@@ -402,7 +402,7 @@ def scrape_top_holdings_from_portfolio_page(
         unlock_scroll(driver)
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located(
-                (By.XPATH, "//*[contains(., 'TOP 5 Holding')]")
+                (By.XPATH, "//section[contains(@id,'top-5-holding')]")
             )
         )
     except Exception as e:
@@ -412,20 +412,27 @@ def scrape_top_holdings_from_portfolio_page(
     scraped_at = datetime.now().isoformat(timespec="seconds")
     as_of_raw = ""
     try:
-        container = driver.find_element(
-            By.XPATH,
-            "//*[contains(., 'TOP 5 Holding')]/ancestor-or-self::*[1]"
+        as_of_el = driver.find_element(
+            By.CSS_SELECTOR,
+            "section#section-top-5-holding .data-date"
         )
-        candidates = container.find_elements(By.XPATH, ".//p | .//span")
-        for el in candidates:
-            t = (el.text or "").strip()
-            if not t:
-                continue
-            if re.search(r"\d{1,2}\s*[ก-ฮ]\.", t) or re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", t):
-                as_of_raw = t
-                break
+        as_of_raw = (as_of_el.text or "").strip()
     except Exception:
-        pass
+        try:
+            section = driver.find_element(
+                By.XPATH,
+                "//section[contains(@id,'top-5-holding')]"
+            )
+            candidates = section.find_elements(By.XPATH, ".//p | .//span")
+            for el in candidates:
+                t = (el.text or "").strip()
+                if not t:
+                    continue
+                if re.search(r"\d{1,2}\s*[ก-ฮ]\.", t) or re.search(r"\d{1,2}/\d{1,2}/\d{2,4}", t):
+                    as_of_raw = t
+                    break
+        except Exception:
+            as_of_raw = ""
     try:
         items = driver.find_elements(By.CSS_SELECTOR, ".top-holding-item")
     except Exception:
@@ -433,6 +440,14 @@ def scrape_top_holdings_from_portfolio_page(
 
     for item in items:
         try:
+            try:
+                sect = item.find_element(By.XPATH, "./ancestor::section[1]")
+                sid = (sect.get_attribute("id") or "").lower()
+            except Exception:
+                sid = ""
+
+            if "top-5-holding" not in sid:
+                continue
             name = ""
             try:
                 name_el = item.find_element(By.CSS_SELECTOR, ".title")
@@ -449,7 +464,10 @@ def scrape_top_holdings_from_portfolio_page(
                 pct_el = item.find_element(By.CSS_SELECTOR, ".percent")
             except Exception:
                 try:
-                    pct_el = item.find_element(By.XPATH, ".//*[contains(@class,'percent')]")
+                    pct_el = item.find_element(
+                        By.XPATH,
+                        ".//*[contains(@class,'percent')]"
+                    )
                 except Exception:
                     pct_el = None
 
@@ -472,6 +490,7 @@ def scrape_top_holdings_from_portfolio_page(
             })
         except Exception:
             continue
+
     return holdings
 
 # ------------------ PARSE HELPERS ------------------
