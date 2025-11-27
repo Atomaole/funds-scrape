@@ -33,14 +33,15 @@ LIST_PAGE_URL = "https://www.wealthmagik.com/funds"
 FEE = "https://www.wealthmagik.com/funds/KSET50LTF-L/fee"
 FUND_CODE_SELECTOR = ".fundCode"
 HEADLESS = False
-PAGELOAD_TIMEOUT = 15
+PAGELOAD_TIMEOUT = 10
 LIST_MAX_SECONDS = 100
 LIST_IDLE_ROUNDS = 5
 OUTPUT_CSV = "wealthmagik_funds.csv"
 LIMIT_FUNDS: Optional[int] = None
 OUTPUT_HOLDINGS_CSV = "wealthmagik_holdings.csv"
-MAX_PROFILE_RETRY = 10
+MAX_PROFILE_RETRY = 3
 OUTPUT_CODES_CSV = "wealthmagik_codes.csv"
+OUTPUT_FAILED_CSV = "wealthmagik_failed_funds.csv"
 
 def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PROFILE_RETRY) -> Dict[str, Any]:
     last_err = ""
@@ -285,7 +286,7 @@ def get_all_fund_profile_urls(driver) -> List[str]:
     log("sample urls: " + ", ".join(urls[:5]))
     return urls
 
-def wait_visible(driver, by, value, timeout=20):
+def wait_visible(driver, by, value, timeout=15):
     return WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((by, value)))
 
 def find_text_by_xpath(driver, xpath: str) -> str:
@@ -866,9 +867,57 @@ def save_codes_to_csv(rows: List[Dict[str, Any]], csv_path: str):
             row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in FIELDS_ORDER_CODES}
             w.writerow(row_out)
     log(f"save codes csv done -> {csv_path} (ทั้งหมด: {len(rows)})")
+    
+def save_failed_to_csv(rows: List[Dict[str, Any]], csv_path: str):
+    if not rows:
+        return
+
+    failed_fields = ["scraped_at", "fund_code", "fund_url", "error"]
+
+    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=failed_fields, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in failed_fields}
+            w.writerow(row_out)
+
+    log(f"save FAILED CSV {csv_path} (ทั้งหมด: {len(rows)})")
+    
+def is_row_failed_or_incomplete(row: Dict[str, Any]) -> bool:
+    if row.get("error"):
+        return True
+
+    critical_keys = ["fund_code", "full_name_th"]
+    for k in critical_keys:
+        v = row.get(k, "")
+        if not str(v).strip():
+            return True
+
+    if not str(row.get("nav_value", "")).strip() and not str(row.get("aum_value", "")).strip():
+        return True
+
+    return False
 
 def main():
     driver = None
+
+    results_by_url: Dict[str, Dict[str, Any]] = {}
+    holdings_by_fund: Dict[str, List[Dict[str, Any]]] = {}
+    codes_by_fund: Dict[str, List[Dict[str, Any]]] = {}
+
+    def process_url(url: str, idx: int, total: int):
+        log(f"[{idx}/{total}] Scrape fund -> {url}")
+        row = scrape_fund_profile_with_retry(driver, url)
+
+        html_holdings = row.pop("_holdings", [])
+        pdf_codes = row.pop("_pdf_codes", [])
+
+        results_by_url[url] = row
+        if html_holdings:
+            holdings_by_fund[url] = html_holdings
+        if pdf_codes:
+            codes_by_fund[url] = pdf_codes
+
     try:
         log("start web")
         driver = make_driver(HEADLESS)
@@ -878,41 +927,93 @@ def main():
         if not urls:
             log("can't find link")
             return
+        max_rounds = 3
+        round_no = 1
+        current_urls = urls[:]
 
-        results: List[Dict[str, Any]] = []
-        holdings_rows: List[Dict[str, Any]] = []
-        codes_rows: List[Dict[str, Any]] = []
+        while current_urls and round_no <= max_rounds:
+            log(f"===={round_no} / {max_rounds}")
+            total = len(current_urls)
 
-        total = len(urls)
-        for i, url in enumerate(urls, 1):
-            log(f"[{i}/{total}] Scrape fund -> {url}")
-            row = scrape_fund_profile_with_retry(driver, url)
-            results.append(row)
-            html_holdings = row.pop("_holdings", [])
-            if html_holdings:
-                holdings_rows.extend(html_holdings)
-            pdf_codes = row.pop("_pdf_codes", [])
-            if pdf_codes:
-                codes_rows.extend(pdf_codes)
-            if i < total:
-                polite_sleep()
+            for i, url in enumerate(current_urls, 1):
+                process_url(url, i, total)
+                if i < total:
+                    polite_sleep()
+            failed_next: List[str] = []
+            for url in current_urls:
+                row = results_by_url.get(url, {})
+                if is_row_failed_or_incomplete(row):
+                    failed_next.append(url)
+
+            log(f"round {round_no} done (scraped: {len(current_urls)}, failed: {len(failed_next)})")
+            # -------------------DEBUG
+            if failed_next and round_no == 1: 
+                debug_path = "wealthmagik_round2_urls_debug.txt"
+                try:
+                    with open(debug_path, "w", encoding="utf-8") as f:
+                        for u in failed_next:
+                            row = results_by_url.get(u, {})
+                            code = (row.get("fund_code") or "").strip()
+                            err = (row.get("error") or "").strip()
+                            line = u
+                            extra_parts = []
+                            if code:
+                                extra_parts.append(code)
+                            if err:
+                                extra_parts.append(err)
+                            if extra_parts:
+                                line += " | " + " | ".join(extra_parts)
+                            f.write(line + "\n")
+                    log(f"DEBUG: saved round2 candidate URLs -> {debug_path} ({len(failed_next)} urls)")
+                except Exception as e:
+                    log(f"DEBUG: failed to save round2 urls: {e}")
+            # ----------------------
+            round_no += 1
+            current_urls = failed_next
+        total_funds = len(results_by_url)
+        total_holdings = sum(len(v) for v in holdings_by_fund.values())
+        total_codes = sum(len(v) for v in codes_by_fund.values())
+        failed_final = [u for u, r in results_by_url.items() if is_row_failed_or_incomplete(r)]
 
         log("========== SUMMARY ==========")
-        log(f"total scrape: {total}")
-        log(f"total holdings: {len(holdings_rows)}")
-        
+        log(f"total funds scraped: {total_funds}")
+        log(f"total holdings: {total_holdings}")
+        log(f"total codes: {total_codes}")
+        log(f"still failed after {max_rounds} rounds: {len(failed_final)}")
+        if failed_final:
+            log("sample failed: " + ", ".join(failed_final[:10]))
+
     except KeyboardInterrupt:
         log("Stop")
     except Exception as e:
         print("FAILED")
         print(f"Error: {e}")
     finally:
-        if results:
-            save_to_csv(results, OUTPUT_CSV)
-        if holdings_rows:
-            save_holdings_to_csv(holdings_rows, OUTPUT_HOLDINGS_CSV)
-        if codes_rows:
-            save_codes_to_csv(codes_rows, OUTPUT_CODES_CSV)
+        final_results: List[Dict[str, Any]] = list(results_by_url.values())
+
+        final_holdings: List[Dict[str, Any]] = []
+        for rows in holdings_by_fund.values():
+            final_holdings.extend(rows)
+
+        final_codes: List[Dict[str, Any]] = []
+        for rows in codes_by_fund.values():
+            final_codes.extend(rows)
+
+        if final_results:
+            save_to_csv(final_results, OUTPUT_CSV)
+        if final_holdings:
+            save_holdings_to_csv(final_holdings, OUTPUT_HOLDINGS_CSV)
+        if final_codes:
+            save_codes_to_csv(final_codes, OUTPUT_CODES_CSV)
+        failed_rows: List[Dict[str, Any]] = []
+        for row in final_results:
+            if is_row_failed_or_incomplete(row):
+                failed_rows.append(row)
+        if failed_rows:
+            save_failed_to_csv(failed_rows, OUTPUT_FAILED_CSV)
+        else:
+            log("nothing fail")
+
         log("close browser")
         if driver:
             try:
