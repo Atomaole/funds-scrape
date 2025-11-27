@@ -554,9 +554,9 @@ def scrape_top_holdings_from_allocation_page(
             return holdings
     as_of_raw = ""
     try:
-        as_of_el = table.find_element(
+        as_of_el = driver.find_element(
             By.XPATH,
-            ".//*[contains(text(),'ข้อมูล ณ วันที่') or contains(text(),'As of')]"
+            "//div[contains(@class,'mainDivtopHolding')]//span[contains(@class,'asofdate')]"
         )
         as_of_raw = _clean_txt(as_of_el.text or "")
     except Exception:
