@@ -328,7 +328,6 @@ def _extract_beta_from_lines(lines: List[str]) -> str:
 
     return ""
 
-
 def extract_beta_from_pdf_bytes(
     pdf_bytes: bytes,
     fund_hints: Optional[List[str]] = None
@@ -894,6 +893,7 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                         "fund_url": url,
                         "code_type": "ISIN",
                         "code_value": _norm_isin(code),
+                        #"is_primary": "1" if idx == 0 else "0",
                     })
                 blooms = extract_all_bloomberg_codes_from_pdf_bytes(pdf_bytes)
                 for idx, code in enumerate(blooms):
@@ -903,6 +903,7 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                         "fund_url": url,
                         "code_type": "Bloomberg",
                         "code_value": code,
+                        #"is_primary": "1" if idx == 0 else "0",
                     })
                 hints = []
                 if fund_code_for_pdf:
