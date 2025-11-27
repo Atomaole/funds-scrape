@@ -33,9 +33,9 @@ LIST_PAGE_URL = "https://www.wealthmagik.com/funds"
 FEE = "https://www.wealthmagik.com/funds/KSET50LTF-L/fee"
 FUND_CODE_SELECTOR = ".fundCode"
 HEADLESS = False
-PAGELOAD_TIMEOUT = 90
+PAGELOAD_TIMEOUT = 15
 LIST_MAX_SECONDS = 100
-LIST_IDLE_ROUNDS = 10
+LIST_IDLE_ROUNDS = 5
 OUTPUT_CSV = "wealthmagik_funds.csv"
 LIMIT_FUNDS: Optional[int] = None
 OUTPUT_HOLDINGS_CSV = "wealthmagik_holdings.csv"
@@ -93,7 +93,7 @@ def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PRO
         "fund_url": url,
         "scraped_at": datetime.now().isoformat(timespec="seconds"),
         "error": f"retry_failed: {last_err}",
-        "_pdf_holdings": [],
+        "_holdings": [],
         "_pdf_codes": [],
     }
 
@@ -264,7 +264,7 @@ def get_all_fund_profile_urls(driver) -> List[str]:
 
     elems = driver.find_elements(By.CSS_SELECTOR, FUND_CODE_SELECTOR)
     codes: Set[str] = set()
-    pat = re.compile(r"[A-Z0-9][A-Z0-9-]+")
+    pat = re.compile(r"[A-Z][A-Z0-9-]{2,}")
     for el in elems:
         t = (el.text or "").strip().replace("\n", " ")
         m = pat.search(t)
@@ -273,7 +273,7 @@ def get_all_fund_profile_urls(driver) -> List[str]:
     links = driver.find_elements(By.XPATH, "//a[contains(@href, '/funds/')]")
     for a in links:
         href = a.get_attribute("href") or ""
-        m = re.search(r"/funds/([A-Z0-9-]+)/", href)
+        m = re.search(r"/funds/([^/?#]+)", href)
         if m:
             codes.add(m.group(1))
 
@@ -281,6 +281,8 @@ def get_all_fund_profile_urls(driver) -> List[str]:
     if LIMIT_FUNDS:
         urls = urls[:LIMIT_FUNDS]
 
+    log(f"found {len(urls)} fund urls")
+    log("sample urls: " + ", ".join(urls[:5]))
     return urls
 
 def wait_visible(driver, by, value, timeout=20):
@@ -382,138 +384,111 @@ def extract_all_bloomberg_codes_from_pdf_bytes(pdf_bytes: bytes) -> List[str]:
     except Exception:
         return []
 
-def extract_beta_from_pdf_bytes(pdf_bytes: bytes) -> str:
-    if not pdf_bytes:
-        return ""
-    try:
-        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
-            texts = []
-            for p in pdf.pages:
-                t = p.extract_text() or ""
-                if t:
-                    texts.append(t)
-        full = "\n".join(texts)
-
-        if not full.strip():
+def _extract_beta_from_lines(lines: List[str]) -> str:
+    n = len(lines)
+    for i in range(n):
+        line = _clean_txt(lines[i])
+        if not line:
+            continue
+        lower = line.lower()
+        if ("sharpe ratio" in lower) and re.search(r"[-+]?\d+(?:\.\d+)?", line):
+            for j in range(i, min(i + 10, n)):
+                l2 = _clean_txt(lines[j])
+                if not l2:
+                    continue
+                low2 = l2.lower()
+                if "beta" not in low2:
+                    continue
+                if "n/a" in low2:
+                    return ""
+                m = re.search(
+                    r"(?i)\bbeta\b[^\d\-+]{0,10}([-+]?\d+(?:\.\d+)?)(?:\s*%?\s*)$",
+                    l2
+                )
+                if m:
+                    return m.group(1).strip()
+            break
+    for raw in lines:
+        line = _clean_txt(raw)
+        if not line:
+            continue
+        lower = line.lower()
+        if "beta" not in lower:
+            continue
+        if "ระดับและทิศทาง" in lower or "อัตราผลตอบแทน" in lower:
+            continue
+        if "n/a" in lower:
             return ""
-        for line in full.splitlines():
-            line_clean = _clean_txt(line)
-            if not line_clean:
-                continue
 
-            lower = line_clean.lower()
-            idx = lower.find("beta")
-            if idx == -1:
-                continue
-            if idx > 8:
-                continue
-            m = re.search(
-                r"Beta[^0-9\n]{0,15}[:=]\s*([-+]?\d+(?:\.\d+)?)",
-                line_clean,
-                flags=re.IGNORECASE,
-            )
-            if m:
-                return m.group(1).strip()
-            m2 = re.search(
-                r"Beta\s*\([^)]+\)\s*([-+]?\d+(?:\.\d+)?)",
-                line_clean,
-                flags=re.IGNORECASE,
-            )
-            if m2:
-                return m2.group(1).strip()
-        return ""
+        m = re.search(
+            r"(?i)\bbeta\b[^\d\-+]{0,10}([-+]?\d+(?:\.\d+)?)(?:\s*%?\s*)$",
+            line
+        )
+        if m:
+            return m.group(1).strip()
 
-    except Exception:
-        return ""
+    return ""
 
-def extract_top_holdings_from_pdf_bytes(
+def extract_beta_from_pdf_bytes(
     pdf_bytes: bytes,
-    fund_code: str,
-    fund_url: str
-) -> List[Dict[str, Any]]:
-    holdings: List[Dict[str, Any]] = []
+    fund_hints: Optional[List[str]] = None
+) -> str:
     if not pdf_bytes:
-        return holdings
+        return ""
+
+    fund_hints = fund_hints or []
+    norm_hints: List[str] = []
+    for h in fund_hints:
+        if not h:
+            continue
+        h = h.strip()
+        if not h:
+            continue
+        norm_hints.append(h.lower())
+        norm_hints.append(re.sub(r"[\s\-]+", "", h.lower()))
 
     try:
         with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
-            lines: List[str] = []
+            page_texts: List[str] = []
             for p in pdf.pages:
                 t = p.extract_text() or ""
-                for ln in t.splitlines():
-                    ln = _clean_txt(ln)
-                    if ln:
-                        lines.append(ln)
+                page_texts.append(t)
 
-        if not lines:
-            return holdings
+        if not page_texts:
+            return ""
+        candidate_pages: Set[int] = set()
 
-        scraped_at = datetime.now().isoformat(timespec="seconds")
-        as_of_raw = ""
-        for ln in lines:
-            if "ข้อมูล ณ วันที่" in ln or "As of" in ln:
-                as_of_raw = ln
-                break
-        anchor_idx = -1
-        for i, ln in enumerate(lines):
-            low = ln.replace(" ", "").lower()
-            if ("5อันดับแรก" in low and "ทรัพย์สิน" in low) or \
-               ("top5" in low and "holding" in low):
-                anchor_idx = i
-                break
+        if norm_hints:
+            for idx, txt in enumerate(page_texts):
+                low = txt.lower()
+                low_nospace = re.sub(r"\s+", "", low)
+                for h in norm_hints:
+                    if h in low or h in low_nospace:
+                        candidate_pages.add(idx)
+                        if idx > 0:
+                            candidate_pages.add(idx - 1)
+                        if idx + 1 < len(page_texts):
+                            candidate_pages.add(idx + 1)
+                        break
+        if candidate_pages:
+            lines: List[str] = []
+            for idx in sorted(candidate_pages):
+                for ln in (page_texts[idx] or "").splitlines():
+                    lines.append(ln)
 
-        if anchor_idx == -1:
-            return holdings
+            beta = _extract_beta_from_lines(lines)
+            if beta:
+                return beta
 
-        current_name_lines: List[str] = []
-        for ln in lines[anchor_idx + 1:]:
-            s = ln.strip()
-            if not s:
-                continue
-            if "หมายเหตุ" in s or "หมายเหต" in s or "note" in s.lower():
-                break
-            if "ชื่อทรัพย์สิน" in s or "% NAV" in s or "%NAV" in s.replace(" ", ""):
-                continue
-            m = re.search(r"(.+?)\s+(\d+(?:\.\d+)?)\s*%?$", s)
-            if m:
-                full_name_parts = current_name_lines + [m.group(1)]
-                name = " ".join(full_name_parts).strip(" .:-")
-                weight = m.group(2).strip()
+        all_lines: List[str] = []
+        for txt in page_texts:
+            for ln in (txt or "").splitlines():
+                all_lines.append(ln)
 
-                holdings.append({
-                    "scraped_at": scraped_at,
-                    "fund_code": fund_code,
-                    "fund_url": fund_url,
-                    "holding_name": name,
-                    "weight_pct": weight,
-                    "as_of_raw": as_of_raw,
-                })
-                current_name_lines = []
+        return _extract_beta_from_lines(all_lines)
 
-            else:
-                m_pct_only = re.match(r"^(\d+(?:\.\d+)?)\s*%?$", s)
-                if m_pct_only and current_name_lines:
-                    name = " ".join(current_name_lines).strip(" .:-")
-                    weight = m_pct_only.group(1).strip()
-
-                    holdings.append({
-                        "scraped_at": scraped_at,
-                        "fund_code": fund_code,
-                        "fund_url": fund_url,
-                        "holding_name": name,
-                        "weight_pct": weight,
-                        "as_of_raw": as_of_raw,
-                    })
-                    current_name_lines = []
-                else:
-                    current_name_lines.append(s)
-
-            if len(holdings) >= 5:
-                break
-        return holdings
     except Exception:
-        return []
-
+        return ""
     
 def parse_date_yyyymmdd(s: str) -> str:
     s = s.strip()
@@ -527,11 +502,109 @@ def parse_date_yyyymmdd(s: str) -> str:
 def parse_percent_str(s: str) -> str:
     if not s:
         return ""
-    t = s.strip()
+    t = _clean_txt(s)
     if "N/A" in t.upper():
         return ""
-    return t.replace("%", "").strip()
-    
+    t = t.replace("%", "")
+    m = re.search(r"[-+]?\d+(?:[.,]\d+)?", t)
+    if not m:
+        return ""
+    num = m.group(0).replace(",", "")
+    return num.strip()
+
+def scrape_top_holdings_from_allocation_page(
+    driver,
+    profile_url: str,
+    fund_code: str,
+) -> List[Dict[str, Any]]:
+    holdings: List[Dict[str, Any]] = []
+    base_url = re.sub(r"/profile/?$", "", profile_url)
+    allocation_url = base_url + "/allocation"
+
+    try:
+        log(f"[HOLDING] open allocation: {allocation_url}")
+        driver.get(allocation_url)
+        unlock_scroll(driver)
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_all_elements_located(
+                (By.CSS_SELECTOR, "table.allocationTable")
+            )
+        )
+    except Exception as e:
+        log(f"HOLDING fail: {e}")
+        return holdings
+
+    scraped_at = datetime.now().isoformat(timespec="seconds")
+    table = None
+    try:
+        heading = driver.find_element(
+            By.XPATH,
+            "(.//*[contains(normalize-space(text()), 'Top 5 Holdings')])[1]"
+        )
+        table = heading.find_element(
+            By.XPATH,
+            "following::table[contains(@class,'allocationTable')][1]"
+        )
+    except Exception:
+        pass
+    if table is None:
+        try:
+            table = driver.find_elements(By.CSS_SELECTOR, "table.allocationTable")[0]
+        except Exception:
+            return holdings
+    as_of_raw = ""
+    try:
+        as_of_el = table.find_element(
+            By.XPATH,
+            ".//*[contains(text(),'ข้อมูล ณ วันที่') or contains(text(),'As of')]"
+        )
+        as_of_raw = _clean_txt(as_of_el.text or "")
+    except Exception:
+        pass
+    try:
+        rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+    except Exception:
+        rows = []
+
+    for row in rows:
+        try:
+            name = ""
+            try:
+                name_span = row.find_element(
+                    By.XPATH,
+                    ".//td[contains(@class,'mat-column-name')]//span"
+                )
+                name = _clean_txt(name_span.text or "")
+            except Exception:
+                pass
+            weight = ""
+            try:
+                pct_span = row.find_element(
+                    By.XPATH,
+                    ".//td[contains(@class,'mat-column-ratio')]//span"
+                )
+                pct_txt = _clean_txt(pct_span.text or "")
+                m = re.search(r"[-+]?\d+(?:\.\d+)?", pct_txt.replace(",", ""))
+                if m:
+                    weight = m.group(0)
+            except Exception:
+                pass
+
+            if not name or not weight:
+                continue
+
+            holdings.append({
+                "scraped_at": scraped_at,
+                "fund_code": fund_code,
+                "fund_url": profile_url,
+                "holding_name": name,
+                "weight_pct": weight,
+                "as_of_raw": as_of_raw,
+            })
+        except Exception:
+            continue
+
+    return holdings
 
 def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
     result = {
@@ -603,7 +676,7 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                 pass
 
         unlock_scroll(driver)
-        wait_visible(driver, By.CLASS_NAME, "nav", timeout=20)
+        wait_visible(driver, By.XPATH, "//div[@class='fundName']", timeout=20)
 
     except TimeoutException as e:
         data["error"] = f"load_timeout: {e}"
@@ -649,7 +722,7 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     scraped_at = data["scraped_at"]
 
     codes_rows: List[Dict[str, Any]] = []
-    data["_pdf_holdings"] = []
+    data["_holdings"] = []
     data["_pdf_codes"] = []
 
     if pdf_url:
@@ -676,21 +749,30 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                         "code_value": code,
                         #"is_primary": "1" if idx == 0 else "0",
                     })
-                data["beta"] = extract_beta_from_pdf_bytes(pdf_bytes)
+                hints = []
                 if fund_code_for_pdf:
-                    data["_pdf_holdings"] = extract_top_holdings_from_pdf_bytes(
-                        pdf_bytes,
-                        fund_code_for_pdf,
-                        url,
-                    )
+                    hints.append(fund_code_for_pdf)
+                if data.get("full_name_th"):
+                    hints.append(data["full_name_th"])
+                data["beta"] = extract_beta_from_pdf_bytes(pdf_bytes, fund_hints=hints)
         except Exception as e:
             data["beta"] = ""
-            data["_pdf_holdings"] = []
             data["_pdf_codes"] = []
             data.setdefault("error", f"pdf_parse_fail: {e}")
     else:
         data["beta"] = ""
+
     data["_pdf_codes"] = codes_rows
+    try:
+        html_holdings = scrape_top_holdings_from_allocation_page(
+            driver,
+            url,
+            fund_code_for_pdf or data.get("fund_code", "")
+        )
+        if html_holdings:
+            data["_holdings"] = html_holdings
+    except Exception as e:
+        log(f"[HOLDING] fail for {url}: {e}")
     try:
         fee_data = scrape_fee_page(driver, url)
         data.update(fee_data)
@@ -806,9 +888,9 @@ def main():
             log(f"[{i}/{total}] Scrape fund -> {url}")
             row = scrape_fund_profile_with_retry(driver, url)
             results.append(row)
-            pdf_holdings = row.pop("_pdf_holdings", [])
-            if pdf_holdings:
-                holdings_rows.extend(pdf_holdings)
+            html_holdings = row.pop("_holdings", [])
+            if html_holdings:
+                holdings_rows.extend(html_holdings)
             pdf_codes = row.pop("_pdf_codes", [])
             if pdf_codes:
                 codes_rows.extend(pdf_codes)
@@ -840,4 +922,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
