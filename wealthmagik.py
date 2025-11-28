@@ -834,15 +834,31 @@ def save_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
         log("ไม่มีข้อมูลจะบันทึก CSV")
         return
+    filtered_rows: List[Dict[str, Any]] = []
+    seen_codes: Set[str] = set()
+
+    for r in rows:
+        code = (r.get("fund_code") or "").strip()
+        if not code:
+            filtered_rows.append(r)
+            continue
+        if code in seen_codes:
+            continue
+        seen_codes.add(code)
+        filtered_rows.append(r)
+
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS_ORDER, extrasaction="ignore")
         w.writeheader()
-        for r in rows:
-            row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in FIELDS_ORDER}
+        for r in filtered_rows:
+            row_out = {
+                col: (r.get(col, "") if r.get(col, "") is not None else "")
+                for col in FIELDS_ORDER
+            }
             w.writerow(row_out)
 
-    ok = sum(1 for r in rows if not r.get("error"))
-    log(f"save CSV done {csv_path} (สำเร็จ: {ok} / ทั้งหมด: {len(rows)})")
+    ok = sum(1 for r in filtered_rows if not r.get("error"))
+    log(f"save CSV done {csv_path} (สำเร็จ: {ok} / ทั้งหมด: {len(filtered_rows)})")
 
 def save_holdings_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
@@ -946,28 +962,6 @@ def main():
                     failed_next.append(url)
 
             log(f"round {round_no} done (scraped: {len(current_urls)}, failed: {len(failed_next)})")
-            # -------------------DEBUG
-            if failed_next and round_no == 1: 
-                debug_path = "wealthmagik_round2_urls_debug.txt"
-                try:
-                    with open(debug_path, "w", encoding="utf-8") as f:
-                        for u in failed_next:
-                            row = results_by_url.get(u, {})
-                            code = (row.get("fund_code") or "").strip()
-                            err = (row.get("error") or "").strip()
-                            line = u
-                            extra_parts = []
-                            if code:
-                                extra_parts.append(code)
-                            if err:
-                                extra_parts.append(err)
-                            if extra_parts:
-                                line += " | " + " | ".join(extra_parts)
-                            f.write(line + "\n")
-                    log(f"DEBUG: saved round2 candidate URLs -> {debug_path} ({len(failed_next)} urls)")
-                except Exception as e:
-                    log(f"DEBUG: failed to save round2 urls: {e}")
-            # ----------------------
             round_no += 1
             current_urls = failed_next
         total_funds = len(results_by_url)
