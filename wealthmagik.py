@@ -522,18 +522,14 @@ def scrape_holdings_from_allocation_page(
     base_url = re.sub(r"/profile/?$", "", profile_url)
     port_url = base_url + "/port"
 
-    try:
-        log(f"[HOLDING] open port: {port_url}")
-        driver.get(port_url)
-        unlock_scroll(driver)
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_all_elements_located(
-                (By.CSS_SELECTOR, ".portallocation-list")
-            )
+    log(f"[HOLDING] open port: {port_url}")
+    driver.get(port_url)
+    unlock_scroll(driver)
+    WebDriverWait(driver, 15).until(
+        EC.presence_of_all_elements_located(
+            (By.CSS_SELECTOR, ".portallocation-list")
         )
-    except Exception as e:
-        log(f"HOLDING fail (load page): {e}")
-        return holdings
+    )
 
     scraped_at = datetime.now().isoformat(timespec="seconds")
     as_of_raw = ""
@@ -601,13 +597,10 @@ def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
     }
     fees_url = profile_url.replace("/profile", "/fee")
 
-    try:
-        driver.get(fees_url)
-        unlock_scroll(driver)
-        wait_visible(driver, By.XPATH, "//*[contains(text(),'ค่าธรรมเนียม (Fees)')]", timeout=20)
-    except Exception as e:
-        log(f"โหลดหน้า fee ไม่สำเร็จ ({profile_url}): {e}")
-        return result
+    log(f"[FEE] Loading... {fees_url}")
+    driver.get(fees_url)
+    unlock_scroll(driver)
+    wait_visible(driver, By.XPATH, "//*[contains(text(),'ค่าธรรมเนียม (Fees)')]", timeout=15)
     
     initial_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.initialPurchase-ffs']")
     additional_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.additionalPurchase-ffs']")
@@ -750,21 +743,16 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
         data["beta"] = ""
 
     data["_pdf_codes"] = codes_rows
-    try:
-        html_holdings = scrape_holdings_from_allocation_page(
-            driver,
-            url,
-            fund_code_for_pdf or data.get("fund_code", "")
-        )
-        if html_holdings:
-            data["_holdings"] = html_holdings
-    except Exception as e:
-        log(f"[HOLDING] fail for {url}: {e}")
-    try:
-        fee_data = scrape_fee_page(driver, url)
-        data.update(fee_data)
-    except Exception as e:
-        log(f"scrape fee fail for {url}: {e}")
+    
+    html_holdings = scrape_holdings_from_allocation_page(
+        driver,
+        url,
+        fund_code_for_pdf or data.get("fund_code", "")
+    )
+    if html_holdings:
+        data["_holdings"] = html_holdings
+    fee_data = scrape_fee_page(driver, url)
+    data.update(fee_data)
 
     return data
 
