@@ -808,6 +808,8 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
         "inception_date": "",
         "factsheet_pdf_url": "",
         "beta": "",
+        "minimum_initial_investment": "",
+        "minimum_next_investment": "",
         "front_end_fee_max_percent": "",
         "front_end_fee_actual_percent": "",
         "back_end_fee_max_percent": "",
@@ -850,12 +852,15 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     details = get_detail_dict(driver)
     data["aimc_categories"] = details.get("ประเภทกอง", "")
     raw_risk = details.get("ค่าความเสี่ยง", "")
-    risk_num = extract_first_number(raw_risk) 
-    data["risk_level"] = risk_num
-    data["is_dividend"]    = details.get("นโยบายการจ่ายปันผล", "")
+    data["risk_level"] = extract_first_number(raw_risk)
+    data["is_dividend"] = details.get("นโยบายการจ่ายปันผล", "")
     raw_inception = details.get("วันที่จดทะเบียนกองทุน", "")
     parsed_inception = parse_thai_finnomena_date(raw_inception)
     data["inception_date"] = parsed_inception or raw_inception
+    raw_minimum_initial_investment = details.get("ลงทุนครั้งแรกขั้นต่ำ", "")
+    raw_minimum_next_investment = details.get("ลงทุนครั้งต่อไปขั้นต่ำ", "")
+    data["minimum_initial_investment"] = extract_first_number(raw_minimum_initial_investment)
+    data["minimum_next_investment"] = extract_first_number(raw_minimum_next_investment) 
     raw_aum = details.get("มูลค่าทรัพย์สินสุทธิ", "")
     m = re.search(r"([\d,\.]+)", raw_aum)
     if m:
@@ -969,6 +974,8 @@ FIELDS_ORDER = [
     "turnover_ratio",
     "factsheet_pdf_url",
     "beta",
+    "minimum_initial_investment",
+    "minimum_next_investment",
     "front_end_fee_max_percent",
     "front_end_fee_actual_percent",
     "back_end_fee_max_percent",
