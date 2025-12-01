@@ -609,6 +609,8 @@ def scrape_top_holdings_from_allocation_page(
 
 def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
     result = {
+        "initial_purchase": "",
+        "additional_purchase": "",
         "front_end_fee_max_percent": "",
         "front_end_fee_actual_percent": "",
         "back_end_fee_max_percent": "",
@@ -631,7 +633,9 @@ def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
     except Exception as e:
         log(f"โหลดหน้า fee ไม่สำเร็จ ({profile_url}): {e}")
         return result
-
+    
+    initial_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.initialPurchase-ffs']")
+    additional_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.additionalPurchase-ffs']")
     front_max_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.frontEndFee-ffs']")
     front_actual_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.frontEndFee-actual']")
     back_max_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.backEndFee-ffs']")
@@ -645,6 +649,8 @@ def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
     Total_Expense_Ratio_max_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.totalExpenseRatio-ffs']")
     Total_Expense_Ratio_actual_raw = find_text_by_xpath(driver, "//*[@id='wmg.funddetailfee.text.totalExpenseRatioActual-ffs']")
 
+    result["initial_purchase"] = parse_percent_str(initial_raw)
+    result["additional_purchase"] = parse_percent_str(additional_raw)
     result["front_end_fee_max_percent"] = parse_percent_str(front_max_raw)
     result["front_end_fee_actual_percent"] = parse_percent_str(front_actual_raw)
     result["back_end_fee_max_percent"] = parse_percent_str(back_max_raw)
@@ -800,6 +806,8 @@ FIELDS_ORDER = [
     "turnover_ratio",
     "factsheet_pdf_url",
     "beta",
+    "initial_purchase",
+    "additional_purchase",
     "front_end_fee_max_percent",
     "front_end_fee_actual_percent",
     "back_end_fee_max_percent",
