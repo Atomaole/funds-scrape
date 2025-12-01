@@ -808,8 +808,8 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
         "inception_date": "",
         "factsheet_pdf_url": "",
         "beta": "",
-        "minimum_initial_investment": "",
-        "minimum_next_investment": "",
+        "initial_purchase": "",
+        "additional_purchase": "",
         "front_end_fee_max_percent": "",
         "front_end_fee_actual_percent": "",
         "back_end_fee_max_percent": "",
@@ -859,8 +859,8 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     data["inception_date"] = parsed_inception or raw_inception
     raw_minimum_initial_investment = details.get("ลงทุนครั้งแรกขั้นต่ำ", "")
     raw_minimum_next_investment = details.get("ลงทุนครั้งต่อไปขั้นต่ำ", "")
-    data["minimum_initial_investment"] = extract_first_number(raw_minimum_initial_investment)
-    data["minimum_next_investment"] = extract_first_number(raw_minimum_next_investment) 
+    data["initial_purchase"] = extract_first_number(raw_minimum_initial_investment)
+    data["additional_purchase"] = extract_first_number(raw_minimum_next_investment) 
     raw_aum = details.get("มูลค่าทรัพย์สินสุทธิ", "")
     m = re.search(r"([\d,\.]+)", raw_aum)
     if m:
@@ -974,8 +974,8 @@ FIELDS_ORDER = [
     "turnover_ratio",
     "factsheet_pdf_url",
     "beta",
-    "minimum_initial_investment",
-    "minimum_next_investment",
+    "initial_purchase",
+    "additional_purchase",
     "front_end_fee_max_percent",
     "front_end_fee_actual_percent",
     "back_end_fee_max_percent",
