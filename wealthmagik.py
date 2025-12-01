@@ -46,48 +46,27 @@ OUTPUT_FAILED_CSV = "wealthmagik_failed_funds.csv"
 def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PROFILE_RETRY) -> Dict[str, Any]:
     last_err = ""
     for attempt in range(1, max_attempts + 1):
-        log(f">> attempt {attempt}/{max_attempts}")
+        if attempt > 1:
+            log(f">> Retry attempt {attempt}/{max_attempts} for {url}")
+        
         try:
             row = scrape_fund_profile(driver, url)
             err = (row.get("error") or "").lower()
             if err.startswith("load_fail") or err.startswith("load_timeout"):
                 last_err = err
-                log(f"    >> {err}, will hard reset + retry")
+                log(f"    >> {err}, waiting to retry...")
                 try:
-                    hard_reset_page(driver)
-                except Exception:
+                    driver.delete_all_cookies()
+                except:
                     pass
-
+                
                 polite_sleep()
                 continue
             return row
 
-        except TimeoutException as e:
-            last_err = f"timeout_exception: {e}"
-            log(f">> TimeoutException: {e} (hard reset + retry)")
-            try:
-                hard_reset_page(driver)
-            except Exception:
-                pass
-            polite_sleep()
-            continue
-
-        except WebDriverException as e:
-            last_err = f"webdriver_exception: {e}"
-            log(f">> WebDriverException: {e} (hard reset + retry)")
-            try:
-                hard_reset_page(driver)
-            except Exception:
-                pass
-            polite_sleep()
-            continue
         except Exception as e:
-            last_err = f"unexpected: {e}"
-            log(f">> unexpected error: {e}  (hard reset + retry)")
-            try:
-                hard_reset_page(driver)
-            except Exception:
-                pass
+            last_err = f"exception: {e}"
+            log(f">> Error occurred: {e}. Retrying...")
             polite_sleep()
             continue
     return {
@@ -98,7 +77,7 @@ def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PRO
         "_pdf_codes": [],
     }
 
-def hard_reset_page(driver):
+#def hard_reset_page(driver):
     try:
         driver.execute_script("window.stop();")
     except Exception:
