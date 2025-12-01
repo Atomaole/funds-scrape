@@ -162,7 +162,7 @@ def close_ad_if_present(driver):
         pass
     unlock_scroll(driver)
 
-def wait_fund_items(driver, timeout: int = 30):
+def wait_fund_items(driver, timeout: int = 15):
     WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, FUND_CODE_SELECTOR)))
 
 def describe_element(driver, el) -> str:
@@ -240,7 +240,7 @@ def scroll_container_once(driver, container):
 def get_all_fund_profile_urls(driver) -> List[str]:
     driver.get(LIST_PAGE_URL)
     close_ad_if_present(driver)
-    wait_fund_items(driver, 30)
+    wait_fund_items(driver, 15)
 
     container = nearest_scrollable_ancestor_of_last_item(driver)
     if not container:
@@ -513,46 +513,29 @@ def parse_percent_str(s: str) -> str:
     num = m.group(0).replace(",", "")
     return num.strip()
 
-def scrape_top_holdings_from_allocation_page(
+def scrape_holdings_from_allocation_page(
     driver,
     profile_url: str,
     fund_code: str,
 ) -> List[Dict[str, Any]]:
     holdings: List[Dict[str, Any]] = []
     base_url = re.sub(r"/profile/?$", "", profile_url)
-    allocation_url = base_url + "/allocation"
+    port_url = base_url + "/port"
 
     try:
-        log(f"[HOLDING] open allocation: {allocation_url}")
-        driver.get(allocation_url)
+        log(f"[HOLDING] open port: {port_url}")
+        driver.get(port_url)
         unlock_scroll(driver)
         WebDriverWait(driver, 20).until(
             EC.presence_of_all_elements_located(
-                (By.CSS_SELECTOR, "table.allocationTable")
+                (By.CSS_SELECTOR, ".portallocation-list")
             )
         )
     except Exception as e:
-        log(f"HOLDING fail: {e}")
+        log(f"HOLDING fail (load page): {e}")
         return holdings
 
     scraped_at = datetime.now().isoformat(timespec="seconds")
-    table = None
-    try:
-        heading = driver.find_element(
-            By.XPATH,
-            "(.//*[contains(normalize-space(text()), 'Top 5 Holdings')])[1]"
-        )
-        table = heading.find_element(
-            By.XPATH,
-            "following::table[contains(@class,'allocationTable')][1]"
-        )
-    except Exception:
-        pass
-    if table is None:
-        try:
-            table = driver.find_elements(By.CSS_SELECTOR, "table.allocationTable")[0]
-        except Exception:
-            return holdings
     as_of_raw = ""
     try:
         as_of_el = driver.find_element(
@@ -563,46 +546,38 @@ def scrape_top_holdings_from_allocation_page(
     except Exception:
         pass
     try:
-        rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
+        rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
     except Exception:
         rows = []
 
     for row in rows:
         try:
             name = ""
-            try:
-                name_span = row.find_element(
-                    By.XPATH,
-                    ".//td[contains(@class,'mat-column-name')]//span"
-                )
-                name = _clean_txt(name_span.text or "")
-            except Exception:
-                pass
             weight = ""
             try:
-                pct_span = row.find_element(
-                    By.XPATH,
-                    ".//td[contains(@class,'mat-column-ratio')]//span"
-                )
-                pct_txt = _clean_txt(pct_span.text or "")
+                name_el = row.find_element(By.CSS_SELECTOR, ".name-text")
+                name = _clean_txt(name_el.text or "")
+            except Exception:
+                pass
+            try:
+                weight_el = row.find_element(By.CSS_SELECTOR, ".ratio-text")
+                pct_txt = _clean_txt(weight_el.text or "")
                 m = re.search(r"[-+]?\d+(?:\.\d+)?", pct_txt.replace(",", ""))
                 if m:
                     weight = m.group(0)
             except Exception:
                 pass
+            if name and weight:
+                holdings.append({
+                    "scraped_at": scraped_at,
+                    "fund_code": fund_code,
+                    "fund_url": profile_url,
+                    "holding_name": name,
+                    "weight_pct": weight,
+                    "as_of_raw": as_of_raw,
+                })
 
-            if not name or not weight:
-                continue
-
-            holdings.append({
-                "scraped_at": scraped_at,
-                "fund_code": fund_code,
-                "fund_url": profile_url,
-                "holding_name": name,
-                "weight_pct": weight,
-                "as_of_raw": as_of_raw,
-            })
-        except Exception:
+        except Exception as e:
             continue
 
     return holdings
@@ -716,9 +691,14 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     data["is_dividend"] = get_id_value_by_prefix(driver, "wmg.funddetailinfo.text.isDividend.")
     data["inception_date"] = parse_date_yyyymmdd(get_id_value_by_prefix(driver, "wmg.funddetailinfo.text.inceptionDate."))
 
-    data["fx_hedging"] = find_text_by_xpath(driver, "//div[contains(@class, 'groupDetail') and .//div[contains(@class, 'label') and normalize-space(text()) = 'FX Hedging']]//div[contains(@class, 'value')]/span")
-    data["turnover_ratio"] = find_text_by_xpath(driver, "//div[contains(@class, 'groupDetail') and .//div[contains(@class, 'label') and normalize-space(text()) = 'Turnover Ratio']]//div[contains(@class, 'value')]/span")
-    
+    raw_fx_hedging = find_text_by_xpath(driver, "//div[contains(@class, 'groupDetail') and .//div[contains(@class, 'label') and normalize-space(text()) = 'FX Hedging']]//div[contains(@class, 'value')]/span")
+    raw_turnover_ratio = find_text_by_xpath(driver, "//div[contains(@class, 'groupDetail') and .//div[contains(@class, 'label') and normalize-space(text()) = 'Turnover Ratio']]//div[contains(@class, 'value')]/span")
+    if "N/A" in raw_fx_hedging.upper():
+        raw_fx_hedging = ""
+    data["fx_hedging"] = raw_fx_hedging
+    if "N/A" in raw_turnover_ratio.upper():
+        raw_turnover_ratio = ""
+    data["turnover_ratio"] = raw_turnover_ratio
     try:
         pdf_url = get_id_value_by_prefix(driver, "wmg.funddetailinfo.button.factSheetPath.")
     except Exception:
@@ -771,7 +751,7 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
 
     data["_pdf_codes"] = codes_rows
     try:
-        html_holdings = scrape_top_holdings_from_allocation_page(
+        html_holdings = scrape_holdings_from_allocation_page(
             driver,
             url,
             fund_code_for_pdf or data.get("fund_code", "")
