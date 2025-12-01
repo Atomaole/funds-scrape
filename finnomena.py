@@ -49,7 +49,7 @@ PAGELOAD_TIMEOUT = 30
 OUTPUT_CSV = "finnomena_funds.csv"
 OUTPUT_HOLDINGS_CSV = "finnomena_holdings.csv"
 LIMIT_FUNDS: Optional[int] = None 
-MAX_PROFILE_RETRY = 2 
+MAX_PROFILE_RETRY = 3 
 OUTPUT_CODES_CSV = "finnomena_codes.csv"
 # ------------------ BASIC UTILS ------------------
 
@@ -142,7 +142,7 @@ def get_all_fund_profile_urls(driver, max_pages: int = MAX_LIST_PAGES) -> List[s
 
     for page in range(1, max_pages + 1):
         list_url = LIST_BASE_URL.format(page=page)
-        log(f"เปิดหน้า list page={page} -> {list_url}")
+        log(f"Opening list page={page} -> {list_url}")
         driver.get(list_url)
         unlock_scroll(driver)
         try:
@@ -157,7 +157,7 @@ def get_all_fund_profile_urls(driver, max_pages: int = MAX_LIST_PAGES) -> List[s
 
         links = driver.find_elements(By.XPATH, "//a[contains(@href, '/fund/')]")
         if not links:
-            log(f"page {page}: ไม่เจอ fund หยุด")
+            log(f"page {page}: No funds found, stopping")
             break
 
         before = len(codes)
@@ -168,18 +168,18 @@ def get_all_fund_profile_urls(driver, max_pages: int = MAX_LIST_PAGES) -> List[s
                 codes.add(m.group(1))
 
         added = len(codes) - before
-        log(f"page {page}: เจอ code ใหม่ {added} ตัว (สะสม {len(codes)})")
+        log(f"page {page}: Found {added} new codes (total {len(codes)})")
 
         if added <= 0:
-            log("ไม่มีแล้วหยุด")
+            log("No more new items, stopping")
             break
 
     urls = [f"https://www.finnomena.com/fund/{c}" for c in sorted(codes)]
-    log(f"รวมลิงก์โปรไฟล์ได้ {len(urls)} รายการ")
+    log(f"Total profile links found: {len(urls)}")
 
     if LIMIT_FUNDS:
         urls = urls[:LIMIT_FUNDS]
-        log(f"จำกัดตัวอย่างเหลือ {len(urls)} ลิงก์แรก")
+        log(f"Limiting sample to first {len(urls)} links")
 
     return urls
 # ------------------ DETAIL-BLOCK HELPER ------------------
@@ -610,9 +610,9 @@ def extract_nav_and_date(driver, fund_code: str, url: str) -> tuple[str, str]:
         time.sleep(0.5)
 
     if not nav_value:
-        log(f"[NAV] ไม่มี NAV value -> {fund_code} {url}")
+        log(f"[NAV] No NAV value -> {fund_code} {url}")
     if not nav_date_raw:
-        log(f"[NAV] ไม่มี NAV date  -> {fund_code} {url}")
+        log(f"[NAV] No NAV date  -> {fund_code} {url}")
 
     return nav_value, nav_date_raw
 
@@ -685,7 +685,7 @@ def _extract_fee_pair_by_label(driver, label_keywords: List[str]) -> tuple[str, 
 
 def scrape_fees_from_fee_page(driver, fund_url: str, data: Dict[str, Any]) -> None:
     fee_url = fund_url.rstrip("/") + "/fee"
-    log(f"  เปิดหน้า fee -> {fee_url}")
+    log(f"  Opening fee page -> {fee_url}")
 
     try:
         driver.get(fee_url)
@@ -1042,7 +1042,7 @@ def save_holdings_to_csv(rows: List[Dict[str, Any]], csv_path: str):
             
 def save_codes_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
-        log("ไม่มี codes จะบันทึก CSV")
+        log("No codes to save to CSV")
         return
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS_ORDER_CODES, extrasaction="ignore")
@@ -1050,19 +1050,19 @@ def save_codes_to_csv(rows: List[Dict[str, Any]], csv_path: str):
         for r in rows:
             row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in FIELDS_ORDER_CODES}
             w.writerow(row_out)
-    log(f"save codes csv done -> {csv_path} (ทั้งหมด: {len(rows)})")
+    log(f"save codes csv done -> {csv_path} (total: {len(rows)})")
 # ------------------ MAIN ------------------
 
 def main():
     driver = None
     try:
-        log("strart webdriver ...")
+        log("start webdriver ...")
         driver = make_driver(HEADLESS)
         driver.set_page_load_timeout(PAGELOAD_TIMEOUT)
 
         urls = get_all_fund_profile_urls(driver)
         if not urls:
-            log("can't find link fund")
+            log("Cannot find any fund links")
             return
 
         results: List[Dict[str, Any]] = []

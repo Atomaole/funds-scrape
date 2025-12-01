@@ -33,7 +33,7 @@ LIST_PAGE_URL = "https://www.wealthmagik.com/funds"
 FEE = "https://www.wealthmagik.com/funds/KSET50LTF-L/fee"
 FUND_CODE_SELECTOR = ".fundCode"
 HEADLESS = False
-PAGELOAD_TIMEOUT = 10
+PAGELOAD_TIMEOUT = 15
 LIST_MAX_SECONDS = 100
 LIST_IDLE_ROUNDS = 5
 OUTPUT_CSV = "wealthmagik_funds.csv"
@@ -162,7 +162,7 @@ def close_ad_if_present(driver):
         pass
     unlock_scroll(driver)
 
-def wait_fund_items(driver, timeout: int = 15):
+def wait_fund_items(driver, timeout: int = 20):
     WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, FUND_CODE_SELECTOR)))
 
 def describe_element(driver, el) -> str:
@@ -240,7 +240,7 @@ def scroll_container_once(driver, container):
 def get_all_fund_profile_urls(driver) -> List[str]:
     driver.get(LIST_PAGE_URL)
     close_ad_if_present(driver)
-    wait_fund_items(driver, 15)
+    wait_fund_items(driver, 20)
 
     container = nearest_scrollable_ancestor_of_last_item(driver)
     if not container:
@@ -251,7 +251,7 @@ def get_all_fund_profile_urls(driver) -> List[str]:
     same = 0
     while True:
         if time.time() - start > LIST_MAX_SECONDS:
-            log(f"ครบ {LIST_MAX_SECONDS}")
+            log(f"Time limit reached: {LIST_MAX_SECONDS}s")
             break
         scroll_container_once(driver, container)
         new = elements_count(driver, FUND_CODE_SELECTOR)
@@ -808,7 +808,7 @@ FIELDS_ORDER_CODES = [
 ]
 def save_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
-        log("ไม่มีข้อมูลจะบันทึก CSV")
+        log("No data to save to CSV")
         return
     filtered_rows: List[Dict[str, Any]] = []
     seen_codes: Set[str] = set()
@@ -834,7 +834,7 @@ def save_to_csv(rows: List[Dict[str, Any]], csv_path: str):
             w.writerow(row_out)
 
     ok = sum(1 for r in filtered_rows if not r.get("error"))
-    log(f"save CSV done {csv_path} (สำเร็จ: {ok} / ทั้งหมด: {len(filtered_rows)})")
+    log(f"save CSV done {csv_path} (success: {ok} / total: {len(filtered_rows)})")
 
 def save_holdings_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
@@ -846,11 +846,11 @@ def save_holdings_to_csv(rows: List[Dict[str, Any]], csv_path: str):
         for r in rows:
             row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in FIELDS_ORDER_HOLDINGS}
             w.writerow(row_out)
-    log(f"save holding csv done-> {csv_path} (ทั้งหมด: {len(rows)})")
+    log(f"save holding csv done-> {csv_path} (total: {len(rows)})")
 
 def save_codes_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
-        log("ไม่มี codes จะบันทึก CSV")
+        log("No codes to save to CSV")
         return
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS_ORDER_CODES, extrasaction="ignore")
@@ -858,7 +858,7 @@ def save_codes_to_csv(rows: List[Dict[str, Any]], csv_path: str):
         for r in rows:
             row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in FIELDS_ORDER_CODES}
             w.writerow(row_out)
-    log(f"save codes csv done -> {csv_path} (ทั้งหมด: {len(rows)})")
+    log(f"save codes csv done -> {csv_path} (total: {len(rows)})")
     
 def save_failed_to_csv(rows: List[Dict[str, Any]], csv_path: str):
     if not rows:
@@ -873,7 +873,7 @@ def save_failed_to_csv(rows: List[Dict[str, Any]], csv_path: str):
             row_out = {col: (r.get(col, "") if r.get(col, "") is not None else "") for col in failed_fields}
             w.writerow(row_out)
 
-    log(f"save FAILED CSV {csv_path} (ทั้งหมด: {len(rows)})")
+    log(f"save FAILED CSV {csv_path} (total: {len(rows)})")
     
 def is_row_failed_or_incomplete(row: Dict[str, Any]) -> bool:
     if row.get("error"):
