@@ -38,7 +38,7 @@ PAGELOAD_TIMEOUT = 15
 LIST_MAX_SECONDS = 100
 LIST_IDLE_ROUNDS = 5
 OUTPUT_CSV = "wealthmagik_funds.csv"
-LIMIT_FUNDS: Optional[int] = 100
+LIMIT_FUNDS: Optional[int] = None
 OUTPUT_HOLDINGS_CSV = "wealthmagik_holdings.csv"
 MAX_PROFILE_RETRY = 3
 OUTPUT_CODES_CSV = "wealthmagik_codes.csv"
@@ -231,10 +231,9 @@ def get_all_fund_profile_urls(driver) -> List[str]:
         else:
             last = new
             same = 0
-
     elems = driver.find_elements(By.CSS_SELECTOR, FUND_CODE_SELECTOR)
     codes: Set[str] = set()
-    pat = re.compile(r"[A-Z0-9][A-Z0-9\-\s/]{2,}")
+    pat = re.compile(r"[A-Z0-9][A-Z0-9\-\s/&]{2,}") 
 
     for el in elems:
         raw_id = el.get_attribute("id") or ""
@@ -256,9 +255,11 @@ def get_all_fund_profile_urls(driver) -> List[str]:
         if m:
             from urllib.parse import unquote
             codes.add(unquote(m.group(1)))
-
-    urls = [f"https://www.wealthmagik.com/funds/{quote(c, safe='')}/profile" for c in sorted(codes)]
-    
+    urls = []
+    for c in sorted(codes):
+        c_clean = c.replace("&", " ") 
+        safe_url_part = quote(c_clean, safe='')
+        urls.append(f"https://www.wealthmagik.com/funds/{safe_url_part}/profile")
     if LIMIT_FUNDS:
         urls = urls[:LIMIT_FUNDS]
     log(f"found {len(urls)} fund urls")
@@ -501,15 +502,23 @@ def scrape_holdings_from_allocation_page(
     holdings: List[Dict[str, Any]] = []
     base_url = re.sub(r"/profile/?$", "", profile_url)
     port_url = base_url + "/port"
-
     log(f"[HOLDING] open port: {port_url}")
-    driver.get(port_url)
-    unlock_scroll(driver)
-    WebDriverWait(driver, 15).until(
-        EC.presence_of_all_elements_located(
-            (By.CSS_SELECTOR, ".portallocation-list")
+    try:
+        driver.get(port_url)
+        unlock_scroll(driver)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".portallocation-list, .emptyData"))
         )
-    )
+        has_empty_tag = driver.find_elements(By.CSS_SELECTOR, ".emptyData")
+        if has_empty_tag:
+            return []
+
+    except TimeoutException:
+        log(f"  [HOLDING] timeout or no data element found -> skip holdings")
+        return []
+    except Exception as e:
+        log(f"  [HOLDING] error opening port page: {e}")
+        return []
 
     scraped_at = datetime.now().isoformat(timespec="seconds")
     as_of_raw = ""
@@ -521,6 +530,7 @@ def scrape_holdings_from_allocation_page(
         as_of_raw = _clean_txt(as_of_el.text or "")
     except Exception:
         pass
+
     try:
         rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
     except Exception:
@@ -543,6 +553,7 @@ def scrape_holdings_from_allocation_page(
                     weight = m.group(0)
             except Exception:
                 pass
+            
             if name and weight:
                 holdings.append({
                     "scraped_at": scraped_at,
