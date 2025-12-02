@@ -389,6 +389,65 @@ def extract_beta_from_pdf_bytes(
     except Exception:
         return ""
 
+def extract_value_by_visual_alignment(pdf_bytes: bytes, keywords: List[str]) -> str:
+    if not pdf_bytes:
+        return ""
+    try:
+        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                words = page.extract_words(x_tolerance=2, y_tolerance=2)
+                words.sort(key=lambda w: (w['top'], w['x0']))
+                for i, word in enumerate(words):
+                    text = word['text'].replace(" ", "").strip()
+                    is_match = False
+                    for kw in keywords:
+                        if kw.lower() in text.lower():
+                            is_match = True
+                            break
+                    if is_match:
+                        target_top = word['top'] - 5
+                        target_bottom = word['bottom'] + 5 
+                        target_left = word['x1']
+                        for next_word in words[i+1:]:
+                            if next_word['top'] > target_bottom:
+                                break
+                            if (next_word['top'] >= target_top and 
+                                next_word['bottom'] <= target_bottom and
+                                next_word['x0'] >= target_left):
+                                val_text = next_word['text'].strip()
+                                if "n/a" in val_text.lower():
+                                    return "N/A"
+                                m = re.search(r"([-+]?\d+(?:\.\d+)?)", val_text.replace(",", ""))
+                                if m:
+                                    num_val_str = m.group(1)
+                                    try:
+                                        if abs(float(num_val_str)) < 3000:
+                                            return num_val_str
+                                    except:
+                                        pass
+        return ""
+    except Exception:
+        return ""
+
+def extract_sharpe_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Sharpe"])
+
+def extract_alpha_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Alpha"])
+
+def extract_max_drawdown_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Drawdown"])
+
+def extract_recovering_period_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Recovering"])
+
+def extract_turnover_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Turnover", "หมุนเวียน"])
+
+def extract_fx_hedging_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    keywords = ["Hedging", "ป้องกันความเสี่ยง", "FX"]
+    return extract_value_by_visual_alignment(pdf_bytes, keywords)
+
 def scrape_top_holdings_from_portfolio_page(
     driver,
     fund_url: str,
@@ -806,8 +865,14 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
         "aimc_categories": "",
         "is_dividend": "",
         "inception_date": "",
-        "factsheet_pdf_url": "",
+        "fx_hedging": "",
+        "turnover_ratio": "",
+        "sharpe_ratio": "",
+        "alpha": "",
+        "max_drawdown": "",
+        "recovering_period": "",
         "beta": "",
+        "factsheet_pdf_url": "",
         "initial_purchase": "",
         "additional_purchase": "",
         "front_end_fee_max_percent": "",
@@ -935,6 +1000,12 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                 if data.get("full_name_th"):
                     hints.append(data["full_name_th"])
                 data["beta"] = extract_beta_from_pdf_bytes(pdf_bytes, fund_hints=hints)
+                data["turnover_ratio"] = extract_turnover_from_pdf_bytes(pdf_bytes)
+                data["fx_hedging"] = extract_fx_hedging_from_pdf_bytes(pdf_bytes)
+                data["sharpe_ratio"] = extract_sharpe_from_pdf_bytes(pdf_bytes)
+                data["alpha"] = extract_alpha_from_pdf_bytes(pdf_bytes)
+                data["max_drawdown"] = extract_max_drawdown_from_pdf_bytes(pdf_bytes)
+                data["recovering_period"] = extract_recovering_period_from_pdf_bytes(pdf_bytes)
 
         except Exception as e:
             data["error"] = f"pdf_parse_fail: {e}"
@@ -972,8 +1043,12 @@ FIELDS_ORDER = [
     "inception_date",
     "fx_hedging",
     "turnover_ratio",
-    "factsheet_pdf_url",
+    "sharpe_ratio",
+    "alpha",
+    "max_drawdown",
+    "recovering_period",
     "beta",
+    "factsheet_pdf_url",
     "initial_purchase",
     "additional_purchase",
     "front_end_fee_max_percent",
