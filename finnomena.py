@@ -138,8 +138,7 @@ def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PRO
 # ------------------ LIST PAGE: ดึง URL กองทุน ------------------
 
 def get_all_fund_profile_urls(driver, max_pages: int = MAX_LIST_PAGES) -> List[str]:
-    codes: Set[str] = set()
-
+    urls: Set[str] = set()
     for page in range(1, max_pages + 1):
         list_url = LIST_BASE_URL.format(page=page)
         log(f"Opening list page={page} -> {list_url}")
@@ -152,36 +151,41 @@ def get_all_fund_profile_urls(driver, max_pages: int = MAX_LIST_PAGES) -> List[s
                 )
             )
         except TimeoutException:
-            log(f"page {page}:")
+            log(f"page {page}: timeout or empty")
             continue
-
         links = driver.find_elements(By.XPATH, "//a[contains(@href, '/fund/')]")
         if not links:
             log(f"page {page}: No funds found, stopping")
             break
-
-        before = len(codes)
+        before = len(urls)
         for a in links:
-            href = a.get_attribute("href") or ""
-            m = re.search(r"/fund/([A-Z0-9\-]+)/?$", href)
-            if m:
-                codes.add(m.group(1))
-
-        added = len(codes) - before
-        log(f"page {page}: Found {added} new codes (total {len(codes)})")
-
-        if added <= 0:
+            full_url = a.get_attribute("href") or ""
+            if "/fund/" not in full_url:
+                continue
+            parts = full_url.split("/fund/")
+            if len(parts) < 2: 
+                continue
+            slug = parts[-1].strip()
+            if not slug or slug == "/":
+                continue
+            if slug.startswith("filter") or slug.startswith("search"):
+                continue
+            clean_url = full_url.rstrip("/")
+            urls.add(clean_url)
+        added = len(urls) - before
+        log(f"page {page}: Found {added} new urls (total {len(urls)})")
+        if added <= 0 and len(links) > 0:
             log("No more new items, stopping")
             break
-
-    urls = [f"https://www.finnomena.com/fund/{c}" for c in sorted(codes)]
-    log(f"Total profile links found: {len(urls)}")
-
+    final_urls = sorted(list(urls))
+    log(f"Total profile links found: {len(final_urls)}")
     if LIMIT_FUNDS:
-        urls = urls[:LIMIT_FUNDS]
-        log(f"Limiting sample to first {len(urls)} links")
+        final_urls = final_urls[:LIMIT_FUNDS]
+        log(f"Limiting sample to first {len(final_urls)} links")
+    if final_urls:
+        log(f"Sample: {final_urls[:3]}")
 
-    return urls
+    return final_urls
 # ------------------ DETAIL-BLOCK HELPER ------------------
 
 def get_detail_dict(driver) -> Dict[str, str]:
