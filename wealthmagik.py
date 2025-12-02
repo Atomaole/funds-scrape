@@ -1,6 +1,7 @@
 import csv
 import re
 import random, time
+from urllib.parse import quote
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Set
 import requests
@@ -37,7 +38,7 @@ PAGELOAD_TIMEOUT = 15
 LIST_MAX_SECONDS = 100
 LIST_IDLE_ROUNDS = 5
 OUTPUT_CSV = "wealthmagik_funds.csv"
-LIMIT_FUNDS: Optional[int] = None
+LIMIT_FUNDS: Optional[int] = 100
 OUTPUT_HOLDINGS_CSV = "wealthmagik_holdings.csv"
 MAX_PROFILE_RETRY = 3
 OUTPUT_CODES_CSV = "wealthmagik_codes.csv"
@@ -59,7 +60,6 @@ def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PRO
                     driver.delete_all_cookies()
                 except:
                     pass
-                
                 polite_sleep()
                 continue
             return row
@@ -76,16 +76,6 @@ def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PRO
         "_holdings": [],
         "_pdf_codes": [],
     }
-
-#def hard_reset_page(driver):
-    try:
-        driver.execute_script("window.stop();")
-    except Exception:
-        pass
-    try:
-        driver.get("about:blank")
-    except Exception:
-        pass
     
 def polite_sleep():
     t = random.uniform(1.3, 2.0) 
@@ -215,7 +205,6 @@ def scroll_container_once(driver, container):
     except Exception:
         pass
 
-
 def get_all_fund_profile_urls(driver) -> List[str]:
     driver.get(LIST_PAGE_URL)
     close_ad_if_present(driver)
@@ -225,6 +214,7 @@ def get_all_fund_profile_urls(driver) -> List[str]:
     if not container:
         container = driver.execute_script("return document.scrollingElement || document.documentElement || document.body;")
     focus_container(driver, container)
+    
     start = time.time()
     last = elements_count(driver, FUND_CODE_SELECTOR)
     same = 0
@@ -244,25 +234,36 @@ def get_all_fund_profile_urls(driver) -> List[str]:
 
     elems = driver.find_elements(By.CSS_SELECTOR, FUND_CODE_SELECTOR)
     codes: Set[str] = set()
-    pat = re.compile(r"[A-Z][A-Z0-9-]{2,}")
+    pat = re.compile(r"[A-Z0-9][A-Z0-9\-\s/]{2,}")
+
     for el in elems:
+        raw_id = el.get_attribute("id") or ""
+        prefix = "wmg.fundscreenerdetail.button.fundcode."
+        
+        if raw_id.startswith(prefix):
+            code = raw_id.replace(prefix, "").strip()
+            if code:
+                codes.add(code)
+                continue 
         t = (el.text or "").strip().replace("\n", " ")
         m = pat.search(t)
         if m:
-            codes.add(m.group(0))
+            codes.add(m.group(0).strip())
     links = driver.find_elements(By.XPATH, "//a[contains(@href, '/funds/')]")
     for a in links:
         href = a.get_attribute("href") or ""
-        m = re.search(r"/funds/([^/?#]+)", href)
+        m = re.search(r"/funds/([^/?#]+)", href) 
         if m:
-            codes.add(m.group(1))
+            from urllib.parse import unquote
+            codes.add(unquote(m.group(1)))
 
-    urls = [f"https://www.wealthmagik.com/funds/{c}/profile" for c in sorted(codes)]
+    urls = [f"https://www.wealthmagik.com/funds/{quote(c, safe='')}/profile" for c in sorted(codes)]
+    
     if LIMIT_FUNDS:
         urls = urls[:LIMIT_FUNDS]
-
     log(f"found {len(urls)} fund urls")
-    log("sample urls: " + ", ".join(urls[:5]))
+    if urls:
+        log("sample urls: " + ", ".join(urls[:5]))
     return urls
 
 def wait_visible(driver, by, value, timeout=15):
