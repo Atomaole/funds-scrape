@@ -36,7 +36,7 @@ FUND_CODE_SELECTOR = ".fundCode"
 HEADLESS = False
 PAGELOAD_TIMEOUT = 15
 LIST_MAX_SECONDS = 100
-LIST_IDLE_ROUNDS = 5
+LIST_IDLE_ROUNDS = 8
 OUTPUT_CSV = "wealthmagik_funds.csv"
 LIMIT_FUNDS: Optional[int] = None
 OUTPUT_HOLDINGS_CSV = "wealthmagik_holdings.csv"
@@ -44,6 +44,20 @@ MAX_PROFILE_RETRY = 3
 OUTPUT_CODES_CSV = "wealthmagik_codes.csv"
 OUTPUT_FAILED_CSV = "wealthmagik_failed_funds.csv"
 
+THAI_MONTH_MAP = {
+    "ม.ค.": 1, "ม.ค": 1, "มกราคม": 1,
+    "ก.พ.": 2, "ก.พ": 2, "กุมภาพันธ์": 2,
+    "มี.ค.": 3, "มี.ค": 3, "มีนาคม": 3,
+    "เม.ย.": 4, "เม.ย": 4, "เมษายน": 4,
+    "พ.ค.": 5, "พ.ค": 5, "พฤษภาคม": 5,
+    "มิ.ย.": 6, "มิ.ย": 6, "มิถุนายน": 6,
+    "ก.ค.": 7, "ก.ค": 7, "กรกฎาคม": 7,
+    "ส.ค.": 8, "ส.ค": 8, "สิงหาคม": 8,
+    "ก.ย.": 9, "ก.ย": 9, "กันยายน": 9,
+    "ต.ค.": 10, "ต.ค": 10, "ตุลาคม": 10,
+    "พ.ย.": 11, "พ.ย": 11, "พฤศจิกายน": 11,
+    "ธ.ค.": 12, "ธ.ค": 12, "ธันวาคม": 12,
+}
 def scrape_fund_profile_with_retry(driver, url: str, max_attempts: int = MAX_PROFILE_RETRY) -> Dict[str, Any]:
     last_err = ""
     for attempt in range(1, max_attempts + 1):
@@ -324,7 +338,7 @@ def extract_all_isins_from_pdf_bytes(pdf_bytes: bytes) -> List[str]:
 
     except Exception:
         return []
-    
+
 def extract_all_bloomberg_codes_from_pdf_bytes(pdf_bytes: bytes) -> List[str]:
     if not pdf_bytes:
         return []
@@ -471,7 +485,190 @@ def extract_beta_from_pdf_bytes(
 
     except Exception:
         return ""
+
+def _clean_thai_text(text: str) -> str:
+    if not text: return ""
+    text = re.sub(r"[\u0e30-\u0e4c]", "", text)
+    text = re.sub(r"[\s\.]", "", text)
+    text = re.sub(r"[^ก-ฮA-Za-z0-9]", "", text)
+    return text
+
+def _get_fuzzy_month_map() -> Dict[str, int]:
+    standard_months = {
+        "ม.ค.": 1, "มกราคม": 1, "JAN": 1, "JANUARY": 1,
+        "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2, "FEBRUARY": 2,
+        "มี.ค.": 3, "มีนาคม": 3, "MAR": 3, "MARCH": 3,
+        "เม.ย.": 4, "เมษายน": 4, "APR": 4, "APRIL": 4,
+        "พ.ค.": 5, "พฤษภาคม": 5, "MAY": 5,
+        "มิ.ย.": 6, "มิถุนายน": 6, "JUN": 6, "JUNE": 6,
+        "ก.ค.": 7, "กรกฎาคม": 7, "JUL": 7, "JULY": 7,
+        "ส.ค.": 8, "สิงหาคม": 8, "AUG": 8, "AUGUST": 8,
+        "ก.ย.": 9, "กันยายน": 9, "SEP": 9, "SEPTEMBER": 9,
+        "ต.ค.": 10, "ตุลาคม": 10, "OCT": 10, "OCTOBER": 10,
+        "พ.ย.": 11, "พฤศจิกายน": 11, "NOV": 11, "NOVEMBER": 11,
+        "ธ.ค.": 12, "ธันวาคม": 12, "DEC": 12, "DECEMBER": 12,
+    }
     
+    fuzzy_map = {}
+    for name, num in standard_months.items():
+        clean_key = _clean_thai_text(name)
+        if clean_key:
+            fuzzy_map[clean_key] = num
+            fuzzy_map[clean_key.lower()] = num
+            
+    return fuzzy_map
+
+def extract_factsheet_date_from_pdf_bytes(pdf_bytes: bytes) -> str:
+
+    if not pdf_bytes:
+        return ""
+
+    fuzzy_months = _get_fuzzy_month_map()
+
+    try:
+        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+            page = pdf.pages[0]
+            crop_height = page.height * 0.35
+            header = page.crop((0, 0, page.width, crop_height))
+            words = header.extract_words(x_tolerance=3, y_tolerance=3, keep_blank_chars=False)
+            lines = {}
+            for w in words:
+                y_pos = int(round(w['top'] / 5) * 5)
+                if y_pos not in lines: lines[y_pos] = []
+                lines[y_pos].append(w)
+            
+            sorted_y = sorted(lines.keys())
+            
+            for y in sorted_y:
+                line_words = sorted(lines[y], key=lambda w: w['x0'])
+                line_text = " ".join([w['text'] for w in line_words])
+                line_text = re.sub(r"\s+", " ", line_text).strip()
+                if any(bad in line_text for bad in ["จดทะเบียน", "จัดตั้ง", "Inception", "Approve", "อนุมัติ"]):
+                    continue
+                matches = re.finditer(r"(\d{1,2})\s+(.*?)\s+(\d{4})", line_text)
+                
+                for m in matches:
+                    d_raw, m_raw, y_raw = m.groups()
+                    if len(m_raw) > 30: continue
+                    m_clean = _clean_thai_text(m_raw)
+                    if not m_clean: continue
+                    month_val = 0
+                    if m_clean in fuzzy_months:
+                        month_val = fuzzy_months[m_clean]
+                    else:
+                        for k_map, v_map in fuzzy_months.items():
+                            if len(k_map) > 2 and k_map in m_clean:
+                                month_val = v_map
+                                break
+                    
+                    if month_val != 0:
+                        try:
+                            y_val = int(y_raw)
+                            if y_val > 2400: y_val -= 543  
+                            elif y_val < 100: y_val += 2500 - 543 
+                            if 1990 <= y_val <= 2100:
+                                return datetime(y_val, month_val, int(d_raw)).strftime("%Y-%m-%d")
+                        except:
+                            pass
+
+    except Exception as e:
+        pass
+    return ""
+    
+def extract_value_by_visual_alignment(pdf_bytes: bytes, keywords: List[str]) -> str:
+    if not pdf_bytes:
+        return ""
+    try:
+        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                words = page.extract_words(x_tolerance=2, y_tolerance=2)
+                words.sort(key=lambda w: (w['top'], w['x0']))
+                for i, word in enumerate(words):
+                    text = word['text'].replace(" ", "").strip()
+                    is_match = False
+                    for kw in keywords:
+                        if kw.lower() in text.lower():
+                            is_match = True
+                            break
+                    if is_match:
+                        target_top = word['top'] - 5
+                        target_bottom = word['bottom'] + 5 
+                        target_left = word['x1']
+                        for next_word in words[i+1:]:
+                            if next_word['top'] > target_bottom:
+                                break
+                            if (next_word['top'] >= target_top and 
+                                next_word['bottom'] <= target_bottom and
+                                next_word['x0'] >= target_left):
+                                val_text = next_word['text'].strip()
+                                if "n/a" in val_text.lower():
+                                    return "N/A"
+                                m = re.search(r"([-+]?\d+(?:\.\d+)?)", val_text.replace(",", ""))
+                                if m:
+                                    num_val_str = m.group(1)
+                                    try:
+                                        if abs(float(num_val_str)) < 3000:
+                                            return num_val_str
+                                    except:
+                                        pass
+        return ""
+    except Exception:
+        return ""
+
+def extract_sharpe_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Sharpe"])
+
+def extract_alpha_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Alpha"])
+
+def extract_max_drawdown_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Drawdown"])
+
+def extract_turnover_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    return extract_value_by_visual_alignment(pdf_bytes, ["Turnover", "หมุนเวียน"])
+
+def extract_fx_hedging_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    keywords = ["Hedging", "ป้องกันความเสี่ยง", "FX"]
+    return extract_value_by_visual_alignment(pdf_bytes, keywords)
+
+def extract_recovering_period_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    target_keywords = ["Recovering", "ระยะเวลาฟื้นตัว"] 
+    if not pdf_bytes:
+        return ""    
+    try:
+        with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                words = page.extract_words(x_tolerance=3, y_tolerance=3)
+                words.sort(key=lambda w: (w['top'], w['x0']))
+                for i, word in enumerate(words):
+                    text = word['text'].replace(" ", "").strip()
+                    is_match = False
+                    for kw in target_keywords:
+                        if kw.lower() in text.lower():
+                            is_match = True
+                            break
+                    if is_match:
+                        target_top = word['top'] - 15
+                        target_bottom = word['bottom'] + 15 
+                        target_left = word['x1']
+                        found_texts = []
+                        for next_word in words[i+1:]:
+                            if next_word['top'] > target_bottom:
+                                break
+                            if (next_word['top'] >= target_top and 
+                                next_word['bottom'] <= target_bottom and
+                                next_word['x0'] >= target_left):
+                                found_texts.append(next_word['text'].strip())
+                        if found_texts:
+                            full_string = " ".join(found_texts)
+                            converted = _convert_period_to_days(full_string)
+                            if converted:
+                                return converted
+                                
+        return ""
+    except Exception:
+        return ""
+
 def parse_date_yyyymmdd(s: str) -> str:
     s = s.strip()
     if not s:
@@ -481,6 +678,69 @@ def parse_date_yyyymmdd(s: str) -> str:
         return d.strftime("%d-%m-%Y")
     except Exception:
         return s
+def parse_thai_date(s: str) -> str:
+    if not s:
+        return ""
+    s = _clean_txt(s)
+    s = re.sub(r"(ข้อมูล\s*ณ\s*วันที่|ณ\s*วันที่|ข้อมูล ณ วันที่|วันที่)", "", s).strip()
+    m = re.search(r"(\d{1,2})\s+([^\d\s]+)\s*(\d{2,4})", s)
+    if m:
+        day_str, month_str, year_str = m.groups()
+        month = THAI_MONTH_MAP.get(month_str.strip())
+        if month:
+            try:
+                day = int(day_str)
+                year = int(year_str)
+                if year > 2400: year -= 543
+                return datetime(year, month, day).strftime("%Y-%m-%d")
+            except: pass
+    m2 = re.search(r"(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})", s)
+    if m2:
+        try:
+            day, month, year = map(int, m2.groups())
+            if year > 2400: year -= 543
+            return datetime(year, month, day).strftime("%Y-%m-%d")
+        except: pass
+        
+    return ""
+
+def _convert_period_to_days(text: str) -> str:
+    if not text:
+        return ""
+    raw = text.lower().replace(",", "")
+    raw_nospace = raw.replace(" ", "")
+
+    if "n/a" in raw_nospace or raw_nospace == "-":
+        return "N/A"
+    m = re.search(r"(\d+(?:\.\d+)?)", raw_nospace)
+    if not m:
+        return ""
+
+    try:
+        val = float(m.group(1))
+    except ValueError:
+        return ""
+
+    days = val
+    year_keywords = [
+        "year", "yr", "ปี", "ป", "y.", "years"
+    ]
+    month_keywords = [
+        "month", "mo", "m.", 
+        "เดือน", "เดอน", "เดอืน", "เดือน", "ดือน", 
+        "เ ดื อ น", "เ ดื อ น"
+    ]
+    week_keywords = [
+        "week", "wk", "w.", "สัปดาห์", "สัปดาห"
+    ]
+    if any(kw in raw_nospace for kw in year_keywords):
+        days = val * 365
+    elif any(kw in raw_nospace for kw in month_keywords):
+        days = val * 30
+    elif any(kw in raw_nospace for kw in week_keywords):
+        days = val * 7
+    return str(int(round(days)))
+
 def parse_percent_str(s: str) -> str:
     if not s:
         return ""
@@ -629,7 +889,42 @@ def scrape_fee_page(driver, profile_url: str) -> Dict[str, str]:
 def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     data: Dict[str, Any] = {
         "fund_url": url,
-        "scraped_at": datetime.now().isoformat(timespec="seconds")
+        "scraped_at": datetime.now().isoformat(timespec="seconds"),
+        "nav_value": "",
+        "nav_date": "",
+        "full_name_th": "",
+        "fund_code": "",
+        "aum_value": "",
+        "risk_level": "",
+        "aimc_categories": "",
+        "is_dividend": "",
+        "inception_date": "",
+        "fx_hedging_web": "",
+        "turnover_ratio_web": "",
+        "factsheet_pdf_url": "",
+        "factsheet_date": "",
+        "fx_hedging": "",
+        "turnover_ratio": "",
+        "sharpe_ratio": "",
+        "alpha": "",
+        "max_drawdown": "",
+        "recovering_period": "",
+        "beta": "",
+        "initial_purchase": "",
+        "additional_purchase": "",
+        "front_end_fee_max_percent": "",
+        "front_end_fee_actual_percent": "",
+        "back_end_fee_max_percent": "",
+        "back_end_fee_actual_percent": "",
+        "switching_in_fee_max_percent": "",
+        "switching_in_fee_actual_percent": "",
+        "switching_out_fee_max_percent": "",
+        "switching_out_fee_actual_percent": "",
+        "management_fee_max_percent": "",
+        "management_fee_actual_percent": "",
+        "total_expense_ratio_max_percent": "",
+        "total_expense_ratio_actual_percent": "",
+        "error": "",
     }
     try:
         try:
@@ -679,10 +974,10 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
     raw_turnover_ratio = find_text_by_xpath(driver, "//div[contains(@class, 'groupDetail') and .//div[contains(@class, 'label') and normalize-space(text()) = 'Turnover Ratio']]//div[contains(@class, 'value')]/span")
     if "N/A" in raw_fx_hedging.upper():
         raw_fx_hedging = ""
-    data["fx_hedging"] = raw_fx_hedging
+    data["fx_hedging_web"] = raw_fx_hedging
     if "N/A" in raw_turnover_ratio.upper():
         raw_turnover_ratio = ""
-    data["turnover_ratio"] = raw_turnover_ratio
+    data["turnover_ratio_web"] = raw_turnover_ratio
     try:
         pdf_url = get_id_value_by_prefix(driver, "wmg.funddetailinfo.button.factSheetPath.")
     except Exception:
@@ -726,6 +1021,14 @@ def scrape_fund_profile(driver, url: str) -> Dict[str, Any]:
                 if data.get("full_name_th"):
                     hints.append(data["full_name_th"])
                 data["beta"] = extract_beta_from_pdf_bytes(pdf_bytes, fund_hints=hints)
+                data["sharpe_ratio"] = extract_sharpe_from_pdf_bytes(pdf_bytes)
+                data["alpha"] = extract_alpha_from_pdf_bytes(pdf_bytes)
+                data["max_drawdown"] = extract_max_drawdown_from_pdf_bytes(pdf_bytes)
+                data["recovering_period"] = extract_recovering_period_from_pdf_bytes(pdf_bytes)
+                data["factsheet_date"] = extract_factsheet_date_from_pdf_bytes(pdf_bytes)
+                data["turnover_ratio"] = extract_turnover_from_pdf_bytes(pdf_bytes)
+                data["fx_hedging"] = extract_fx_hedging_from_pdf_bytes(pdf_bytes)
+                
         except Exception as e:
             data["beta"] = ""
             data["_pdf_codes"] = []
@@ -761,9 +1064,16 @@ FIELDS_ORDER = [
     "aimc_categories",
     "is_dividend",
     "inception_date",
+    "fx_hedging_web",
+    "turnover_ratio_web",
+    "factsheet_pdf_url",
+    "factsheet_date",
     "fx_hedging",
     "turnover_ratio",
-    "factsheet_pdf_url",
+    "sharpe_ratio",
+    "alpha",
+    "max_drawdown",
+    "recovering_period",
     "beta",
     "initial_purchase",
     "additional_purchase",
