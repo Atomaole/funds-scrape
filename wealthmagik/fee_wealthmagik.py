@@ -127,7 +127,7 @@ def main():
             return
 
         total_funds = len(funds_to_scrape)
-        log(f"starting ({total_funds}")
+        log(f"starting ({total_funds})")
 
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
@@ -135,7 +135,7 @@ def main():
             
             if not code or not url: continue
             
-            log(f"[{i}/{total_funds}] 💰 {code} ...")
+            log(f"[{i}/{total_funds}]{code}")
             
             fee_data = scrape_fees(driver, code, url)
             all_fees.append(fee_data)
