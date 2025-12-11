@@ -45,6 +45,8 @@ def make_driver():
     if HEADLESS:
         options.add_argument("-headless")
     options.set_preference("dom.webnotifications.enabled", False)
+    options.add_argument("--width=1920")
+    options.add_argument("--height=1080")
     return webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
 
 def clean_text(text):
