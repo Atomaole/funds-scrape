@@ -33,6 +33,8 @@ def make_driver():
     if HEADLESS:
         options.add_argument("-headless")
     options.set_preference("dom.webnotifications.enabled", False)
+    options.add_argument("--width=1920")
+    options.add_argument("--height=1080")
     return webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
 
 def clean_text(text):
@@ -130,7 +132,6 @@ def scrape_info_and_pdf(driver, fund_code, url):
         "aum": "",
         "bid_price_per_unit": "",
         "offer_price_per_unit": "",
-        "factsheet_url": "",
         "source_url": url
     }
     found_codes = []
@@ -169,13 +170,12 @@ def scrape_info_and_pdf(driver, fund_code, url):
             raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
             pdf_url = unquote(raw_pdf_url).strip()
             if pdf_url and pdf_url.startswith("http"):
-                info_data["factsheet_url"] = pdf_url
                 pdf_bytes = fetch_pdf_bytes(pdf_url)
                 if pdf_bytes:
                     extracted = extract_codes_from_pdf(pdf_bytes)
                     for item in extracted:
                         item['fund_code'] = fund_code
-                        item['source_url'] = pdf_url
+                        item["factsheet_url"] = pdf_url
                         found_codes.append(item)
         except Exception as e:
             pass
@@ -223,7 +223,7 @@ def main():
                 "fund_code", "full_name_th", "nav_value", "nav_date", 
                 "bid_price_per_unit", "offer_price_per_unit",
                 "amc", "category", "risk_level", "aum",
-                "is_dividend", "inception_date", "factsheet_url", "source_url"
+                "is_dividend", "inception_date", "source_url"
             ]
             with open(OUTPUT_INFO_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers_info)
@@ -231,7 +231,7 @@ def main():
                 writer.writerows(all_info)
         if all_codes:
             log(f"saving {OUTPUT_CODES_FILENAME}")
-            headers_codes = ["fund_code", "type", "code", "source_url"]
+            headers_codes = ["fund_code", "type", "code","factsheet_url"]
             with open(OUTPUT_CODES_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers_codes)
                 writer.writeheader()

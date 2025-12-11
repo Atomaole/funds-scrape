@@ -48,6 +48,8 @@ def make_driver():
     if HEADLESS:
         options.add_argument("-headless")
     options.set_preference("dom.webnotifications.enabled", False)
+    options.add_argument("--width=1920")
+    options.add_argument("--height=1080")
     return webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
 
 def clean_text(text):
@@ -157,7 +159,7 @@ def scrape_info(driver, fund_code, url):
         "aum": "",
         "min_initial_buy": "",
         "min_next_buy": "",
-        "source_url": url
+        "source_url": url,
     }
     found_codes = []
     try:
@@ -189,14 +191,13 @@ def scrape_info(driver, fund_code, url):
         try:
             pdf_link_el = driver.find_element(By.XPATH, "//a[contains(text(), 'หนังสือชี้ชวน') or contains(@href, '.pdf')]")
             pdf_url = pdf_link_el.get_attribute("href")
-            data["factsheet_url"] = pdf_url
             
             if pdf_url:
                 pdf_bytes = fetch_pdf_bytes(pdf_url)
                 extracted = extract_codes_from_pdf(pdf_bytes)
                 for item in extracted:
                     item['fund_code'] = fund_code
-                    item['source_url'] = pdf_url
+                    item['factsheet_url'] = pdf_url
                     found_codes.append(item)
         except Exception:
             pass
@@ -259,7 +260,7 @@ def main():
                 "full_name_th", "amc", "category", 
                 "risk_level", "aum",
                 "is_dividend", "inception_date", 
-                "min_initial_buy", "min_next_buy", "source_url"
+                "min_initial_buy", "min_next_buy","source_url"
             ]
             with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers)
@@ -268,7 +269,7 @@ def main():
         if all_codes:
             log(f"codes to {OUTPUT_CODES_FILENAME}")
             with open(OUTPUT_CODES_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=["fund_code", "type", "code", "source_url"])
+                writer = csv.DictWriter(f, fieldnames=["fund_code", "type", "code","factsheet_url"])
                 writer.writeheader()
                 writer.writerows(all_codes)
             log("done")
