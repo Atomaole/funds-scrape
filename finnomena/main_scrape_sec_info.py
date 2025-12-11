@@ -51,6 +51,28 @@ def clean_text(text):
     if not text: return ""
     return re.sub(r'\s+', ' ', text).strip()
 
+def parse_recovering_period(text):
+    if not text or text == "-" or text == "N/A":
+        return text
+    text_clean = text.replace(" ", "")
+    total_days = 0
+    found_match = False
+    match_year = re.search(r'(\d+)ปี', text_clean)
+    if match_year:
+        total_days += int(match_year.group(1)) * 365
+        found_match = True
+    match_month = re.search(r'(\d+)เดือน', text_clean)
+    if match_month:
+        total_days += int(match_month.group(1)) * 30
+        found_match = True
+    match_day = re.search(r'(\d+)วัน', text_clean)
+    if match_day:
+        total_days += int(match_day.group(1))
+        found_match = True
+    if found_match:
+        return str(total_days)
+    return text
+
 def scrape_sec_info(driver, fund_code):
     safe_code = quote(fund_code)
     url = f"https://fundcheck.sec.or.th/fund-detail;funds={safe_code}"
@@ -122,9 +144,13 @@ def scrape_sec_info(driver, fund_code):
                 xpath = f"//div[@id='{html_id}']/following-sibling::div"
                 val_el = driver.find_element(By.XPATH, xpath)
                 raw_val = driver.execute_script("return arguments[0].textContent;", val_el)
-                data[field] = clean_text(raw_val)
+                cleaned_val = clean_text(raw_val)
+                if field == "recovering_period":
+                    data[field] = parse_recovering_period(cleaned_val)
+                else:
+                    data[field] = cleaned_val
             except:
-                data[field] = "" 
+                data[field] = ""
         try:
             fx_xpath = "//div[contains(text(), 'FX Hedging')]/following-sibling::div//div[contains(@class, 'progress-bar')]"
             fx_el = driver.find_element(By.XPATH, fx_xpath)
