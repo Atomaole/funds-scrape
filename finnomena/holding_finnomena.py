@@ -16,6 +16,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILENAME = os.path.join(script_dir, "finnomena_fund_list.csv") 
 OUTPUT_FILENAME = os.path.join(script_dir, "finnomena_holdings.csv")
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 def polite_sleep():
     t = random.uniform(0.5, 1) 
@@ -74,49 +76,58 @@ def clean_text(text):
 
 def scrape_holdings(driver, fund_code, base_url):
     port_url = base_url.rstrip("/") + "/portfolio"
-    
-    holdings_data = []
-    
-    try:
-        driver.get(port_url)
+
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            section = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.ID, "section-top-5-holding"))
-            )
-        except:
-            return []
-        as_of_date = ""
-        try:
-            date_el = section.find_element(By.CSS_SELECTOR, ".data-date")
-            raw_date = clean_text(date_el.text)
-            as_of_date = parse_thai_date(raw_date)
-        except:
-            pass
-        items = section.find_elements(By.CSS_SELECTOR, ".top-holding-item")
-        
-        for item in items:
+            driver.get(port_url)
             try:
-                name_el = item.find_element(By.CSS_SELECTOR, ".title")
-                name = clean_text(name_el.text)
-                
-                percent_el = item.find_element(By.CSS_SELECTOR, ".percent")
-                percent = clean_text(percent_el.text).replace("%", "")
-                
-                if name and percent:
-                    holdings_data.append({
-                        "fund_code": fund_code,
-                        "holding_name": name,
-                        "percent": percent,
-                        "as_of_date": as_of_date,
-                        "source_url": port_url
-                    })
+                section = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "section-top-5-holding"))
+                )
+            except Exception:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Element not found (Timeout)")
+                else:
+                    return []
+            holdings_data = []
+            as_of_date = ""
+            try:
+                date_el = section.find_element(By.CSS_SELECTOR, ".data-date")
+                raw_date = clean_text(date_el.text)
+                as_of_date = parse_thai_date(raw_date)
             except:
-                continue
-                
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
+                pass
+            
+            items = section.find_elements(By.CSS_SELECTOR, ".top-holding-item")
+            
+            for item in items:
+                try:
+                    name_el = item.find_element(By.CSS_SELECTOR, ".title")
+                    name = clean_text(name_el.text)
+                    
+                    percent_el = item.find_element(By.CSS_SELECTOR, ".percent")
+                    percent = clean_text(percent_el.text).replace("%", "")
+                    
+                    if name and percent:
+                        holdings_data.append({
+                            "fund_code": fund_code,
+                            "holding_name": name,
+                            "percent": percent,
+                            "as_of_date": as_of_date,
+                            "source_url": port_url
+                        })
+                except:
+                    continue
+            return holdings_data
+
+        except Exception as e:
+            log(f"⚠️ Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code} after {MAX_RETRIES} attempts.")
     
-    return holdings_data
+    return []
 
 def main():
     driver = make_driver()
@@ -138,7 +149,7 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}] 🔍 {code} ...")
+            log(f"[{i}/{total_funds}] 🔍 {code}")
             data = scrape_holdings(driver, code, url)
             if data:
                 all_holdings.extend(data)
@@ -151,7 +162,7 @@ def main():
         log(f"Error: {e}")
     finally:
         if all_holdings:
-            log(f"save {len(all_holdings)} rows to {OUTPUT_FILENAME}...")
+            log(f"save {len(all_holdings)} rows to {OUTPUT_FILENAME}")
         
             keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
         

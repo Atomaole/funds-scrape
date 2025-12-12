@@ -15,6 +15,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fund_list.csv")
 OUTPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fees.csv")
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
@@ -22,7 +24,6 @@ def log(msg):
 def polite_sleep():
     t = random.uniform(0.5, 1) 
     time.sleep(t)
-
 def make_driver():
     options = webdriver.FirefoxOptions()
     if HEADLESS:
@@ -52,7 +53,7 @@ def get_text_by_id(driver, element_id):
 
 def close_ad_if_present(driver):
     try:
-        WebDriverWait(driver, 3).until(
+        WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.ID, "popupAdsClose"))
         ).click()
         time.sleep(0.5)
@@ -61,8 +62,7 @@ def close_ad_if_present(driver):
 def scrape_fees(driver, fund_code, profile_url):
     base_url = re.sub(r"/(profile|port|risk)/?$", "", profile_url)
     fee_url = base_url + "/fee"
-    
-    data = {
+    empty_data = {
         "fund_code": fund_code,
         "source_url": fee_url,
         "initial_purchase": "",
@@ -72,49 +72,55 @@ def scrape_fees(driver, fund_code, profile_url):
         "switching_in_max": "", "switching_in_actual": "",
         "switching_out_max": "", "switching_out_actual": "",
         "management_max": "", "management_actual": "",
-        "ter_max": "", "ter_actual": "" # Total Expense Ratio
+        "ter_max": "", "ter_actual": "" 
     }
-    
-    try:
-        driver.get(fee_url)
-        close_ad_if_present(driver)
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "wmg.funddetailfee.text.frontEndFee-ffs"))
-            )
-        except:
+            driver.get(fee_url)
+            close_ad_if_present(driver)
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "wmg.funddetailfee.text.frontEndFee-ffs"))
+                )
+            except:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Fee elements not found (Timeout)")
+                else:
+                    return empty_data
+            data = empty_data.copy()
+            data["initial_purchase"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.initialPurchase-ffs"))
+            data["additional_purchase"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.additionalPurchase-ffs"))
+
+            data["front_end_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.frontEndFee-ffs"))
+            data["front_end_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.frontEndFee-actual"))
+
+            data["back_end_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.backEndFee-ffs"))
+            data["back_end_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.backEndFee-actual"))
+
+            data["switching_in_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingInFee-ffs"))
+            data["switching_in_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingInFee-actual"))
+
+            data["switching_out_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingOutFee-ffs"))
+            data["switching_out_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingOutFee-actual"))
+
+            data["management_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.managementFee-ffs"))
+            data["management_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.managementFee-actual"))
+
+            data["ter_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.totalExpenseRatio-ffs"))
+            data["ter_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.totalExpenseRatioActual-ffs"))
+
             return data
-        
-        data["initial_purchase"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.initialPurchase-ffs"))
-        data["additional_purchase"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.additionalPurchase-ffs"))
-
-        data["front_end_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.frontEndFee-ffs"))
-        data["front_end_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.frontEndFee-actual"))
-
-        data["back_end_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.backEndFee-ffs"))
-        data["back_end_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.backEndFee-actual"))
-
-        data["switching_in_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingInFee-ffs"))
-        data["switching_in_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingInFee-actual"))
-
-        data["switching_out_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingOutFee-ffs"))
-        data["switching_out_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.switchingOutFee-actual"))
-
-        data["management_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.managementFee-ffs"))
-        data["management_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.managementFee-actual"))
-
-        data["ter_max"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.totalExpenseRatio-ffs"))
-        data["ter_actual"] = parse_percent(get_text_by_id(driver, "wmg.funddetailfee.text.totalExpenseRatioActual-ffs"))
-
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
-    
-    return data
+        except Exception as e:
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code}")
+    return empty_data
 
 def main():
     driver = make_driver()
     all_fees = []
-    
     try:
         funds_to_scrape = []
         try:
@@ -125,21 +131,15 @@ def main():
         except FileNotFoundError:
             log(f"can't find {INPUT_FILENAME}")
             return
-
         total_funds = len(funds_to_scrape)
         log(f"starting ({total_funds})")
-
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
-            
             if not code or not url: continue
-            
             log(f"[{i}/{total_funds}]{code}")
-            
             fee_data = scrape_fees(driver, code, url)
             all_fees.append(fee_data)
-
             polite_sleep()
 
     except KeyboardInterrupt:
@@ -164,7 +164,6 @@ def main():
                 writer = csv.DictWriter(f, fieldnames=headers)
                 writer.writeheader()
                 writer.writerows(all_fees)
-            
             log("done")
         else:
             log("Error")

@@ -14,8 +14,9 @@ from webdriver_manager.firefox import GeckoDriverManager
 script_dir = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILENAME = os.path.join(script_dir, "finnomena_fund_list.csv")
 OUTPUT_FILENAME = os.path.join(script_dir, "finnomena_fees.csv")
-
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 def polite_sleep():
     t = random.uniform(0.5, 1) 
@@ -69,38 +70,45 @@ def extract_fee_pair(driver, keywords):
 
 def scrape_fees(driver, fund_code, base_url):
     fee_url = base_url.rstrip("/") + "/fee"
-    
-    data = {
+    empty_data = {
         "fund_code": fund_code,
         "source_url": fee_url,
         "front_end_max": "", "front_end_actual": "",
         "back_end_max": "", "back_end_actual": "",
         "management_max": "", "management_actual": "",
-        "ter_max": "", "ter_actual": "", # Total Expense Ratio
+        "ter_max": "", "ter_actual": "", 
         "switching_in_max": "", "switching_in_actual": "",
         "switching_out_max": "", "switching_out_actual": ""
     }
-    
-    try:
-        driver.get(fee_url)
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".fee-text"))
-            )
-        except:
+            driver.get(fee_url)
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".fee-text"))
+                )
+            except:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Fees not loaded (Timeout)")
+                else:
+                    return empty_data
+            data = empty_data.copy()
+            data["front_end_max"], data["front_end_actual"] = extract_fee_pair(driver, ["Front-end Fee", "ค่าธรรมเนียมการขาย"])
+            data["back_end_max"], data["back_end_actual"] = extract_fee_pair(driver, ["Back-end Fee", "ค่าธรรมเนียมการรับซื้อคืน"])
+            data["management_max"], data["management_actual"] = extract_fee_pair(driver, ["Management Fee", "ค่าธรรมเนียมการจัดการ"])
+            data["ter_max"], data["ter_actual"] = extract_fee_pair(driver, ["Total Expense Ratio", "ค่าธรรมเนียมและค่าใช้จ่ายรวม"])
+            data["switching_in_max"], data["switching_in_actual"] = extract_fee_pair(driver, ["Switching-in Fee", "สับเปลี่ยนหน่วยลงทุนเข้า"])
+            data["switching_out_max"], data["switching_out_actual"] = extract_fee_pair(driver, ["Switching-out Fee", "สับเปลี่ยนหน่วยลงทุนออก"])
             return data
-        
-        data["front_end_max"], data["front_end_actual"] = extract_fee_pair(driver, ["Front-end Fee", "ค่าธรรมเนียมการขาย"])
-        data["back_end_max"], data["back_end_actual"] = extract_fee_pair(driver, ["Back-end Fee", "ค่าธรรมเนียมการรับซื้อคืน"])
-        data["management_max"], data["management_actual"] = extract_fee_pair(driver, ["Management Fee", "ค่าธรรมเนียมการจัดการ"])
-        data["ter_max"], data["ter_actual"] = extract_fee_pair(driver, ["Total Expense Ratio", "ค่าธรรมเนียมและค่าใช้จ่ายรวม"])
-        data["switching_in_max"], data["switching_in_actual"] = extract_fee_pair(driver, ["Switching-in Fee", "สับเปลี่ยนหน่วยลงทุนเข้า"])
-        data["switching_out_max"], data["switching_out_actual"] = extract_fee_pair(driver, ["Switching-out Fee", "สับเปลี่ยนหน่วยลงทุนออก"])
 
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
-    
-    return data
+        except Exception as e:
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code}")
+
+    return empty_data
 
 def main():
     driver = make_driver()
@@ -123,7 +131,7 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} ...")
+            log(f"[{i}/{total_funds}]{code}")
             fee_data = scrape_fees(driver, code, url)
             all_fees.append(fee_data)
             polite_sleep()
@@ -139,7 +147,7 @@ def main():
                 "front_end_max", "front_end_actual",
                 "back_end_max", "back_end_actual",
                 "management_max", "management_actual",
-                "ter_max", "ter_actual", # Total Expense Ratio
+                "ter_max", "ter_actual", 
                 "switching_in_max", "switching_in_actual",
                 "switching_out_max", "switching_out_actual"
             ]

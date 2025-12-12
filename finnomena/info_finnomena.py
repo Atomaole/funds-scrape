@@ -19,8 +19,10 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILENAME = os.path.join(script_dir, "finnomena_fund_list.csv")
 OUTPUT_FILENAME = os.path.join(script_dir, "finnomena_info.csv")
 OUTPUT_CODES_FILENAME = os.path.join(script_dir, "finnomena_codes.csv")
-
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
+
 THAI_MONTH_MAP = {
     "ม.ค.": 1, "มกราคม": 1, "JAN": 1,
     "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
@@ -162,58 +164,64 @@ def scrape_info(driver, fund_code, url):
         "source_url": url,
     }
     found_codes = []
-    try:
-        driver.get(url)
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "h1")))
-        except:
+            driver.get(url)
+            try:
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "h1")))
+            except:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Page not loaded (H1 missing)")
+                else:
+                    return data, found_codes
+            try:
+                p_elem = driver.find_element(By.XPATH, "//header[@id='fund-header']//p[1]")
+                data["full_name_th"] = clean_text(p_elem.text)
+            except:
+                pass
+            
+            try:
+                nav_box = WebDriverWait(driver, 5).until(
+                    EC.visibility_of_element_located((By.CSS_SELECTOR, ".fund-nav-percent"))
+                )
+                h3_elem = nav_box.find_element(By.TAG_NAME, "h3")
+                data["nav_value"] = extract_number_only(h3_elem.text)
+                p_elem = nav_box.find_element(By.TAG_NAME, "p")
+                data["nav_date"] = parse_thai_date(clean_text(p_elem.text))
+            except Exception:
+                pass
+            
+            try:
+                pdf_link_el = driver.find_element(By.XPATH, "//a[contains(text(), 'หนังสือชี้ชวน') or contains(@href, '.pdf')]")
+                pdf_url = pdf_link_el.get_attribute("href")
+                
+                if pdf_url:
+                    pdf_bytes = fetch_pdf_bytes(pdf_url)
+                    extracted = extract_codes_from_pdf(pdf_bytes)
+                    for item in extracted:
+                        item['fund_code'] = fund_code
+                        item['factsheet_url'] = pdf_url
+                        found_codes.append(item)
+            except Exception:
+                pass
+
+            details = get_detail_dict(driver)
+            data["amc"] = details.get("บลจ", "")
+            data["category"] = details.get("ประเภทกอง", "")
+            data["risk_level"] = extract_number_only(details.get("ค่าความเสี่ยง", ""))
+            data["is_dividend"] = details.get("นโยบายการจ่ายปันผล", "")
+            data["aum"] = extract_number_only(details.get("มูลค่าทรัพย์สินสุทธิ", ""))
+            data["inception_date"] = parse_thai_date(details.get("วันที่จดทะเบียนกองทุน", ""))
+            data["min_initial_buy"] = extract_number_only(details.get("ลงทุนครั้งแรกขั้นต่ำ", ""))
+            data["min_next_buy"] = extract_number_only(details.get("ลงทุนครั้งต่อไปขั้นต่ำ", ""))
             return data, found_codes
-        try:
-            p_elem = driver.find_element(By.XPATH, "//header[@id='fund-header']//p[1]")
-            data["full_name_th"] = clean_text(p_elem.text)
-        except:
-            pass
-        try:
-            nav_box = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, ".fund-nav-percent"))
-            )
-            WebDriverWait(driver, 10).until(
-                lambda d: extract_number_only(d.find_element(By.CSS_SELECTOR, ".fund-nav-percent h3").text) != ""
-            )
-            h3_elem = nav_box.find_element(By.TAG_NAME, "h3")
-            data["nav_value"] = extract_number_only(h3_elem.text)
-            p_elem = nav_box.find_element(By.TAG_NAME, "p")
-            data["nav_date"] = parse_thai_date(clean_text(p_elem.text))
-            
+
         except Exception as e:
-            log(f"NAV error: {e}")
-            pass
-        try:
-            pdf_link_el = driver.find_element(By.XPATH, "//a[contains(text(), 'หนังสือชี้ชวน') or contains(@href, '.pdf')]")
-            pdf_url = pdf_link_el.get_attribute("href")
-            
-            if pdf_url:
-                pdf_bytes = fetch_pdf_bytes(pdf_url)
-                extracted = extract_codes_from_pdf(pdf_bytes)
-                for item in extracted:
-                    item['fund_code'] = fund_code
-                    item['factsheet_url'] = pdf_url
-                    found_codes.append(item)
-        except Exception:
-            pass
-
-        details = get_detail_dict(driver)
-        data["amc"] = details.get("บลจ", "")
-        data["category"] = details.get("ประเภทกอง", "")
-        data["risk_level"] = extract_number_only(details.get("ค่าความเสี่ยง", ""))
-        data["is_dividend"] = details.get("นโยบายการจ่ายปันผล", "")
-        data["aum"] = extract_number_only(details.get("มูลค่าทรัพย์สินสุทธิ", ""))
-        data["inception_date"] = parse_thai_date(details.get("วันที่จดทะเบียนกองทุน", ""))
-        data["min_initial_buy"] = extract_number_only(details.get("ลงทุนครั้งแรกขั้นต่ำ", ""))
-        data["min_next_buy"] = extract_number_only(details.get("ลงทุนครั้งต่อไปขั้นต่ำ", ""))
-
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
+            log(f"⚠️ Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code} finally.")
     return data, found_codes
 
 def main():

@@ -20,6 +20,8 @@ INPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fund_list.csv")
 OUTPUT_INFO_FILENAME = os.path.join(script_dir, "wealthmagik_info.csv")
 OUTPUT_CODES_FILENAME = os.path.join(script_dir, "wealthmagik_codes.csv")
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 def polite_sleep():
     t = random.uniform(0.5, 1) 
@@ -112,7 +114,7 @@ def extract_codes_from_pdf(pdf_bytes):
 
 def close_ad_if_present(driver):
     try:
-        WebDriverWait(driver, 3).until(
+        WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.ID, "popupAdsClose"))
         ).click()
         time.sleep(0.5)
@@ -135,54 +137,63 @@ def scrape_info_and_pdf(driver, fund_code, url):
         "source_url": url
     }
     found_codes = []
-
-    try:
-        driver.get(url)
-        close_ad_if_present(driver)
-        
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
-        except:
+            driver.get(url)
+            close_ad_if_present(driver)
+            try:
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
+            except:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Page not loaded (Title missing)")
+                else:
+                    return info_data, found_codes
+            try:
+                info_data["full_name_th"] = get_text_by_id(driver, "wmg.funddetailinfo.text.categoryTH")
+                if not info_data["full_name_th"]:
+                    info_data["full_name_th"] = driver.find_element(By.XPATH, "//div[@class='fundName']/span[@class='categoryTH']").text
+            except: pass
+            
+            try:
+                info_data["nav_value"] = clean_text(driver.find_element(By.CLASS_NAME, "nav").text)
+                raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
+                info_data["nav_date"] = parse_wm_date(raw_nav_date)
+            except: pass
+            
+            info_data["aum"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.totalnetAsset.")
+            info_data["risk_level"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.riskSpectrum.")
+            info_data["category"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.aimcCategories.")
+            info_data["is_dividend"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.isDividend.")
+            info_data["bid_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
+            info_data["offer_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
+            raw_inception = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.inceptionDate.")
+            info_data["inception_date"] = parse_wm_date(raw_inception)
+            try:
+                amc_el = driver.find_element(By.XPATH, "//div[contains(@class,'fund-company-name')]") 
+                info_data["amc"] = clean_text(amc_el.text)
+            except: pass
+            try:
+                raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
+                pdf_url = unquote(raw_pdf_url).strip()
+                if pdf_url and pdf_url.startswith("http"):
+                    pdf_bytes = fetch_pdf_bytes(pdf_url)
+                    if pdf_bytes:
+                        extracted = extract_codes_from_pdf(pdf_bytes)
+                        for item in extracted:
+                            item['fund_code'] = fund_code
+                            item["factsheet_url"] = pdf_url
+                            found_codes.append(item)
+            except Exception:
+                pass
+
             return info_data, found_codes
-        try:
-            info_data["full_name_th"] = get_text_by_id(driver, "wmg.funddetailinfo.text.categoryTH")
-            if not info_data["full_name_th"]:
-                info_data["full_name_th"] = driver.find_element(By.XPATH, "//div[@class='fundName']/span[@class='categoryTH']").text
-        except: pass
-        try:
-            info_data["nav_value"] = clean_text(driver.find_element(By.CLASS_NAME, "nav").text)
-            raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
-            info_data["nav_date"] = parse_wm_date(raw_nav_date)
-        except: pass
-        info_data["aum"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.totalnetAsset.")
-        info_data["risk_level"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.riskSpectrum.")
-        info_data["category"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.aimcCategories.")
-        info_data["is_dividend"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.isDividend.")
-        info_data["bid_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
-        info_data["offer_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
-        raw_inception = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.inceptionDate.")
-        info_data["inception_date"] = parse_wm_date(raw_inception)
-        try:
-            amc_el = driver.find_element(By.XPATH, "//div[contains(@class,'fund-company-name')]") 
-            info_data["amc"] = clean_text(amc_el.text)
-        except: pass
-        try:
-            raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
-            pdf_url = unquote(raw_pdf_url).strip()
-            if pdf_url and pdf_url.startswith("http"):
-                pdf_bytes = fetch_pdf_bytes(pdf_url)
-                if pdf_bytes:
-                    extracted = extract_codes_from_pdf(pdf_bytes)
-                    for item in extracted:
-                        item['fund_code'] = fund_code
-                        item["factsheet_url"] = pdf_url
-                        found_codes.append(item)
+
         except Exception as e:
-            pass
-
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
-
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code}")
     return info_data, found_codes
 
 def main():
@@ -206,10 +217,10 @@ def main():
             url = fund.get("url", "")
             if not code or not url: continue
             log(f"[{i}/{total_funds}]{code}")
+            
             info, codes = scrape_info_and_pdf(driver, code, url)
             all_info.append(info)
             if codes: all_codes.extend(codes)
-            
             polite_sleep()
 
     except KeyboardInterrupt:

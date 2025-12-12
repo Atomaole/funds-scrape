@@ -17,6 +17,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fund_list.csv")
 OUTPUT_FILENAME = os.path.join(script_dir, "wealthmagik_holdings.csv")
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 THAI_MONTH_MAP = {
     "ม.ค.": 1, "มกราคม": 1, "JAN": 1,
@@ -79,7 +81,7 @@ def parse_thai_date(text):
 
 def close_ad_if_present(driver):
     try:
-        WebDriverWait(driver, 3).until(
+        WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.ID, "popupAdsClose"))
         ).click()
         time.sleep(0.5)
@@ -87,48 +89,53 @@ def close_ad_if_present(driver):
 
 def scrape_holdings(driver, fund_code, profile_url):
     port_url = re.sub(r"/profile/?$", "/port", profile_url)
-    holdings_data = []
-    try:
-        driver.get(port_url)
-        close_ad_if_present(driver)
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".portallocation-list, .emptyData"))
-            )
-        except:
-            return []
-        if driver.find_elements(By.CSS_SELECTOR, ".emptyData"):
-            return []
-        
-        as_of_date = ""
-        try:
-            date_el = driver.find_element(By.XPATH, "//div[contains(@class,'mainDivtopHolding')]//span[contains(@class,'asofdate')]")
-            raw_date = clean_text(date_el.text)
-            as_of_date = parse_thai_date(raw_date)
-        except: pass
-        rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
-        
-        for row in rows:
+            driver.get(port_url)
+            close_ad_if_present(driver)
             try:
-                name_el = row.find_element(By.CSS_SELECTOR, ".name-text")
-                name = clean_text(name_el.text)
-                weight_el = row.find_element(By.CSS_SELECTOR, ".ratio-text")
-                weight = clean_text(weight_el.text).replace("%", "")
-                if name and weight:
-                    holdings_data.append({
-                        "fund_code": fund_code,
-                        "holding_name": name,
-                        "percent": weight,
-                        "as_of_date": as_of_date,
-                        "source_url": port_url
-                    })
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".portallocation-list, .emptyData"))
+                )
             except:
-                continue
-
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
-    
-    return holdings_data
+                if attempt < MAX_RETRIES:
+                    raise Exception("Element not found (Timeout)")
+                else:
+                    return []
+            if driver.find_elements(By.CSS_SELECTOR, ".emptyData"):
+                return []
+            holdings_data = []
+            as_of_date = ""
+            try:
+                date_el = driver.find_element(By.XPATH, "//div[contains(@class,'mainDivtopHolding')]//span[contains(@class,'asofdate')]")
+                raw_date = clean_text(date_el.text)
+                as_of_date = parse_thai_date(raw_date)
+            except: pass
+            rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
+            for row in rows:
+                try:
+                    name_el = row.find_element(By.CSS_SELECTOR, ".name-text")
+                    name = clean_text(name_el.text)
+                    weight_el = row.find_element(By.CSS_SELECTOR, ".ratio-text")
+                    weight = clean_text(weight_el.text).replace("%", "")
+                    if name and weight:
+                        holdings_data.append({
+                            "fund_code": fund_code,
+                            "holding_name": name,
+                            "percent": weight,
+                            "as_of_date": as_of_date,
+                            "source_url": port_url
+                        })
+                except:
+                    continue
+            return holdings_data
+        except Exception as e:
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code}")
+    return []
 
 def main():
     driver = make_driver()
@@ -170,7 +177,7 @@ def main():
                 writer.writerows(all_holdings)
             log("done")
         else:
-            log("Error")
+            log("Error or No Data")
         if driver:
             try:
                 driver.quit()
