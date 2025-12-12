@@ -21,6 +21,8 @@ INPUT_FILES = [
 OUTPUT_FILENAME = os.path.join(script_dir, "all_sec_fund_info.csv")
 
 HEADLESS = True
+MAX_RETRIES = 3
+RETRY_DELAY = 3
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
@@ -81,8 +83,7 @@ def make_driver():
 def scrape_sec_info(driver, fund_code):
     safe_code = quote(fund_code)
     url = f"https://fundcheck.sec.or.th/fund-detail;funds={safe_code}"
-    
-    data = {
+    empty_data = {
         "fund_code": fund_code,
         "sec_url": url,
         "as_of_date": "N/A",
@@ -95,58 +96,66 @@ def scrape_sec_info(driver, fund_code):
         "turnover_ratio": "",
         "fx_hedging": ""
     }
-
-    try:
-        driver.get(url)
-        wait = WebDriverWait(driver, 10)
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "card-body")))
-        except:
-            log(f"timeout/error: {fund_code}")
-            return data
-        try:
-            def page_has_date(d):
-                body_text = d.find_element(By.TAG_NAME, "body").text
-                return re.search(r"ข้อมูล ณ วันที่.*?\d{1,2}/\d{1,2}/\d{4}", body_text, re.DOTALL)
-            wait.until(page_has_date)
+            driver.get(url)
+            wait = WebDriverWait(driver, 15)
+            try:
+                wait.until(EC.presence_of_element_located((By.CLASS_NAME, "card-body")))
+            except:
+                if attempt < MAX_RETRIES:
+                    raise Exception("Page not loaded (Card Body missing)")
+                else:
+                    return empty_data
+            try:
+                def page_has_date(d):
+                    body_text = d.find_element(By.TAG_NAME, "body").text
+                    return re.search(r"ข้อมูล ณ วันที่.*?\d{1,2}/\d{1,2}/\d{4}", body_text, re.DOTALL)
+                wait.until(page_has_date)
+            except:
+                if attempt < MAX_RETRIES:
+                     raise Exception("Data not populated (Date missing)")
+            data = empty_data.copy()
             whole_page_text = driver.find_element(By.TAG_NAME, "body").text
             match = re.search(r"ข้อมูล ณ วันที่.*?(\d{1,2}/\d{1,2}/\d{4})", whole_page_text, re.DOTALL)
             if match:
                 data["as_of_date"] = convert_thai_date(match.group(1))
             else:
                 data["as_of_date"] = "N/A (Not Found)"
-        except:
-            data["as_of_date"] = "N/A (Error)"
-        id_map = {
-            "sharpe_ratio": "sharpe-ratio", "alpha": "alpha", "beta": "beta",
-            "tracking_error": "tracking-error", "max_drawdown": "max-drawdown",
-            "recovering_period": "recovering-period", "turnover_ratio": "turnover-ratio"
-        }
+            id_map = {
+                "sharpe_ratio": "sharpe-ratio", "alpha": "alpha", "beta": "beta",
+                "tracking_error": "tracking-error", "max_drawdown": "max-drawdown",
+                "recovering_period": "recovering-period", "turnover_ratio": "turnover-ratio"
+            }
 
-        for field, html_id in id_map.items():
+            for field, html_id in id_map.items():
+                try:
+                    xpath = f"//div[@id='{html_id}']/following-sibling::div"
+                    val_el = driver.find_element(By.XPATH, xpath)
+                    raw_val = driver.execute_script("return arguments[0].textContent;", val_el)
+                    cleaned_val = clean_text(raw_val)
+                    if field == "recovering_period":
+                        data[field] = parse_recovering_period(cleaned_val)
+                    else:
+                        data[field] = cleaned_val
+                except:
+                    data[field] = "" 
             try:
-                xpath = f"//div[@id='{html_id}']/following-sibling::div"
-                val_el = driver.find_element(By.XPATH, xpath)
-                raw_val = driver.execute_script("return arguments[0].textContent;", val_el)
-                cleaned_val = clean_text(raw_val)
-                if field == "recovering_period":
-                    data[field] = parse_recovering_period(cleaned_val)
-                else:
-                    data[field] = cleaned_val
+                fx_xpath = "//div[contains(text(), 'FX Hedging')]/following-sibling::div//div[contains(@class, 'progress-bar')]"
+                fx_el = driver.find_element(By.XPATH, fx_xpath)
+                raw_fx = driver.execute_script("return arguments[0].textContent;", fx_el)
+                data["fx_hedging"] = clean_text(raw_fx)
             except:
-                data[field] = "" 
-        try:
-            fx_xpath = "//div[contains(text(), 'FX Hedging')]/following-sibling::div//div[contains(@class, 'progress-bar')]"
-            fx_el = driver.find_element(By.XPATH, fx_xpath)
-            raw_fx = driver.execute_script("return arguments[0].textContent;", fx_el)
-            data["fx_hedging"] = clean_text(raw_fx)
-        except:
-            data["fx_hedging"] = ""
+                data["fx_hedging"] = ""
+            return data
 
-    except Exception as e:
-        log(f"Error {fund_code}: {e}")
-    
-    return data
+        except Exception as e:
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            if attempt < MAX_RETRIES:
+                time.sleep(RETRY_DELAY)
+            else:
+                log(f"Failed {fund_code}")
+    return empty_data
 
 def get_unique_fund_codes(file_list):
     unique_codes = set()
