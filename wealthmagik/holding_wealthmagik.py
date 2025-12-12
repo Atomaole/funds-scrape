@@ -107,10 +107,11 @@ def scrape_holdings(driver, fund_code, profile_url):
             holdings_data = []
             as_of_date = ""
             try:
-                date_el = driver.find_element(By.XPATH, "//div[contains(@class,'mainDivtopHolding')]//span[contains(@class,'asofdate')]")
+                date_el = driver.find_element(By.CSS_SELECTOR, ".date-detail-text")
                 raw_date = clean_text(date_el.text)
                 as_of_date = parse_thai_date(raw_date)
-            except: pass
+            except Exception: 
+                pass
             rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
             for row in rows:
                 try:
