@@ -17,7 +17,8 @@ LIST_PAGE_URL = "https://www.wealthmagik.com/funds"
 OUTPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fund_list.csv")
 HEADLESS = True
 LIST_MAX_SECONDS = 300 
-MAX_RETRIES = 10
+MAX_SCROLL_RETRIES = 10
+MAX_PAGE_LOAD_RETRIES = 3
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
@@ -76,14 +77,14 @@ def elements_count(driver) -> int:
     except:
         return 0
 
-def main():
+def scrape_process():
     driver = make_driver()
     fund_list = []
-
     try:
         log("starting")
         driver.get(LIST_PAGE_URL)
         time.sleep(2)
+        
         close_ad_if_present(driver)
         WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundCode")))
         container = get_scrollable_container(driver)
@@ -93,9 +94,10 @@ def main():
         start_time = time.time()
         last_count = elements_count(driver)
         retries = 0
-
+        log("searching")
         while True:
             if time.time() - start_time > LIST_MAX_SECONDS:
+                log("Time limit reached.")
                 break
             smooth_scroll_to_bottom(driver, container)
             time.sleep(0.5) 
@@ -105,12 +107,12 @@ def main():
                 retries = 0 
             else:
                 retries += 1
-                if retries >= MAX_RETRIES:
+                if retries >= MAX_SCROLL_RETRIES:
+                    log("No new elements found. Stopping scroll.")
                     break
-        log("scrape list funds")
+        log("Extracting data")
         elems = driver.find_elements(By.CSS_SELECTOR, ".fundCode")
         unique_funds = set()
-        
         for el in elems:
             try:
                 raw_id = el.get_attribute("id") or ""
@@ -126,21 +128,34 @@ def main():
                     fund_list.append([fund_code, url])
             except:
                 continue
+        return fund_list
 
     except Exception as e:
-        log(f"Error: {e}")
+        log(f"Scrape Error: {e}")
+        return None
     finally:
         driver.quit()
 
-    if fund_list:
-        fund_list.sort(key=lambda x: x[0])
+def main():
+    final_fund_list = []
+    for attempt in range(1, MAX_PAGE_LOAD_RETRIES + 1):
+        log(f"Attempt {attempt}/{MAX_PAGE_LOAD_RETRIES} to scrape list")
+        result = scrape_process()
+        if result and len(result) > 0:
+            final_fund_list = result
+            break
+        else:
+            log(f"Attempt {attempt} failed or got 0 funds. Retrying")
+            time.sleep(3)
+    if final_fund_list:
+        final_fund_list.sort(key=lambda x: x[0])
         with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f)
             writer.writerow(["fund_code", "url"])
-            writer.writerows(fund_list)
-        log(f"done {len(fund_list)}")
+            writer.writerows(final_fund_list)
+        log(f"Done {len(final_fund_list)} funds.")
     else:
-        log("Error")
+        log("Failed to scrape funds after retries")
 
 if __name__ == "__main__":
     main()
