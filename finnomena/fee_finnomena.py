@@ -47,6 +47,11 @@ def parse_percent(text):
         return match.group(0)
     return ""
 
+def extract_number_only(text):
+    if not text: return ""
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", text.replace(",", ""))
+    return match.group(0) if match else ""
+
 def extract_fee_pair(driver, keywords):
     try:
         xpath_query = "//div[contains(@class,'fin-row') and (" + " or ".join([f"contains(., '{k}')" for k in keywords]) + ")]"
@@ -68,6 +73,22 @@ def extract_fee_pair(driver, keywords):
     except Exception:
         return "", ""
 
+def extract_buying_min(driver):
+    initial_buy = ""
+    next_buy = ""
+    try:
+        elements = driver.find_elements(By.CSS_SELECTOR, ".p-buying.buying-total")
+        
+        if len(elements) >= 2:
+            initial_buy = extract_number_only(elements[0].text)
+            next_buy = extract_number_only(elements[1].text)
+        elif len(elements) == 1:
+            initial_buy = extract_number_only(elements[0].text)
+            
+    except Exception:
+        pass
+    return initial_buy, next_buy
+
 def scrape_fees(driver, fund_code, base_url):
     fee_url = base_url.rstrip("/") + "/fee"
     empty_data = {
@@ -78,18 +99,19 @@ def scrape_fees(driver, fund_code, base_url):
         "management_max": "", "management_actual": "",
         "ter_max": "", "ter_actual": "", 
         "switching_in_max": "", "switching_in_actual": "",
-        "switching_out_max": "", "switching_out_actual": ""
+        "switching_out_max": "", "switching_out_actual": "",
+        "min_initial_buy": "", "min_next_buy": ""
     }
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             driver.get(fee_url)
             try:
                 WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".fee-text"))
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ".fee-text, .p-buying"))
                 )
             except:
                 if attempt < MAX_RETRIES:
-                    raise Exception("Fees not loaded (Timeout)")
+                    raise Exception("Fees/Buying info not loaded (Timeout)")
                 else:
                     return empty_data
             data = empty_data.copy()
@@ -99,6 +121,7 @@ def scrape_fees(driver, fund_code, base_url):
             data["ter_max"], data["ter_actual"] = extract_fee_pair(driver, ["Total Expense Ratio", "ค่าธรรมเนียมและค่าใช้จ่ายรวม"])
             data["switching_in_max"], data["switching_in_actual"] = extract_fee_pair(driver, ["Switching-in Fee", "สับเปลี่ยนหน่วยลงทุนเข้า"])
             data["switching_out_max"], data["switching_out_actual"] = extract_fee_pair(driver, ["Switching-out Fee", "สับเปลี่ยนหน่วยลงทุนออก"])
+            data["min_initial_buy"], data["min_next_buy"] = extract_buying_min(driver)
             return data
 
         except Exception as e:
@@ -107,7 +130,6 @@ def scrape_fees(driver, fund_code, base_url):
                 time.sleep(RETRY_DELAY)
             else:
                 log(f"Failed {fund_code}")
-
     return empty_data
 
 def main():
@@ -149,9 +171,9 @@ def main():
                 "management_max", "management_actual",
                 "ter_max", "ter_actual", 
                 "switching_in_max", "switching_in_actual",
-                "switching_out_max", "switching_out_actual"
+                "switching_out_max", "switching_out_actual",
+                "min_initial_buy", "min_next_buy"
             ]
-        
             with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers)
                 writer.writeheader()
