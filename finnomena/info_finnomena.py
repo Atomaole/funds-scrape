@@ -159,8 +159,6 @@ def scrape_info(driver, fund_code, url):
         "is_dividend": "",
         "inception_date": "",
         "aum": "",
-        "min_initial_buy": "",
-        "min_next_buy": "",
         "source_url": url,
     }
     found_codes = []
@@ -212,8 +210,6 @@ def scrape_info(driver, fund_code, url):
             data["is_dividend"] = details.get("นโยบายการจ่ายปันผล", "")
             data["aum"] = extract_number_only(details.get("มูลค่าทรัพย์สินสุทธิ", ""))
             data["inception_date"] = parse_thai_date(details.get("วันที่จดทะเบียนกองทุน", ""))
-            data["min_initial_buy"] = extract_number_only(details.get("ลงทุนครั้งแรกขั้นต่ำ", ""))
-            data["min_next_buy"] = extract_number_only(details.get("ลงทุนครั้งต่อไปขั้นต่ำ", ""))
             return data, found_codes
 
         except Exception as e:
@@ -268,7 +264,7 @@ def main():
                 "full_name_th", "amc", "category", 
                 "risk_level", "aum",
                 "is_dividend", "inception_date", 
-                "min_initial_buy", "min_next_buy","source_url"
+                "source_url"
             ]
             with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers)
