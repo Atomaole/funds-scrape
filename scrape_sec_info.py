@@ -18,7 +18,7 @@ INPUT_FILES = [
     os.path.join(script_dir, "wealthmagik", "wealthmagik_fund_list.csv")
 ]
 
-OUTPUT_FILENAME = os.path.join(script_dir, "all_sec_fund_info.csv")
+OUTPUT_FILENAME = os.path.join(script_dir, "merged_output", "all_sec_fund_info.csv")
 
 HEADLESS = True
 MAX_RETRIES = 3
