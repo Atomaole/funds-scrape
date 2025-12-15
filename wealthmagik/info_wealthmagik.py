@@ -126,7 +126,6 @@ def scrape_info_and_pdf(driver, fund_code, url):
         "full_name_th": "",
         "nav_value": "",
         "nav_date": "",
-        "amc": "",
         "risk_level": "",
         "category": "",
         "is_dividend": "",
@@ -168,10 +167,6 @@ def scrape_info_and_pdf(driver, fund_code, url):
             info_data["offer_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
             raw_inception = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.inceptionDate.")
             info_data["inception_date"] = parse_wm_date(raw_inception)
-            try:
-                amc_el = driver.find_element(By.XPATH, "//div[contains(@class,'fund-company-name')]") 
-                info_data["amc"] = clean_text(amc_el.text)
-            except: pass
             try:
                 raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
                 pdf_url = unquote(raw_pdf_url).strip()
@@ -233,7 +228,7 @@ def main():
             headers_info = [
                 "fund_code", "full_name_th", "nav_value", "nav_date", 
                 "bid_price_per_unit", "offer_price_per_unit",
-                "amc", "category", "risk_level", "aum",
+                "category", "risk_level", "aum",
                 "is_dividend", "inception_date", "source_url"
             ]
             with open(OUTPUT_INFO_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
