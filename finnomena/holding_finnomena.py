@@ -153,7 +153,7 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}] 🔍 {code} (holding)")
+            log(f"[{i}/{total_funds}]{code} (holding/fin)")
             data = scrape_holdings(driver, code, url)
             if data:
                 all_holdings.extend(data)

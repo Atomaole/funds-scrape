@@ -141,7 +141,7 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} (fee)")
+            log(f"[{i}/{total_funds}]{code} (fee/magik)")
             fee_data = scrape_fees(driver, code, url)
             all_fees.append(fee_data)
             polite_sleep()

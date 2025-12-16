@@ -248,7 +248,7 @@ def main():
             
             if not code or not url: continue
             
-            log(f"[{i}/{total_funds}] {code} (info)")
+            log(f"[{i}/{total_funds}]{code} (info/fin)")
             
             info, codes = scrape_info(driver, code, url)
             all_info.append(info)

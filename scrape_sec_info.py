@@ -189,7 +189,7 @@ def main():
     try:
         total = len(all_funds)
         for i, code in enumerate(all_funds, 1):
-            log(f"[{i}/{total}]{code}")
+            log(f"[{i}/{total}]{code} (sec info)")
             info = scrape_sec_info(driver, code)
             results.append(info)
             polite_sleep()

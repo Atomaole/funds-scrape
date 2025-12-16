@@ -215,7 +215,7 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} (info)")
+            log(f"[{i}/{total_funds}]{code} (info/magik)")
             
             info, codes = scrape_info_and_pdf(driver, code, url)
             all_info.append(info)
