@@ -80,8 +80,7 @@ def make_driver():
     options.add_argument("--height=1080")
     
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(current_script_dir)
-    driver_path = os.path.join(project_root, "geckodriver")
+    driver_path = os.path.join(current_script_dir, "geckodriver")
     return webdriver.Firefox(service=Service(driver_path), options=options)
 
 def scrape_sec_info(driver, fund_code):
