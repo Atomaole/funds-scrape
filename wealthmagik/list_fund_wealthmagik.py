@@ -30,7 +30,11 @@ def make_driver():
     options.add_argument("--width=1920")
     options.add_argument("--height=1080")
     options.set_preference("dom.webnotifications.enabled", False)
-    return webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
+    
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(current_script_dir)
+    driver_path = os.path.join(project_root, "geckodriver")
+    return webdriver.Firefox(service=Service(driver_path), options=options)
 
 def unlock_scroll(driver):
     js = """

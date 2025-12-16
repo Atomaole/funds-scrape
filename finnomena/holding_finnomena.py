@@ -68,7 +68,7 @@ def make_driver():
     options.set_preference("dom.webnotifications.enabled", False)
     options.add_argument("--width=1920")
     options.add_argument("--height=1080")
-    return webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
+    return webdriver.Firefox(service=Service("/Users/atomle/funds-scrape/geckodriver"), options=options)
 
 def clean_text(text):
     if not text: return ""
