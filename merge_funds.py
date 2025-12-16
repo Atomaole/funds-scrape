@@ -80,7 +80,7 @@ final_info = pd.DataFrame(merged_rows).reset_index().rename(columns={'index': 'f
 cols_to_drop = [c for c in final_info.columns if 'source' in c]
 final_info = final_info.drop(columns=cols_to_drop)
 
-print(f"Info{len(final_info)} done")
+print(f"Info {len(final_info)} done")
 
 # FEES
 if not dfs['fin_fees'].empty: dfs['fin_fees']['source'] = 'finnomena'
@@ -100,7 +100,7 @@ final_codes = pd.concat([
     dfs['fin_codes'][code_cols] if not dfs['fin_codes'].empty else pd.DataFrame(), 
     dfs['wm_codes'][code_cols] if not dfs['wm_codes'].empty else pd.DataFrame()
 ]).drop_duplicates()
-print(f"Codes{len(final_codes)} done")
+print(f"Codes {len(final_codes)} done")
 
 # HOLDINGS
 if not dfs['fin_holdings'].empty: dfs['fin_holdings']['source'] = 'finnomena'
@@ -124,7 +124,7 @@ source_map = latest_dates['selected_source'].to_dict()
 df_holdings['target_source'] = df_holdings['fund_code'].map(source_map)
 final_holdings = df_holdings[df_holdings['source'] == df_holdings['target_source']].drop(columns=['target_source', 'source'])
 
-print(f"Holdings{len(final_holdings)} done")
+print(f"Holdings {len(final_holdings)} done")
 
 # SAVE
 final_info.to_csv(os.path.join(OUTPUT_DIR, 'master_funds_info.csv'), index=False)
