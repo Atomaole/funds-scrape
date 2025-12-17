@@ -60,6 +60,32 @@ def clean_text(text):
     if not text: return ""
     return re.sub(r'\s+', ' ', text).strip()
 
+def clean_deleted_funds(output_filename, valid_fund_codes):
+    if not os.path.exists(output_filename):
+        return
+    rows_to_keep = []
+    fieldnames = []
+    deleted_count = 0
+    try:
+        with open(output_filename, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames
+            if not fieldnames: return
+            for row in reader:
+                code = row.get("fund_code", "").strip()
+                if code in valid_fund_codes:
+                    rows_to_keep.append(row)
+                else:
+                    deleted_count += 1
+        if deleted_count > 0:
+            log(f"Cleaning {os.path.basename(output_filename)}: Removed {deleted_count}")
+            with open(output_filename, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows_to_keep)
+    except Exception as e:
+        log(f"Error cleaning file {output_filename}: {e}")
+
 def parse_thai_date(text):
     if not text: return ""
     text = re.sub(r"(ข้อมูล\s*ณ\s*วันที่|ณ\s*วันที่|as of|วันที่จดทะเบียนกองทุน)", "", text, flags=re.IGNORECASE).strip()
@@ -205,6 +231,21 @@ def scrape_info(driver, fund_code, url, need_master=True):
 
 def main():
     driver = make_driver()
+    funds_to_scrape = []
+    valid_codes = set()
+    try:
+        with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            for row in reader: 
+                funds_to_scrape.append(row)
+                c = unquote(row.get("fund_code", "")).strip()
+                if c: valid_codes.add(c)
+    except FileNotFoundError:
+        log("not found file list funds")
+        return
+    
+    clean_deleted_funds(OUTPUT_MASTER_FILENAME, valid_codes)
+    clean_deleted_funds(OUTPUT_CODES_FILENAME, valid_codes)
     existing_master_codes = set()
     if os.path.exists(OUTPUT_MASTER_FILENAME):
         try:
@@ -215,10 +256,8 @@ def main():
             log(f"Found {len(existing_master_codes)} existing funds in Master file.")
         except Exception as e:
             log(f"Error reading master file: {e}")
-    headers_master = [
-        "fund_code", "full_name_th", "amc", "category", 
-        "risk_level", "is_dividend", "inception_date", "source_url"
-    ]
+
+    headers_master = ["fund_code", "full_name_th", "amc", "category", "risk_level", "is_dividend", "inception_date", "source_url"]
     headers_daily = ["fund_code", "nav_date", "nav_value", "aum", "scraped_at"]
     headers_codes = ["fund_code", "type", "code","factsheet_url"]
     exists_master = os.path.exists(OUTPUT_MASTER_FILENAME)
@@ -234,15 +273,6 @@ def main():
         if not exists_master: writer_master.writeheader()
         if not exists_daily: writer_daily.writeheader()
         if not exists_codes: writer_codes.writeheader()
-        funds_to_scrape = []
-        try:
-            with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                for row in reader: funds_to_scrape.append(row)
-        except FileNotFoundError:
-            log("not found file list funds")
-            return
-            
         total_funds = len(funds_to_scrape)
         log(f"Starting Scrape {total_funds} Funds")
 

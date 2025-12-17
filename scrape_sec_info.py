@@ -34,6 +34,32 @@ def clean_text(text):
     if not text: return ""
     return re.sub(r'\s+', ' ', text).strip()
 
+def clean_deleted_funds(output_filename, valid_fund_codes):
+    if not os.path.exists(output_filename):
+        return
+    rows_to_keep = []
+    fieldnames = []
+    deleted_count = 0
+    try:
+        with open(output_filename, "r", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames
+            if not fieldnames: return
+            for row in reader:
+                code = row.get("fund_code", "").strip()
+                if code in valid_fund_codes:
+                    rows_to_keep.append(row)
+                else:
+                    deleted_count += 1
+        if deleted_count > 0:
+            log(f"Cleaning {os.path.basename(output_filename)}: Removed {deleted_count}")
+            with open(output_filename, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows_to_keep)
+    except Exception as e:
+        log(f"Error cleaning file {output_filename}: {e}")
+
 def parse_recovering_period(text):
     if not text or text == "-" or text == "N/A":
         return text
@@ -186,6 +212,8 @@ def main():
     if not all_funds:
         log("No funds founds in input files.")
         return
+    valid_codes_set = set(all_funds)
+    clean_deleted_funds(OUTPUT_FILENAME, valid_codes_set)
     existing_sec_codes = set()
     if os.path.exists(OUTPUT_FILENAME):
         try:
