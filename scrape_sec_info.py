@@ -17,8 +17,8 @@ INPUT_FILES = [
     os.path.join(script_dir, "finnomena", "finnomena_fund_list.csv"),
     os.path.join(script_dir, "wealthmagik", "wealthmagik_fund_list.csv")
 ]
-
-OUTPUT_FILENAME = os.path.join(script_dir, "merged_output", "all_sec_fund_info.csv")
+OUTPUT_DIR = os.path.join(script_dir, "merged_output")
+OUTPUT_FILENAME = os.path.join(OUTPUT_DIR, "all_sec_fund_info.csv")
 
 HEADLESS = True
 MAX_RETRIES = 3
@@ -176,45 +176,69 @@ def get_unique_fund_codes(file_list):
                 if clean_code:
                     unique_codes.add(clean_code)
     sorted_list = sorted(list(unique_codes))
-    log(f"Total funds {len(sorted_list)}")
+    log(f"Total funds found in list: {len(sorted_list)}")
     return sorted_list
 
 def main():
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
     all_funds = get_unique_fund_codes(INPUT_FILES)
     if not all_funds:
-        log("No funds founds")
+        log("No funds founds in input files.")
         return
+    existing_sec_codes = set()
+    if os.path.exists(OUTPUT_FILENAME):
+        try:
+            with open(OUTPUT_FILENAME, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_sec_codes.add(row.get("fund_code", "").strip())
+            log(f"Found {len(existing_sec_codes)} existing funds in output file")
+        except Exception as e:
+            log(f"Error reading existing output: {e}")
     driver = make_driver()
-    results = []
+    
+    headers = [
+        "fund_code", "as_of_date", 
+        "sharpe_ratio", "alpha", "beta", 
+        "max_drawdown", "recovering_period", 
+        "tracking_error", "turnover_ratio", "fx_hedging",
+        "sec_url"
+    ]
+    file_exists = os.path.exists(OUTPUT_FILENAME)
+    mode = 'a' if file_exists else 'w'
     try:
-        total = len(all_funds)
-        for i, code in enumerate(all_funds, 1):
-            log(f"[{i}/{total}]{code} (sec info)")
-            info = scrape_sec_info(driver, code)
-            results.append(info)
-            polite_sleep()
-            
-    except KeyboardInterrupt:
-        log("Stopped")
-    except Exception as e:
-        log(f"Critical Error {e}")
-    finally:
-        if results:
-            log(f"Saving to {OUTPUT_FILENAME}")
-            headers = [
-                "fund_code", "as_of_date", 
-                "sharpe_ratio", "alpha", "beta", 
-                "max_drawdown", "recovering_period", 
-                "tracking_error", "turnover_ratio", "fx_hedging",
-                "sec_url"
-            ]
-            with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers)
+        with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
+            writer = csv.DictWriter(f, fieldnames=headers)
+            if not file_exists:
                 writer.writeheader()
-                writer.writerows(results)
-            log("Done")
+                
+            total = len(all_funds)
+            processed_count = 0
+            
+            for i, code in enumerate(all_funds, 1):
+                if code in existing_sec_codes:
+                    continue
+                log(f"[{i}/{total}] {code} (sec info)")
+                info = scrape_sec_info(driver, code)
+                writer.writerow(info)
+                f.flush()
+                
+                processed_count += 1
+                polite_sleep()
+            
+            if processed_count == 0:
+                log("All funds are already up to date No new scrape needed")
+
+    except KeyboardInterrupt:
+        log("Stop")
+    except Exception as e:
+        log(f"Error: {e}")
+    finally:
         if driver:
             driver.quit()
+            log("Browser Closed")
+        log("Done")
 
 if __name__ == "__main__":
     main()

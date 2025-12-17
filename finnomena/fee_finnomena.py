@@ -148,32 +148,45 @@ def main():
             log(f"Found {len(existing_codes)} existing records. Skipping them.")
         except Exception as e:
             log(f"Error reading existing file: {e}")
-    new_fees = []
-    
+    file_exists = os.path.exists(OUTPUT_FILENAME)
+    mode = 'a' if file_exists else 'w'
+    f_out = open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig")
     try:
+        headers = [
+            "fund_code", "source_url",
+            "front_end_max", "front_end_actual",
+            "back_end_max", "back_end_actual",
+            "management_max", "management_actual",
+            "ter_max", "ter_actual", 
+            "switching_in_max", "switching_in_actual",
+            "switching_out_max", "switching_out_actual",
+            "min_initial_buy", "min_next_buy"
+        ]
+        writer = csv.DictWriter(f_out, fieldnames=headers)
+        if not file_exists:
+            writer.writeheader()
         funds_to_scrape = []
         try:
             with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                for row in reader:
-                    funds_to_scrape.append(row)
+                for row in reader: funds_to_scrape.append(row)
         except FileNotFoundError:
             log("not found file list funds")
             return
 
         total_funds = len(funds_to_scrape)
         log(f"starting scrape fee {total_funds}")
-
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
             if code in existing_codes:
                 continue
-            log(f"[{i}/{total_funds}]{code} (fee/fin)")
+            log(f"[{i}/{total_funds}] {code} (fee/fin)")
             fee_data = scrape_fees(driver, code, url)
-            new_fees.append(fee_data)
-            
+            if fee_data:
+                writer.writerow(fee_data)
+                f_out.flush()
             polite_sleep()
             
     except KeyboardInterrupt:
@@ -181,34 +194,11 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if new_fees:
-            log(f"saving {len(new_fees)} new rows to {OUTPUT_FILENAME}")
-            headers = [
-                "fund_code", "source_url",
-                "front_end_max", "front_end_actual",
-                "back_end_max", "back_end_actual",
-                "management_max", "management_actual",
-                "ter_max", "ter_actual", 
-                "switching_in_max", "switching_in_actual",
-                "switching_out_max", "switching_out_actual",
-                "min_initial_buy", "min_next_buy"
-            ]
-            file_exists = os.path.exists(OUTPUT_FILENAME)
-            mode = 'a' if file_exists else 'w'
-            with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers)
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerows(new_fees)
-            log("done")
-        else:
-            log("No new data to save.")
-            
+        f_out.close()
         if driver:
-            try:
-                driver.quit()
-                log("Closing Browser")
-            except Exception:
-                pass
+            try: driver.quit()
+            except: pass
+        log("Done")
+
 if __name__ == "__main__":
     main()

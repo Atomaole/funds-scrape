@@ -211,10 +211,23 @@ def main():
                 for row in reader: existing_master_codes.add(row['fund_code'].strip())
             log(f"Found {len(existing_master_codes)} existing funds in Master.")
         except: pass
-    new_master_rows = []
-    daily_rows = []
-    new_codes_rows = []
+    headers_master = ["fund_code", "full_name_th", "category", "risk_level", "is_dividend", "inception_date", "source_url"]
+    headers_daily = ["fund_code", "nav_date", "nav_value", "bid_price_per_unit", "offer_price_per_unit", "aum", "scraped_at"]
+    headers_codes = ["fund_code", "type", "code","factsheet_url"]
+    exists_master = os.path.exists(OUTPUT_MASTER_FILENAME)
+    exists_daily = os.path.exists(OUTPUT_DAILY_FILENAME)
+    exists_codes = os.path.exists(OUTPUT_CODES_FILENAME)
+    f_master = open(OUTPUT_MASTER_FILENAME, 'a', newline="", encoding="utf-8-sig")
+    f_daily = open(OUTPUT_DAILY_FILENAME, 'a', newline="", encoding="utf-8-sig")
+    f_codes = open(OUTPUT_CODES_FILENAME, 'a', newline="", encoding="utf-8-sig")
+
     try:
+        writer_master = csv.DictWriter(f_master, fieldnames=headers_master)
+        writer_daily = csv.DictWriter(f_daily, fieldnames=headers_daily)
+        writer_codes = csv.DictWriter(f_codes, fieldnames=headers_codes)
+        if not exists_master: writer_master.writeheader()
+        if not exists_daily: writer_daily.writeheader()
+        if not exists_codes: writer_codes.writeheader()
         funds_to_scrape = []
         try:
             with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
@@ -233,9 +246,17 @@ def main():
             status_msg = "FULL Update" if need_master else "Daily Update"
             log(f"[{i}/{total_funds}] {code} : {status_msg}")
             m_data, d_data, codes = scrape_info(driver, code, url, need_master=need_master)
-            if d_data: daily_rows.append(d_data)
-            if m_data: new_master_rows.append(m_data)
-            if codes: new_codes_rows.extend(codes)
+            if d_data: 
+                writer_daily.writerow(d_data)
+                f_daily.flush()
+
+            if m_data: 
+                writer_master.writerow(m_data)
+                f_master.flush()
+
+            if codes: 
+                writer_codes.writerows(codes)
+                f_codes.flush()
             
             polite_sleep()
 
@@ -244,31 +265,9 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if new_master_rows:
-            file_exists = os.path.exists(OUTPUT_MASTER_FILENAME)
-            mode = 'a' if file_exists else 'w'
-            log(f"Saving {len(new_master_rows)} new to Master...")
-            headers_master = ["fund_code", "full_name_th", "category", "risk_level", "is_dividend", "inception_date", "source_url"]
-            with open(OUTPUT_MASTER_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers_master)
-                if not file_exists: writer.writeheader()
-                writer.writerows(new_master_rows)
-        if daily_rows:
-            log(f"Saving Daily to {OUTPUT_DAILY_FILENAME}")
-            headers_daily = ["fund_code", "nav_date", "nav_value", "bid_price_per_unit", "offer_price_per_unit", "aum", "scraped_at"]
-            with open(OUTPUT_DAILY_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers_daily)
-                writer.writeheader()
-                writer.writerows(daily_rows)
-        if new_codes_rows:
-            file_exists = os.path.exists(OUTPUT_CODES_FILENAME)
-            mode = 'a' if file_exists else 'w'
-            log("Saving new Codes")
-            headers_codes = ["fund_code", "type", "code","factsheet_url"]
-            with open(OUTPUT_CODES_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers_codes)
-                if not file_exists: writer.writeheader()
-                writer.writerows(new_codes_rows) 
+        f_master.close()
+        f_daily.close()
+        f_codes.close()
         if driver:
             try: driver.quit()
             except: pass

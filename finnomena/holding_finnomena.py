@@ -142,34 +142,41 @@ def main():
                 reader = csv.DictReader(f)
                 for row in reader:
                     existing_codes.add(row.get("fund_code", "").strip())
-            log(f"Found {len(existing_codes)} existing funds in holdings. Skipping them.")
+            log(f"Found {len(existing_codes)} existing funds")
         except Exception as e:
             log(f"Error reading existing file: {e}")
-
-    new_holdings = []
+    file_exists = os.path.exists(OUTPUT_FILENAME)
+    mode = 'a' if file_exists else 'w'
+    f_out = open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig")
     
     try:
+        keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
+        writer = csv.DictWriter(f_out, fieldnames=keys)
+        if not file_exists:
+            writer.writeheader()
         funds_to_scrape = []
         try:
             with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
                 reader = csv.DictReader(f)
-                for row in reader:
-                    funds_to_scrape.append(row)
+                for row in reader: funds_to_scrape.append(row)
         except FileNotFoundError:
             log(f"not found {INPUT_FILENAME}")
             return
+
         total_funds = len(funds_to_scrape)
         log(f"scrape holding {total_funds}")
+        
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
             if code in existing_codes:
                 continue
-            log(f"[{i}/{total_funds}]{code} (holding/fin)")
+            log(f"[{i}/{total_funds}] {code} (holding/fin)")
             data = scrape_holdings(driver, code, url)
             if data:
-                new_holdings.extend(data)
+                writer.writerows(data)
+                f_out.flush()
             
             polite_sleep() 
             
@@ -178,25 +185,11 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if new_holdings:
-            log(f"save {len(new_holdings)} new rows to {OUTPUT_FILENAME}")
-            keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
-            file_exists = os.path.exists(OUTPUT_FILENAME)
-            mode = 'a' if file_exists else 'w'
-            with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=keys)
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerows(new_holdings)
-            log("done")
-        else:
-            log("No new data to save.")
-            
+        f_out.close()
         if driver:
-            try:
-                driver.quit()
-                log("Closing Browser")
-            except Exception:
-                pass
+            try: driver.quit()
+            except: pass
+        log("Done")
+
 if __name__ == "__main__":
     main()

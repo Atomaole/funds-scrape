@@ -148,9 +148,15 @@ def main():
             log(f"Found {len(existing_codes)} existing funds in holdings. Skipping them.")
         except Exception as e:
             log(f"Error reading existing file: {e}")
-    new_holdings = []
+    file_exists = os.path.exists(OUTPUT_FILENAME)
+    mode = 'a' if file_exists else 'w'
+    f_out = open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig")
     
     try:
+        keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
+        writer = csv.DictWriter(f_out, fieldnames=keys)
+        if not file_exists:
+            writer.writeheader()
         funds_to_scrape = []
         try:
             with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
@@ -171,7 +177,9 @@ def main():
             log(f"[{i}/{total_funds}] {code} (holding/magik)")
             data = scrape_holdings(driver, code, url)
             if data:
-                new_holdings.extend(data)
+                writer.writerows(data)
+                f_out.flush()
+                
             polite_sleep() 
 
     except KeyboardInterrupt:
@@ -179,26 +187,13 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if new_holdings:
-            log(f"saving {len(new_holdings)} new rows to {OUTPUT_FILENAME}")
-            keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
-            
-            file_exists = os.path.exists(OUTPUT_FILENAME)
-            mode = 'a' if file_exists else 'w'
-            with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=keys)
-                if not file_exists:
-                    writer.writeheader()
-                writer.writerows(new_holdings)
-            log("done")
-        else:
-            log("No new data to save")
-            
+        f_out.close()
         if driver:
             try:
                 driver.quit()
                 log("Closing Browser")
             except Exception:
                 pass
+
 if __name__ == "__main__":
     main()
