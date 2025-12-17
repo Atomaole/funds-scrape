@@ -16,9 +16,12 @@ from selenium.webdriver.firefox.service import Service
 from webdriver_manager.firefox import GeckoDriverManager
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+current_date_str = datetime.now().strftime("%Y-%m-%d")
 INPUT_FILENAME = os.path.join(script_dir, "wealthmagik_fund_list.csv")
-OUTPUT_INFO_FILENAME = os.path.join(script_dir, "wealthmagik_info.csv")
+OUTPUT_MASTER_FILENAME = os.path.join(script_dir, "wealthmagik_master_info.csv")
+OUTPUT_DAILY_FILENAME = os.path.join(script_dir, f"wealthmagik_daily_nav_{current_date_str}.csv")
 OUTPUT_CODES_FILENAME = os.path.join(script_dir, "wealthmagik_codes.csv")
+
 HEADLESS = True
 MAX_RETRIES = 3
 RETRY_DELAY = 3
@@ -123,23 +126,22 @@ def close_ad_if_present(driver):
         ).click()
         time.sleep(0.5)
     except: pass
-
-def scrape_info_and_pdf(driver, fund_code, url):
-    info_data = {
+def scrape_info(driver, fund_code, url, need_master=True):
+    # need_master = True is mean never scrape this funds before
+    # need_master = False is mean need to scrape all details
+    
+    master_data = None
+    daily_data = {
         "fund_code": fund_code,
-        "full_name_th": "",
-        "nav_value": "",
         "nav_date": "",
-        "risk_level": "",
-        "category": "",
-        "is_dividend": "",
-        "inception_date": "",
-        "aum": "",
+        "nav_value": "",
         "bid_price_per_unit": "",
         "offer_price_per_unit": "",
-        "source_url": url
+        "aum": "",
+        "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     found_codes = []
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             driver.get(url)
@@ -147,59 +149,71 @@ def scrape_info_and_pdf(driver, fund_code, url):
             try:
                 WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
             except:
-                if attempt < MAX_RETRIES:
-                    raise Exception("Page not loaded (Title missing)")
-                else:
-                    return info_data, found_codes
+                if attempt < MAX_RETRIES: raise Exception("Page not loaded")
+                else: return master_data, daily_data, found_codes
             try:
-                info_data["full_name_th"] = get_text_by_id(driver, "wmg.funddetailinfo.text.categoryTH")
-                if not info_data["full_name_th"]:
-                    info_data["full_name_th"] = driver.find_element(By.XPATH, "//div[@class='fundName']/span[@class='categoryTH']").text
-            except: pass
-            
-            try:
-                info_data["nav_value"] = clean_text(driver.find_element(By.CLASS_NAME, "nav").text)
+                daily_data["nav_value"] = clean_text(driver.find_element(By.CLASS_NAME, "nav").text)
                 raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
-                info_data["nav_date"] = parse_wm_date(raw_nav_date)
+                daily_data["nav_date"] = parse_wm_date(raw_nav_date)
             except: pass
-            
-            info_data["aum"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.totalnetAsset.")
-            info_data["risk_level"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.riskSpectrum.")
-            info_data["category"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.aimcCategories.")
-            info_data["is_dividend"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.isDividend.")
-            info_data["bid_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
-            info_data["offer_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
-            raw_inception = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.inceptionDate.")
-            info_data["inception_date"] = parse_wm_date(raw_inception)
-            try:
-                raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
-                pdf_url = unquote(raw_pdf_url).strip()
-                if pdf_url and pdf_url.startswith("http"):
-                    pdf_bytes = fetch_pdf_bytes(pdf_url)
-                    if pdf_bytes:
-                        extracted = extract_codes_from_pdf(pdf_bytes)
-                        for item in extracted:
-                            item['fund_code'] = fund_code
-                            item["factsheet_url"] = pdf_url
-                            found_codes.append(item)
-            except Exception:
-                pass
+            daily_data["aum"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.totalnetAsset.")
+            daily_data["bid_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
+            daily_data["offer_price_per_unit"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
+            if need_master:
+                master_data = {
+                    "fund_code": fund_code,
+                    "full_name_th": "",
+                    "category": "",
+                    "risk_level": "",
+                    "is_dividend": "",
+                    "inception_date": "",
+                    "source_url": url
+                }
+                try:
+                    master_data["full_name_th"] = get_text_by_id(driver, "wmg.funddetailinfo.text.categoryTH")
+                    if not master_data["full_name_th"]:
+                        master_data["full_name_th"] = driver.find_element(By.XPATH, "//div[@class='fundName']/span[@class='categoryTH']").text
+                except: pass
+                master_data["risk_level"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.riskSpectrum.")
+                master_data["category"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.aimcCategories.")
+                master_data["is_dividend"] = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.isDividend.")
+                raw_inception = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.inceptionDate.")
+                master_data["inception_date"] = parse_wm_date(raw_inception)
+                try:
+                    raw_pdf_url = get_value_from_id_attribute(driver, "wmg.funddetailinfo.button.factSheetPath.")
+                    pdf_url = unquote(raw_pdf_url).strip()
+                    if pdf_url and pdf_url.startswith("http"):
+                        pdf_bytes = fetch_pdf_bytes(pdf_url)
+                        if pdf_bytes:
+                            extracted = extract_codes_from_pdf(pdf_bytes)
+                            for item in extracted:
+                                item['fund_code'] = fund_code
+                                item["factsheet_url"] = pdf_url
+                                found_codes.append(item)
+                except Exception: pass
 
-            return info_data, found_codes
+            return master_data, daily_data, found_codes
 
         except Exception as e:
-            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
-            if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAY)
-            else:
-                log(f"Failed {fund_code}")
-    return info_data, found_codes
+            log(f"Error {fund_code} (Attempt {attempt}): {e}")
+            if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
+            else: log(f"Failed {fund_code}")
+            
+    return master_data, daily_data, found_codes
 
 def main():
     driver = make_driver()
-    all_info = []
-    all_codes = []
-    
+    existing_master_codes = set()
+    if os.path.exists(OUTPUT_MASTER_FILENAME):
+        try:
+            with open(OUTPUT_MASTER_FILENAME, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader: existing_master_codes.add(row['fund_code'].strip())
+            log(f"Found {len(existing_master_codes)} existing funds in Master.")
+        except: pass
+    new_master_rows = []
+    daily_rows = []
+    new_codes_rows = []
     try:
         funds_to_scrape = []
         try:
@@ -209,17 +223,20 @@ def main():
         except FileNotFoundError: return
 
         total_funds = len(funds_to_scrape)
-        log(f"starting ({total_funds}")
+        log(f"starting ({total_funds})")
 
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} (info/magik)")
+            need_master = code not in existing_master_codes
+            status_msg = "FULL Update" if need_master else "Daily Update"
+            log(f"[{i}/{total_funds}] {code} : {status_msg}")
+            m_data, d_data, codes = scrape_info(driver, code, url, need_master=need_master)
+            if d_data: daily_rows.append(d_data)
+            if m_data: new_master_rows.append(m_data)
+            if codes: new_codes_rows.extend(codes)
             
-            info, codes = scrape_info_and_pdf(driver, code, url)
-            all_info.append(info)
-            if codes: all_codes.extend(codes)
             polite_sleep()
 
     except KeyboardInterrupt:
@@ -227,31 +244,35 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if all_info:
-            log(f"saving {OUTPUT_INFO_FILENAME}")
-            headers_info = [
-                "fund_code", "full_name_th", "nav_value", "nav_date", 
-                "bid_price_per_unit", "offer_price_per_unit",
-                "category", "risk_level", "aum",
-                "is_dividend", "inception_date", "source_url"
-            ]
-            with open(OUTPUT_INFO_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
-                writer = csv.DictWriter(f, fieldnames=headers_info)
+        if new_master_rows:
+            file_exists = os.path.exists(OUTPUT_MASTER_FILENAME)
+            mode = 'a' if file_exists else 'w'
+            log(f"Saving {len(new_master_rows)} new to Master...")
+            headers_master = ["fund_code", "full_name_th", "category", "risk_level", "is_dividend", "inception_date", "source_url"]
+            with open(OUTPUT_MASTER_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
+                writer = csv.DictWriter(f, fieldnames=headers_master)
+                if not file_exists: writer.writeheader()
+                writer.writerows(new_master_rows)
+        if daily_rows:
+            log(f"Saving Daily to {OUTPUT_DAILY_FILENAME}")
+            headers_daily = ["fund_code", "nav_date", "nav_value", "bid_price_per_unit", "offer_price_per_unit", "aum", "scraped_at"]
+            with open(OUTPUT_DAILY_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.DictWriter(f, fieldnames=headers_daily)
                 writer.writeheader()
-                writer.writerows(all_info)
-        if all_codes:
-            log(f"saving {OUTPUT_CODES_FILENAME}")
+                writer.writerows(daily_rows)
+        if new_codes_rows:
+            file_exists = os.path.exists(OUTPUT_CODES_FILENAME)
+            mode = 'a' if file_exists else 'w'
+            log("Saving new Codes")
             headers_codes = ["fund_code", "type", "code","factsheet_url"]
-            with open(OUTPUT_CODES_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
+            with open(OUTPUT_CODES_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers_codes)
-                writer.writeheader()
-                writer.writerows(all_codes) 
+                if not file_exists: writer.writeheader()
+                writer.writerows(new_codes_rows) 
         if driver:
-            try:
-                driver.quit()
-                log("Closing Browser")
-            except Exception:
-                pass
+            try: driver.quit()
+            except: pass
+        log("Done.")
 
 if __name__ == "__main__":
     main()
