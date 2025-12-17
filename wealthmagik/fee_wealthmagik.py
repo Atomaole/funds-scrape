@@ -124,7 +124,18 @@ def scrape_fees(driver, fund_code, profile_url):
 
 def main():
     driver = make_driver()
-    all_fees = []
+    existing_codes = set()
+    if os.path.exists(OUTPUT_FILENAME):
+        try:
+            with open(OUTPUT_FILENAME, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_codes.add(row.get("fund_code", "").strip())
+            log(f"Found {len(existing_codes)} existing records. Skipping them.")
+        except Exception as e:
+            log(f"Error reading existing file: {e}")
+    new_fees = []
+    
     try:
         funds_to_scrape = []
         try:
@@ -135,15 +146,19 @@ def main():
         except FileNotFoundError:
             log(f"can't find {INPUT_FILENAME}")
             return
+            
         total_funds = len(funds_to_scrape)
         log(f"starting ({total_funds})")
+        
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} (fee/magik)")
+            if code in existing_codes:
+                continue
+            log(f"[{i}/{total_funds}] {code} (fee/magik)")
             fee_data = scrape_fees(driver, code, url)
-            all_fees.append(fee_data)
+            new_fees.append(fee_data)
             polite_sleep()
 
     except KeyboardInterrupt:
@@ -151,8 +166,8 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if all_fees:
-            log(f"saving {OUTPUT_FILENAME}")
+        if new_fees:
+            log(f"Saving {len(new_fees)} new records to {OUTPUT_FILENAME}")
             headers = [
                 "fund_code", "source_url",
                 "initial_purchase", "additional_purchase",
@@ -163,14 +178,16 @@ def main():
                 "management_max", "management_actual",
                 "ter_max", "ter_actual"
             ]
-        
-            with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
+            file_exists = os.path.exists(OUTPUT_FILENAME)
+            mode = 'a' if file_exists else 'w'
+            with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=headers)
-                writer.writeheader()
-                writer.writerows(all_fees)
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerows(new_fees)
             log("done")
         else:
-            log("Error")
+            log("No new data to save")
         if driver:
             try:
                 driver.quit()

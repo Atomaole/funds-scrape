@@ -21,18 +21,12 @@ MAX_RETRIES = 3
 RETRY_DELAY = 3
 
 THAI_MONTH_MAP = {
-    "ม.ค.": 1, "มกราคม": 1, "JAN": 1,
-    "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
-    "มี.ค.": 3, "มีนาคม": 3, "MAR": 3,
-    "เม.ย.": 4, "เมษายน": 4, "APR": 4,
-    "พ.ค.": 5, "พฤษภาคม": 5, "MAY": 5,
-    "มิ.ย.": 6, "มิถุนายน": 6, "JUN": 6,
-    "ก.ค.": 7, "กรกฎาคม": 7, "JUL": 7,
-    "ส.ค.": 8, "สิงหาคม": 8, "AUG": 8,
-    "ก.ย.": 9, "กันยายน": 9, "SEP": 9,
-    "ต.ค.": 10, "ตุลาคม": 10, "OCT": 10,
-    "พ.ย.": 11, "พฤศจิกายน": 11, "NOV": 11,
-    "ธ.ค.": 12, "ธันวาคม": 12, "DEC": 12,
+    "ม.ค.": 1, "มกราคม": 1, "JAN": 1, "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
+    "มี.ค.": 3, "มีนาคม": 3, "MAR": 3, "เม.ย.": 4, "เมษายน": 4, "APR": 4,
+    "พ.ค.": 5, "พฤษภาคม": 5, "MAY": 5, "มิ.ย.": 6, "มิถุนายน": 6, "JUN": 6,
+    "ก.ค.": 7, "กรกฎาคม": 7, "JUL": 7, "ส.ค.": 8, "สิงหาคม": 8, "AUG": 8,
+    "ก.ย.": 9, "กันยายน": 9, "SEP": 9, "ต.ค.": 10, "ตุลาคม": 10, "OCT": 10,
+    "พ.ย.": 11, "พฤศจิกายน": 11, "NOV": 11, "ธ.ค.": 12, "ธันวาคม": 12, "DEC": 12,
 }
 
 def polite_sleep():
@@ -144,7 +138,17 @@ def scrape_holdings(driver, fund_code, profile_url):
 
 def main():
     driver = make_driver()
-    all_holdings = []
+    existing_codes = set()
+    if os.path.exists(OUTPUT_FILENAME):
+        try:
+            with open(OUTPUT_FILENAME, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_codes.add(row.get("fund_code", "").strip())
+            log(f"Found {len(existing_codes)} existing funds in holdings. Skipping them.")
+        except Exception as e:
+            log(f"Error reading existing file: {e}")
+    new_holdings = []
     
     try:
         funds_to_scrape = []
@@ -162,10 +166,12 @@ def main():
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             if not code or not url: continue
-            log(f"[{i}/{total_funds}]{code} (holding/magik)")
+            if code in existing_codes:
+                continue
+            log(f"[{i}/{total_funds}] {code} (holding/magik)")
             data = scrape_holdings(driver, code, url)
             if data:
-                all_holdings.extend(data)
+                new_holdings.extend(data)
             polite_sleep() 
 
     except KeyboardInterrupt:
@@ -173,16 +179,21 @@ def main():
     except Exception as e:
         log(f"Error: {e}")
     finally:
-        if all_holdings:
-            log(f"saving {len(all_holdings)} to {OUTPUT_FILENAME}")
+        if new_holdings:
+            log(f"saving {len(new_holdings)} new rows to {OUTPUT_FILENAME}")
             keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
-            with open(OUTPUT_FILENAME, "w", newline="", encoding="utf-8-sig") as f:
+            
+            file_exists = os.path.exists(OUTPUT_FILENAME)
+            mode = 'a' if file_exists else 'w'
+            with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=keys)
-                writer.writeheader()
-                writer.writerows(all_holdings)
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerows(new_holdings)
             log("done")
         else:
-            log("Error or No Data")
+            log("No new data to save")
+            
         if driver:
             try:
                 driver.quit()
