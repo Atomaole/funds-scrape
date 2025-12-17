@@ -142,19 +142,6 @@ def extract_codes_from_pdf(pdf_bytes):
             isin_matches = re.findall(r"\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b", full_text)
             for isin in set(isin_matches):
                 codes.append({"type": "ISIN", "code": isin})
-            found_bloomberg = set()
-            label_matches = re.finditer(r"Bloomberg\s*(?:Code|Ticker|ID)?\s*[:：]?\s+([A-Z0-9-]{3,15}\s+[A-Z]{2}(?:\s+Equity)?)", full_text, re.IGNORECASE)
-            for m in label_matches:
-                raw = m.group(1).strip()
-                if len(raw) > 4: found_bloomberg.add(raw.upper())
-            equity_matches = re.finditer(r"\b([A-Z0-9-]{3,15}\s+[A-Z]{2}\s+Equity)\b", full_text, re.IGNORECASE)
-            for m in equity_matches:
-                found_bloomberg.add(m.group(1).strip().upper())
-            tb_matches = re.finditer(r"\b([A-Z0-9-]{3,15}\s+TB)\b", full_text)
-            for m in tb_matches:
-                found_bloomberg.add(m.group(1).strip().upper())
-            for bb_code in found_bloomberg:
-                codes.append({"type": "Bloomberg", "code": bb_code})
     except Exception as e:
         print(f"PDF Error: {e}")
     return codes
