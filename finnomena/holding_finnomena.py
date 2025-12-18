@@ -49,10 +49,8 @@ def parse_thai_date(text):
         try:
             day = int(d_str)
             year = int(y_str)
-            if year < 100:
-                year += 1957 
-            elif year > 2400:
-                year -= 543
+            if year < 100: year += 1957 
+            elif year > 2400: year -= 543
             return datetime(year, month_num, day).strftime("%d-%m-%Y")
         except ValueError:
             pass
@@ -104,54 +102,96 @@ def clean_deleted_funds(output_filename, valid_fund_codes):
     except Exception as e:
         log(f"Error cleaning file {output_filename}: {e}")
 
+def scrape_pie_chart(driver, section_id, data_type, fund_code, url):
+    results = []
+    try:
+        try:
+            section = WebDriverWait(driver, 3).until(
+                EC.presence_of_element_located((By.ID, section_id))
+            )
+        except:
+            return []
+        as_of_date = ""
+        try:
+            date_el = section.find_element(By.CSS_SELECTOR, ".data-date")
+            raw_date = clean_text(date_el.text)
+            as_of_date = parse_thai_date(raw_date)
+        except: pass
+        items = section.find_elements(By.CSS_SELECTOR, ".top-holding-item")
+        
+        for item in items:
+            try:
+                name_el = item.find_element(By.CSS_SELECTOR, ".title")
+                name = clean_text(name_el.text)
+                percent_el = item.find_element(By.CSS_SELECTOR, ".percent")
+                percent = clean_text(percent_el.text).replace("%", "")
+                
+                if name and percent:
+                    results.append({
+                        "fund_code": fund_code,
+                        "type": data_type,
+                        "name": name,
+                        "percent": percent,
+                        "as_of_date": as_of_date,
+                        "source_url": url
+                    })
+            except:
+                continue
+    except Exception as e:
+        pass
+        
+    return results
+
 def scrape_holdings(driver, fund_code, base_url):
     port_url = base_url.rstrip("/") + "/portfolio"
+    all_data = []
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             driver.get(port_url)
             try:
-                section = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "section-top-5-holding"))
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "fund-portfolio"))
                 )
-            except Exception:
-                if attempt < MAX_RETRIES:
-                    raise Exception("Element not found (Timeout)")
-                else:
-                    return []
-            holdings_data = []
-            as_of_date = ""
-            try:
-                date_el = section.find_element(By.CSS_SELECTOR, ".data-date")
-                raw_date = clean_text(date_el.text)
-                as_of_date = parse_thai_date(raw_date)
             except:
                 pass
-            
-            items = section.find_elements(By.CSS_SELECTOR, ".top-holding-item")
-            
-            for item in items:
+            try:
+                section_top5 = driver.find_element(By.ID, "section-top-5-holding")
+                as_of_date_top5 = ""
                 try:
-                    name_el = item.find_element(By.CSS_SELECTOR, ".title")
-                    name = clean_text(name_el.text)
-                    
-                    percent_el = item.find_element(By.CSS_SELECTOR, ".percent")
-                    percent = clean_text(percent_el.text).replace("%", "")
-                    
-                    if name and percent:
-                        holdings_data.append({
-                            "fund_code": fund_code,
-                            "holding_name": name,
-                            "percent": percent,
-                            "as_of_date": as_of_date,
-                            "source_url": port_url
-                        })
-                except:
-                    continue
-            return holdings_data
+                    date_el = section_top5.find_element(By.CSS_SELECTOR, ".data-date")
+                    as_of_date_top5 = parse_thai_date(clean_text(date_el.text))
+                except: pass
+                
+                items = section_top5.find_elements(By.CSS_SELECTOR, ".top-holding-item")
+                for item in items:
+                    try:
+                        name = clean_text(item.find_element(By.CSS_SELECTOR, ".title").text)
+                        percent = clean_text(item.find_element(By.CSS_SELECTOR, ".percent").text).replace("%", "")
+                        if name and percent:
+                            all_data.append({
+                                "fund_code": fund_code,
+                                "type": "holding",
+                                "name": name,
+                                "percent": percent,
+                                "as_of_date": as_of_date_top5,
+                                "source_url": port_url
+                            })
+                    except: continue
+            except: 
+                pass
+
+            assets = scrape_pie_chart(driver, "section-allocation-chart", "asset_alloc", fund_code, port_url)
+            all_data.extend(assets)
+            sectors = scrape_pie_chart(driver, "section-stock-allocation", "sector_alloc", fund_code, port_url)
+            all_data.extend(sectors)
+            if all_data:
+                return all_data
+            if attempt < MAX_RETRIES:
+                 raise Exception("No data found, retrying...")
 
         except Exception as e:
-            log(f"⚠️ Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
+            log(f"Error {fund_code} (Attempt {attempt}/{MAX_RETRIES}): {e}")
             if attempt < MAX_RETRIES:
                 time.sleep(RETRY_DELAY)
             else:
@@ -189,21 +229,14 @@ def main():
     f_out = open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig")
     
     try:
-        keys = ["fund_code", "holding_name", "percent", "as_of_date", "source_url"]
+        keys = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
+        
         writer = csv.DictWriter(f_out, fieldnames=keys)
         if not file_exists:
             writer.writeheader()
-        funds_to_scrape = []
-        try:
-            with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                for row in reader: funds_to_scrape.append(row)
-        except FileNotFoundError:
-            log(f"not found {INPUT_FILENAME}")
-            return
 
         total_funds = len(funds_to_scrape)
-        log(f"scrape holding {total_funds}")
+        log(f"scrape holding + allocations {total_funds}")
         
         for i, fund in enumerate(funds_to_scrape, 1):
             code = unquote(fund.get("fund_code", "")).strip()
