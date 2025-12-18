@@ -5,6 +5,7 @@ import os
 import random
 from selenium import webdriver
 from urllib.parse import unquote
+from datetime import datetime
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,13 +18,40 @@ OUTPUT_FILENAME = os.path.join(script_dir, "finnomena_fees.csv")
 HEADLESS = True
 MAX_RETRIES = 3
 RETRY_DELAY = 3
+LOG_BUFFER = []
+HAS_ERROR = False
 
 def polite_sleep():
     t = random.uniform(0.5, 1) 
     time.sleep(t)
 
 def log(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}")
+    global HAS_ERROR
+    if "error" in msg.lower() or "failed" in msg.lower():
+        HAS_ERROR = True
+    timestamp = time.strftime('%H:%M:%S')
+    formatted_msg = f"[{timestamp}] {msg}"
+    print(formatted_msg)
+    LOG_BUFFER.append(formatted_msg)
+
+def save_log_if_error():
+    if not HAS_ERROR:
+        return
+    try:
+        current_script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_script_dir)
+        log_dir = os.path.join(project_root, "Logs")
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        script_name = os.path.basename(__file__).replace(".py", "")
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{script_name}_{date_str}.log"
+        file_path = os.path.join(log_dir, filename)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(LOG_BUFFER))
+        print(f"Error detected. Log saved at: {file_path}")
+    except Exception as e:
+        print(f"Cannot save log file: {e}")
 
 def make_driver():
     options = webdriver.FirefoxOptions()
@@ -237,6 +265,7 @@ def main():
         if driver:
             try: driver.quit()
             except: pass
+        save_log_if_error()
         log("Done")
 
 if __name__ == "__main__":
