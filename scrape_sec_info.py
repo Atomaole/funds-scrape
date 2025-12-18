@@ -58,7 +58,10 @@ def polite_sleep():
 
 def clean_text(text):
     if not text: return ""
-    return re.sub(r'\s+', ' ', text).strip()
+    cleaned = re.sub(r'\s+', ' ', text).strip()
+    if cleaned == "-":
+        return ""
+    return cleaned
 
 def clean_deleted_funds(output_filename, valid_fund_codes):
     if not os.path.exists(output_filename):
@@ -88,7 +91,7 @@ def clean_deleted_funds(output_filename, valid_fund_codes):
 
 def parse_recovering_period(text):
     if not text or text == "-" or text == "N/A":
-        return text
+        return ""
     text_clean = text.replace(" ", "")
     total_days = 0
     found_match = False
@@ -110,6 +113,8 @@ def parse_recovering_period(text):
         
     if found_match:
         return str(total_days)
+    if text.strip() == "-":
+        return ""
     return text
 
 def convert_thai_date(date_str):
@@ -136,7 +141,7 @@ def make_driver():
     return webdriver.Firefox(service=Service(driver_path), options=options)
 
 def scrape_sec_info(driver, fund_code):
-    safe_code = quote(fund_code)
+    safe_code = quote(fund_code, safe='') 
     url = f"https://fundcheck.sec.or.th/fund-detail;funds={safe_code}"
     empty_data = {
         "fund_code": fund_code,
