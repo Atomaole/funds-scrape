@@ -8,7 +8,7 @@ from datetime import datetime
 from update_driver import update_geckodriver
 
 # for test
-TEST_MODE_SKIP_LIST = True
+TEST_MODE_SKIP_LIST = False
 
 DIR_FIN = "finnomena"
 DIR_WM = "wealthmagik"
