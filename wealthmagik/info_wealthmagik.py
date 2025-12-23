@@ -267,6 +267,17 @@ def main():
                 for row in reader: existing_master_codes.add(row['fund_code'].strip())
             log(f"Found {len(existing_master_codes)} existing funds in Master.")
         except: pass
+    existing_daily_codes = set()
+    if os.path.exists(OUTPUT_DAILY_FILENAME):
+        try:
+            with open(OUTPUT_DAILY_FILENAME, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    existing_daily_codes.add(row['fund_code'].strip())
+            log(f"Found {len(existing_daily_codes)} existing funds in Daily file.")
+        except Exception as e:
+            log(f"Error reading daily file: {e}")
+
     headers_master = ["fund_code", "full_name_th", "category", "risk_level", "is_dividend", "inception_date", "source_url"]
     headers_daily = ["fund_code", "nav_date", "nav_value", "bid_price_per_unit", "offer_price_per_unit", "aum", "scraped_at"]
     headers_codes = ["fund_code", "type", "code","factsheet_url"]
@@ -299,6 +310,10 @@ def main():
             url = fund.get("url", "")
             if not code or not url: continue
             need_master = code not in existing_master_codes
+            need_daily = code not in existing_daily_codes
+            if not need_master and not need_daily:
+                log(f"[{i}/{total_funds}] {code} : Already done")
+                continue
             status_msg = "FULL Update" if need_master else "Daily Update"
             log(f"[{i}/{total_funds}] {code} : {status_msg}")
             m_data, d_data, codes = scrape_info(driver, code, url, need_master=need_master)

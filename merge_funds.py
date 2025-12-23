@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import glob
 import os
+import time
 import shutil
 from datetime import datetime, timedelta
 
@@ -11,9 +12,11 @@ WM_DIR = 'wealthmagik'
 MERGED_DIR = 'merged_output'
 FINAL_DB_DIR = 'final_db_data'
 HOLDING_AGE_THRESHOLD = 60
+LOG_BUFFER = []
+HAS_ERROR = False
 
 GLOBAL_DELETED_FUNDS = set()
-
+script_dir = os.path.dirname(os.path.abspath(__file__))
 if not os.path.exists(MERGED_DIR): os.makedirs(MERGED_DIR)
 if not os.path.exists(FINAL_DB_DIR): os.makedirs(FINAL_DB_DIR)
 
@@ -28,6 +31,32 @@ def load_csv(filepath):
         try: return pd.read_csv(filepath)
         except Exception: return pd.DataFrame()
     return pd.DataFrame()
+
+def log(msg):
+    global HAS_ERROR
+    if "error" in msg.lower() or "failed" in msg.lower():
+        HAS_ERROR = True
+    timestamp = time.strftime('%H:%M:%S')
+    formatted_msg = f"[{timestamp}] {msg}"
+    print(formatted_msg)
+    LOG_BUFFER.append(formatted_msg)
+
+def save_log_if_error():
+    if not HAS_ERROR:
+        return
+    try:
+        log_dir = os.path.join(script_dir, "Logs")
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        script_name = os.path.basename(__file__).replace(".py", "")
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{script_name}_{date_str}.log"
+        file_path = os.path.join(log_dir, filename)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(LOG_BUFFER))
+        print(f"Error detected. Log saved at: {file_path}")
+    except Exception as e:
+        print(f"Cannot save log file: {e}")
 
 def clean_float(df, cols):
     for col in cols:
@@ -55,7 +84,7 @@ def save_incremental(df_new, filename_base, unique_keys):
         original_count = len(df_new)
         df_new = df_new[~df_new['fund_code'].isin(GLOBAL_DELETED_FUNDS)].copy()
         if len(df_new) < original_count:
-            print(f"Filtered out {original_count - len(df_new)} deleted funds from {filename_base}.")
+            log(f"Filtered out {original_count - len(df_new)} deleted funds from {filename_base}.")
 
     current_month = datetime.now().month
     monthly_filename = f"{filename_base}_{current_month}.csv"
@@ -69,7 +98,7 @@ def save_incremental(df_new, filename_base, unique_keys):
         return k_list
 
     if not os.path.exists(monthly_path):
-        print(f"New month/file detected: Creating {monthly_filename}")
+        log(f"New month/file detected: Creating {monthly_filename}")
         for old_file in glob.glob(os.path.join(MERGED_DIR, f"{filename_base}_*.csv")):
             if old_file != monthly_path:
                 try: os.remove(old_file)
@@ -80,7 +109,7 @@ def save_incremental(df_new, filename_base, unique_keys):
         df_new.to_csv(final_path, index=False)
         
     else:
-        print(f"Existing month file found. Calculating Diff")
+        log(f"Existing month file found. Calculating Diff")
         df_old = pd.read_csv(monthly_path)
         
         def get_key_set(df):
@@ -101,7 +130,7 @@ def save_incremental(df_new, filename_base, unique_keys):
             added_df = temp_new.loc[lookup_keys].reset_index()
             added_df['sync_action'] = 'ADD'
             diff_rows.append(added_df)
-            print(f"Found {len(added_keys)} new records")
+            log(f"Found {len(added_keys)} new records")
         
         if deleted_keys:
             temp_old = df_old.set_index(unique_keys)
@@ -109,12 +138,12 @@ def save_incremental(df_new, filename_base, unique_keys):
             deleted_df = temp_old.loc[lookup_keys].reset_index()
             deleted_df['sync_action'] = 'DELETE'
             diff_rows.append(deleted_df)
-            print(f"Found {len(deleted_keys)} deleted records")
+            log(f"Found {len(deleted_keys)} deleted records")
 
             if filename_base == 'master_funds_info' and unique_keys == ['fund_code']:
                 for k in lookup_keys:
                     GLOBAL_DELETED_FUNDS.add(k)
-                    print(f"Marked {k} for Global Cascade Delete")
+                    log(f"Marked {k} for Global Cascade Delete")
 
         if filename_base != 'master_funds_info' and 'fund_code' in unique_keys and GLOBAL_DELETED_FUNDS:
             cascade_deletes = []
@@ -128,7 +157,7 @@ def save_incremental(df_new, filename_base, unique_keys):
                         cascade_df[col] = np.nan
                 
                 diff_rows.append(cascade_df)
-                print(f"Added {len(cascade_df)} Cascade Deletes from Master")
+                log(f"Added {len(cascade_df)} Cascade Deletes from Master")
 
         df_new.to_csv(monthly_path, index=False)
         
@@ -137,15 +166,15 @@ def save_incremental(df_new, filename_base, unique_keys):
             if 'fund_code' in final_df.columns:
                 final_df = final_df.drop_duplicates(subset=unique_keys + ['sync_action'])
             final_df.to_csv(final_path, index=False)
-            print(f"Diff saved to {final_filename}")
+            log(f"Diff saved to {final_filename}")
         else:
-            print("No changes detected")
+            log("No changes detected")
 
 
-print("Starting Merge Process (Strict Master Clean Mode)")
+log("Starting Merge Process (Strict Master Clean Mode)")
 
 # 1. MASTER INFO (First Priority)
-print("Processing Master Info")
+log("Processing Master Info")
 fin_master = load_csv(os.path.join(FIN_DIR, 'finnomena_master_info.csv'))
 wm_master = load_csv(os.path.join(WM_DIR, 'wealthmagik_master_info.csv'))
 master_merged = pd.merge(fin_master, wm_master, on='fund_code', how='outer', suffixes=('_fin', '_wm'))
@@ -174,7 +203,7 @@ final_master = clean_date(final_master, 'inception_date')
 save_incremental(final_master, 'master_funds_info', unique_keys=['fund_code'])
 
 # 2. ALL SEC FUND INFO
-print("Processing All SEC Fund Info")
+log("Processing All SEC Fund Info")
 sec_file_path = os.path.join(MERGED_DIR, 'all_sec_fund_info.csv')
 sec_info = load_csv(sec_file_path)
 if not sec_info.empty:
@@ -182,10 +211,10 @@ if not sec_info.empty:
     sec_info = clean_float(sec_info, ['sharpe_ratio', 'alpha', 'beta', 'max_drawdown', 'recovering_period', 'tracking_error', 'turnover_ratio'])
     save_incremental(sec_info, 'all_sec_fund_info', unique_keys=['fund_code'])
 else:
-    print(f"Warning: '{sec_file_path}' not found. Skipping")
+    log(f"Warning: '{sec_file_path}' not found. Skipping")
 
 # 3. FEES
-print("Processing Fees")
+log("Processing Fees")
 fin_fees = load_csv(os.path.join(FIN_DIR, 'finnomena_fees.csv'))
 wm_fees = load_csv(os.path.join(WM_DIR, 'wealthmagik_fees.csv'))
 wm_fees = wm_fees.rename(columns={'initial_purchase': 'min_initial_buy', 'additional_purchase': 'min_next_buy'})
@@ -201,7 +230,7 @@ final_fees = all_fees.groupby('fund_code', as_index=False).first()
 save_incremental(final_fees, 'master_funds_fees', unique_keys=['fund_code'])
 
 # 4. CODES
-print("Processing Codes")
+log("Processing Codes")
 fin_codes = load_csv(os.path.join(FIN_DIR, 'finnomena_codes.csv'))
 wm_codes = load_csv(os.path.join(WM_DIR, 'wealthmagik_codes.csv'))
 all_codes = pd.concat([fin_codes, wm_codes], ignore_index=True)
@@ -211,7 +240,7 @@ if not all_codes.empty:
     save_incremental(final_codes, 'master_funds_codes', unique_keys=['fund_code', 'code'])
 
 # 5. HOLDINGS & ALLOCATIONS (UPDATED LOGIC)
-print("Processing Holdings & Allocations")
+log("Processing Holdings & Allocations")
 df_list = []
 f_h = load_csv(os.path.join(FIN_DIR, 'finnomena_holdings.csv'))
 if not f_h.empty:
@@ -268,10 +297,10 @@ if df_list:
     save_incremental(final_allocations, 'master_funds_allocations', unique_keys=['fund_code', 'name', 'type', 'data_source'])
     
 else:
-    print("No portfolio data found")
+    log("No portfolio data found")
 
 # 6. DAILY NAV
-print("Processing Daily NAV")
+log("Processing Daily NAV")
 nav_files = glob.glob(os.path.join(FIN_DIR, 'finnomena_daily_nav_*.csv')) + \
             glob.glob(os.path.join(WM_DIR, 'wealthmagik_daily_nav_*.csv'))
 
@@ -352,8 +381,8 @@ final_nav_combined = pd.concat([final_nav_add, final_nav_delete], ignore_index=T
 if not final_nav_combined.empty:
     final_nav_path = os.path.join(FINAL_DB_DIR, "final_funds_daily_nav.csv")
     final_nav_combined.to_csv(final_nav_path, index=False)
-    print(f"Daily NAV processed: {len(final_nav_combined)} records saved.")
+    log(f"Daily NAV processed: {len(final_nav_combined)} records saved.")
 else:
-    print("No Daily NAV data.")
+    log("No Daily NAV data.")
 
-print(f"\nAll Done! Diff files are in '{FINAL_DB_DIR}'")
+log(f"\nAll Done! Diff files are in '{FINAL_DB_DIR}'")
