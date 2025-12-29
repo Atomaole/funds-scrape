@@ -6,7 +6,7 @@ import signal
 from datetime import datetime, timedelta
 
 # CONFIG
-AUTO_MODE = False   # True=loop, False=one round
+AUTO_MODE = True   # True=loop, False=one round
 RUN_ON_START = True    # True=do now after run False=waiting time
 SCHEDULE_TIME = "03:00"
 DAYS_TO_SKIP = [6,0]   # skip [6=sunday, 0=monday]
