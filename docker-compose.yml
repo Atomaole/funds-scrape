@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16
+    container_name: funds_postgres_container
+    environment:
+      POSTGRES_USER: admin # you can change whatever you want
+      POSTGRES_PASSWORD: password # you can change whatever you want
+      POSTGRES_DB: funds_db # name of db
+    ports:
+      - "5432:5432"
+    volumes:
+      - funds_db_data:/var/lib/postgresql/data 
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  pgadmin:
+    image: dpage/pgadmin4 # you can choose whatever you want to have UI to see database if you want
+    container_name: funds_pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: atom@admin.com # this is my name you can change it
+      PGADMIN_DEFAULT_PASSWORD: admin # you can change
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+volumes:
+  funds_db_data:

@@ -1,0 +1,197 @@
+import csv
+import time
+import re
+import os
+import random
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import unquote
+from datetime import datetime
+
+# CONFIG
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root = os.path.dirname(script_dir)
+current_date_str = datetime.now().strftime("%Y-%m-%d")
+RAW_DATA_DIR = os.path.join(script_dir, "raw_data")
+if not os.path.exists(RAW_DATA_DIR): os.makedirs(RAW_DATA_DIR)
+INPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_fund_list.csv")
+OUTPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_allocations.csv")
+RESUME_FILE = os.path.join(script_dir, "allocations_resume.log")
+MAX_RETRIES = 3
+RETRY_DELAY = 2
+LOG_BUFFER = []
+HAS_ERROR = False
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,th;q=0.8"
+}
+
+def polite_sleep():
+    time.sleep(random.uniform(0.3, 0.7))
+
+def log(msg):
+    global HAS_ERROR
+    if "error" in msg.lower() or "failed" in msg.lower(): HAS_ERROR = True
+    timestamp = time.strftime('%H:%M:%S')
+    print(f"[{timestamp}] {msg}")
+    LOG_BUFFER.append(f"[{timestamp}] {msg}")
+
+def save_log_if_error():
+    if not HAS_ERROR: return
+    try:
+        log_dir = os.path.join(root, "Logs")
+        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        filename = f"alloc_wm_{datetime.now().strftime('%Y-%m-%d')}.log"
+        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+            f.write("\n".join(LOG_BUFFER))
+    except: pass
+
+def get_resume_state():
+    if not os.path.exists(RESUME_FILE): return set()
+    finished = set()
+    try:
+        with open(RESUME_FILE, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        if not lines: return set()
+        first_line_parts = lines[0].strip().split('|')
+        if len(first_line_parts) < 2 or first_line_parts[-1] != current_date_str:
+            log(f"Resume file date mismatch Deleting and starting new")
+            try: os.remove(RESUME_FILE)
+            except: pass
+            return set()
+        for line in lines:
+            parts = line.strip().split('|')
+            if len(parts) >= 1: finished.add(parts[0])
+        log(f"Resuming Found {len(finished)} funds done")
+        return finished
+    except Exception as e: 
+        log(f"Error reading resume file: {e}")
+        return set()
+
+def append_resume_state(code):
+    try:
+        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+            f.write(f"{code}|{current_date_str}\n")
+    except: pass
+
+def cleanup_resume_file():
+    if os.path.exists(RESUME_FILE):
+        try: os.remove(RESUME_FILE)
+        except: pass
+
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text).strip() if text else ""
+
+def parse_thai_date(text):
+    if not text: return ""
+    text = re.sub(r"(ข้อมูล\s*ณ\s*วันที่|ณ\s*วันที่|as of)", "", text, flags=re.IGNORECASE).strip()
+    match = re.search(r"(\d{1,2})\s+([^\s\d]+)\s+(\d{2,4})", text)
+    if match:
+        thai_months = {"ม.ค.":1, "มกราคม":1, "JAN":1, "ก.พ.":2, "กุมภาพันธ์":2, "FEB":2, "มี.ค.":3, "มีนาคม":3, "MAR":3, "เม.ย.":4, "เมษายน":4, "APR":4, "พ.ค.":5, "พฤษภาคม":5, "MAY":5, "มิ.ย.":6, "มิถุนายน":6, "JUN":6, "ก.ค.":7, "กรกฎาคม":7, "JUL":7, "ส.ค.":8, "สิงหาคม":8, "AUG":8, "ก.ย.":9, "กันยายน":9, "SEP":9, "ต.ค.":10, "ตุลาคม":10, "OCT":10, "พ.ย.":11, "พฤศจิกายน":11, "NOV":11, "ธ.ค.":12, "ธันวาคม":12, "DEC":12}
+        d_str, m_str, y_str = match.groups()
+        month_num = thai_months.get(m_str.strip(), 0)
+        if month_num == 0: return text
+        try:
+            day, year = int(d_str), int(y_str)
+            if year < 100: year += 1957
+            elif year > 2400: year -= 543
+            return datetime(year, month_num, day).strftime("%d-%m-%Y")
+        except: pass
+    return text
+
+def scrape_section_soup(soup, container_class, data_type, fund_code, url):
+    results = []
+    try:
+        container = soup.select_one(f".{container_class}")
+        if not container: return []
+        as_of_date = ""
+        date_el = container.select_one(".asofdate")
+        if date_el:
+            as_of_date = parse_thai_date(clean_text(date_el.get_text()))
+        rows = container.select("tr.mat-row")
+        for row in rows:
+            try:
+                name_el = row.select_one(".cdk-column-name")
+                percent_el = row.select_one(".cdk-column-ratio")
+                if name_el and percent_el:
+                    name = clean_text(name_el.get_text())
+                    percent = clean_text(percent_el.get_text()).replace("%", "").strip()
+                    if name and percent:
+                        results.append({
+                            "fund_code": fund_code, "type": data_type, 
+                            "name": name, "percent": percent, 
+                            "as_of_date": as_of_date, "source_url": url
+                        })
+            except: continue
+    except: pass
+    return results
+
+def scrape_allocations(fund_code, profile_url):
+    alloc_url = re.sub(r"/profile/?$", "/allocation", profile_url)
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            current_headers = HEADERS.copy()
+            if attempt > 1:
+                current_headers.update({
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                })
+                log(f"Retry {attempt}: Fetching {alloc_url}")
+            response = requests.get(alloc_url, headers=current_headers, timeout=15)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                all_data = []
+                all_data.extend(scrape_section_soup(soup, "investmentAllocationByAsset", "asset_alloc", fund_code, alloc_url))
+                all_data.extend(scrape_section_soup(soup, "investmentAllocationByCountry", "country_alloc", fund_code, alloc_url))
+                if all_data: return all_data
+                if soup.select(".fundName") or soup.select("h1"):
+                    return []
+            elif response.status_code == 404:
+                return []
+            if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
+        except Exception as e:
+            log(f"Error {fund_code}: {e}")
+            if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
+    return []
+
+def main():
+    finished_funds = get_resume_state()
+    funds = []
+    try:
+        with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f): funds.append(row)
+    except: return
+    mode = 'a' if finished_funds else 'w'
+    try:
+        with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f_out:
+            keys = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
+            writer = csv.DictWriter(f_out, fieldnames=keys)
+            if mode == 'w': writer.writeheader()
+            total = len(funds)
+            log(f"Start Scraping Allocations (Total: {total})")
+            for i, fund in enumerate(funds, 1):
+                code = unquote(fund.get("fund_code", "")).strip()
+                url = fund.get("url", "")
+                if not code or not url: continue
+                if code in finished_funds: continue
+                log(f"[{i}/{total}] {code} (allocations/wealthmagik)")
+                data = scrape_allocations(code, url)
+                if data:
+                    writer.writerows(data)
+                    f_out.flush()
+                append_resume_state(code)
+                polite_sleep()
+
+    except KeyboardInterrupt: 
+        log("Stopped by user")
+        global HAS_ERROR
+        HAS_ERROR = True
+    finally:
+        # if not HAS_ERROR: cleanup_resume_file()
+        save_log_if_error()
+        log("Done")
+
+if __name__ == "__main__":
+    main()
