@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 # CONFIG
 AUTO_MODE = True   # True=loop, False=one round
-RUN_ON_START = True    # True=do now after run False=waiting time
+RUN_ON_START = False    # True=do now after run False=waiting time (3.00AM)
 SCHEDULE_TIME = "03:00"
 DAYS_TO_SKIP = [6,0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
