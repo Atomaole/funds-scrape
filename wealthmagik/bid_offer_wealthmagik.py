@@ -3,8 +3,11 @@ import time
 import re
 import os
 import random
+import threading
+import math
 from urllib.parse import unquote
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -26,17 +29,24 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
+CSV_LOCK = threading.Lock()
+LOG_LOCK = threading.Lock()
+COUNT_LOCK = threading.Lock()
+STOP_EVENT = threading.Event()
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+PROCESSED_COUNT = 0
 
 def polite_sleep():
-    time.sleep(random.uniform(0.3, 1))
+    time.sleep(random.uniform(0.5, 1.5))
 
 def log(msg):
     global HAS_ERROR
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    print(f"[{timestamp}] {msg}")
-    LOG_BUFFER.append(f"[{timestamp}] {msg}")
+    with LOG_LOCK:
+        print(f"[{timestamp}] {msg}")
+        LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
 def save_log_if_error():
     if not HAS_ERROR: return
@@ -68,10 +78,11 @@ def get_resume_state():
     except: return set()
 
 def append_resume_state(code):
-    try:
-        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"{code}|{current_date_str}\n")
-    except: pass
+    with CSV_LOCK:
+        try:
+            with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+                f.write(f"{code}|{current_date_str}\n")
+        except: pass
 
 def cleanup_resume_file():
     if os.path.exists(RESUME_FILE):
@@ -88,6 +99,8 @@ def make_driver():
     options.add_argument("--width=1920")
     options.add_argument("--height=1080")
     driver_path = os.path.join(root, "geckodriver")
+    if not os.path.exists(driver_path):
+         driver_path = os.path.join(script_dir, "geckodriver")
     return webdriver.Firefox(service=Service(driver_path), options=options)
 
 def clean_text(text):
@@ -132,20 +145,14 @@ def scrape_bid_offer(driver, fund_code, url):
         "offer_price": ""
     }
     for attempt in range(1, MAX_RETRIES + 1):
+        if STOP_EVENT.is_set(): return None
         try:
-            if attempt > 1:
-                log(f"Retry {attempt}: Resetting driver state (bid_offer)")
-                try:
-                    driver.delete_all_cookies()
-                    driver.get("about:blank")
-                    time.sleep(2)
-                except: pass
+            if attempt > 1: pass
             driver.get(url)
             close_ad_if_present(driver)
             try: WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
             except: 
-                if attempt < MAX_RETRIES: 
-                    continue 
+                if attempt < MAX_RETRIES: continue 
                 else: return None
             raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
             data["nav_date"] = parse_wm_date(raw_nav_date)
@@ -161,9 +168,56 @@ def scrape_bid_offer(driver, fund_code, url):
             
     return None
 
+def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_count_start):
+    global PROCESSED_COUNT
+    driver = None
+    try:
+        driver = make_driver()
+        for i, fund in enumerate(fund_list, 1):
+            if STOP_EVENT.is_set():
+                break
+            code = unquote(fund.get("fund_code", "")).strip()
+            url = fund.get("url", "")
+            try:
+                data = scrape_bid_offer(driver, code, url)
+                if STOP_EVENT.is_set(): break
+                current_total_done = 0
+                with COUNT_LOCK:
+                    PROCESSED_COUNT += 1
+                    current_total_done = finished_count_start + PROCESSED_COUNT
+                if data:
+                    with CSV_LOCK:
+                        with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
+                            writer = csv.DictWriter(f_out, fieldnames=fieldnames)
+                            writer.writerow(data)
+                    log(f"[{current_total_done}/{total_all_funds}] {code} (bid_offer/wealthmagik)")
+                else:
+                    log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
+                append_resume_state(code)
+                polite_sleep()
+                
+            except Exception as e:
+                current_total_done = 0
+                with COUNT_LOCK:
+                    if 'current_total_done' not in locals() or current_total_done == 0:
+                         PROCESSED_COUNT += 1
+                         current_total_done = finished_count_start + PROCESSED_COUNT
+                         
+                log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
+
+    except Exception as e:
+        if not STOP_EVENT.is_set():
+             log(f"Thread-{thread_id} Crashed: {e}")
+    finally:
+        if driver:
+            driver.quit()
+
+def split_list(lst, n):
+    k, m = divmod(len(lst), n)
+    return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+
 def main():
     finished_funds = get_resume_state()
-    driver = make_driver()
     funds = []
     try:
         with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
@@ -171,34 +225,39 @@ def main():
     except: 
         log(f"Input file not found: {INPUT_FILENAME}")
         return
-    mode = 'a' if finished_funds else 'w'
+    pending_funds = [f for f in funds if unquote(f.get("fund_code", "")).strip() not in finished_funds]
+    total_all_funds = len(funds)
+    finished_count_start = len(finished_funds)
+    remaining = len(pending_funds)
+    log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
+    if remaining == 0:
+        log("All done")
+        return
+    fieldnames = ["fund_code", "nav_date", "bid_price", "offer_price"]
+    if not os.path.exists(OUTPUT_FILENAME) or os.path.getsize(OUTPUT_FILENAME) == 0:
+         with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f_out:
+            writer = csv.DictWriter(f_out, fieldnames=fieldnames)
+            writer.writeheader()
+    batches = split_list(pending_funds, NUM_WORKERS)
+    batches = [b for b in batches if len(b) > 0]
+    log(f"Starting {len(batches)}")
+    global PROCESSED_COUNT
+    PROCESSED_COUNT = 0 
+    executor = ThreadPoolExecutor(max_workers=len(batches))
+    futures = []
     try:
-        with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f_out:
-            keys = ["fund_code", "nav_date", "bid_price", "offer_price"]
-            writer = csv.DictWriter(f_out, fieldnames=keys)
-            if mode == 'w': writer.writeheader()
-            total = len(funds)
-            log(f"Start Scraping Bid/Offer (Total: {total})")
-            for i, fund in enumerate(funds, 1):
-                code = unquote(fund.get("fund_code", "")).strip()
-                url = fund.get("url", "")
-                if not code or not url: continue
-                if code in finished_funds: continue
-                log(f"[{i}/{total}] {code} (bid_offer/wealthmagik)")
-                data = scrape_bid_offer(driver, code, url)
-                if data:
-                    writer.writerow(data)
-                    f_out.flush()
-                append_resume_state(code)
-                polite_sleep()
-
-    except KeyboardInterrupt: 
-        log("Stopped by user")
+        for i, batch in enumerate(batches):
+            futures.append(executor.submit(process_batch, i+1, batch, fieldnames, total_all_funds, finished_count_start))
+        for future in as_completed(futures):
+            try: future.result()
+            except Exception as e: pass 
+    except KeyboardInterrupt:
+        log("Stopping Scraper")
+        STOP_EVENT.set()
+        executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
     finally:
-        if driver: driver.quit()
-        # if not HAS_ERROR: cleanup_resume_file()
         save_log_if_error()
         log("Done")
 

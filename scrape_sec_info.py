@@ -3,8 +3,10 @@ import time
 import re
 import os
 import random
+import threading
 from urllib.parse import quote, unquote
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -25,15 +27,21 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
+CSV_LOCK = threading.Lock()
+LOG_LOCK = threading.Lock()
+COUNT_LOCK = threading.Lock()
+STOP_EVENT = threading.Event()
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+PROCESSED_COUNT = 0
 
 def log(msg):
     global HAS_ERROR
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    formatted_msg = f"[{timestamp}] {msg}"
-    print(formatted_msg)
-    LOG_BUFFER.append(formatted_msg)
+    with LOG_LOCK:
+        print(f"[{timestamp}] {msg}")
+        LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
 def save_log_if_error():
     if not HAS_ERROR: return
@@ -59,7 +67,6 @@ def get_resume_state():
             if saved_date != current_date_str:
                 log(f"Resume file date ({saved_date}) mismatch. Starting new")
                 try: 
-                    f.close()
                     os.remove(RESUME_FILE) 
                 except: pass
                 return set()
@@ -73,10 +80,11 @@ def get_resume_state():
         return set()
     
 def append_resume_state(code):
-    try:
-        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"{code}|{current_date_str}\n")
-    except: pass
+    with CSV_LOCK:
+        try:
+            with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+                f.write(f"{code}|{current_date_str}\n")
+        except: pass
 
 def cleanup_resume_file():
     if os.path.exists(RESUME_FILE):
@@ -161,9 +169,9 @@ def scrape_sec_info(driver, fund_code):
         "tracking_error": "", "turnover_ratio": "", "fx_hedging": ""
     }
     for attempt in range(1, MAX_RETRIES + 1):
+        if STOP_EVENT.is_set(): return empty_data
         try:
             if attempt > 1:
-                log(f"Retry {attempt}: Resetting driver state (sec)")
                 try:
                     driver.delete_all_cookies()
                     driver.get("about:blank")
@@ -225,13 +233,54 @@ def get_finnomena_funds(filepath):
     log(f"Total funds found in list: {len(sorted_list)}")
     return sorted_list
 
+def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_count_start):
+    global PROCESSED_COUNT
+    driver = None
+    try:
+        driver = make_driver()
+        for i, code in enumerate(fund_list, 1):
+            if STOP_EVENT.is_set(): break
+            try:
+                info = scrape_sec_info(driver, code)
+                if STOP_EVENT.is_set(): break
+                current_total_done = 0
+                with COUNT_LOCK:
+                    PROCESSED_COUNT += 1
+                    current_total_done = finished_count_start + PROCESSED_COUNT
+                with CSV_LOCK:
+                    with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
+                         writer = csv.DictWriter(f, fieldnames=fieldnames)
+                         writer.writerow(info)
+                log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
+                append_resume_state(code)
+                polite_sleep()
+                
+            except Exception as e:
+                current_total_done = 0
+                with COUNT_LOCK:
+                    if 'current_total_done' not in locals() or current_total_done == 0:
+                        PROCESSED_COUNT += 1
+                        current_total_done = finished_count_start + PROCESSED_COUNT
+                log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
+
+    except Exception as e:
+        if not STOP_EVENT.is_set():
+             log(f"Thread-{thread_id} Crashed: {e}")
+    finally:
+        if driver:
+            driver.quit()
+
+def split_list(lst, n):
+    k, m = divmod(len(lst), n)
+    return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+
 def main():
     finished_funds = get_resume_state()
     all_funds = get_finnomena_funds(INPUT_FILE)
     if not all_funds:
         log("No funds found in input file")
         return
-    driver = make_driver()
+
     headers = [
         "fund_code", "as_of_date", 
         "sharpe_ratio", "alpha", "beta", 
@@ -239,32 +288,39 @@ def main():
         "tracking_error", "turnover_ratio", "fx_hedging",
         "sec_url"
     ]
-    mode = 'a' if finished_funds else 'w'
-    try:
-        with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f:
+    if not os.path.exists(OUTPUT_FILENAME) or os.path.getsize(OUTPUT_FILENAME) == 0:
+        with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f:
             writer = csv.DictWriter(f, fieldnames=headers)
-            if mode == 'w': writer.writeheader()
-            total = len(all_funds)
-            for i, code in enumerate(all_funds, 1):
-                if code in finished_funds: continue
-                log(f"[{i}/{total}] {code} (sec info)")
-                info = scrape_sec_info(driver, code)
-                writer.writerow(info)
-                f.flush()
-                append_resume_state(code)
-                polite_sleep()
-                
+            writer.writeheader()
+    pending_funds = [code for code in all_funds if code not in finished_funds]
+    total_all_funds = len(all_funds)
+    finished_count_start = len(finished_funds)
+    remaining = len(pending_funds)
+    log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
+    if remaining == 0:
+        log("All done")
+        return
+    batches = split_list(pending_funds, NUM_WORKERS)
+    batches = [b for b in batches if len(b) > 0]
+    log(f"Starting Scraper {len(batches)}")
+    global PROCESSED_COUNT
+    PROCESSED_COUNT = 0 
+    executor = ThreadPoolExecutor(max_workers=len(batches))
+    futures = []
+    try:
+        for i, batch in enumerate(batches):
+            futures.append(executor.submit(process_batch, i+1, batch, headers, total_all_funds, finished_count_start))
+        for future in as_completed(futures):
+            try: future.result()
+            except Exception: pass
+            
     except KeyboardInterrupt:
-        log("Stopped by user")
+        log("\nStopping Scraper")
+        STOP_EVENT.set()
+        executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
-    except Exception as e:
-        log(f"Critical Error: {e}")
     finally:
-        if driver:
-            driver.quit()
-            log("Browser Closed")
-        # if not HAS_ERROR: cleanup_resume_file()
         save_log_if_error()
         log("Done")
 

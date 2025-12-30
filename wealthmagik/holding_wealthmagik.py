@@ -4,9 +4,11 @@ import re
 import os
 import random
 import requests
+import threading
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # CONFIG
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +23,10 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
+CSV_LOCK = threading.Lock()
+LOG_LOCK = threading.Lock()
+STOP_EVENT = threading.Event()
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 
 THAI_MONTH_MAP = {
     "ม.ค.": 1, "มกราคม": 1, "JAN": 1, "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
@@ -45,8 +51,9 @@ def log(msg):
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    print(f"[{timestamp}] {msg}")
-    LOG_BUFFER.append(f"[{timestamp}] {msg}")
+    with LOG_LOCK:
+        print(f"[{timestamp}] {msg}")
+        LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
 def save_log_if_error():
     if not HAS_ERROR: return
@@ -81,10 +88,11 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    try:
-        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"{code}|{current_date_str}\n")
-    except: pass
+    with CSV_LOCK:
+        try:
+            with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+                f.write(f"{code}|{current_date_str}\n")
+        except: pass
 
 def cleanup_resume_file():
     if os.path.exists(RESUME_FILE):
@@ -112,8 +120,9 @@ def parse_thai_date(text):
 
 def scrape_holdings(fund_code, profile_url):
     port_url = re.sub(r"/profile/?$", "/port", profile_url)
-    
+    time.sleep(random.uniform(0.5, 1.5))
     for attempt in range(1, MAX_RETRIES + 1):
+        if STOP_EVENT.is_set(): return None
         try:
             current_headers = HEADERS.copy()
             if attempt > 1:
@@ -121,7 +130,6 @@ def scrape_holdings(fund_code, profile_url):
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache'
                 })
-                log(f"Retry {attempt}: Fetching {port_url}")
             response = requests.get(port_url, headers=current_headers, timeout=15)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -152,7 +160,30 @@ def scrape_holdings(fund_code, profile_url):
         except Exception as e:
             log(f"Error {fund_code}: {e}")
             if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
-    return []
+            
+    return None
+
+def process_fund_task(fund, writer):
+    if STOP_EVENT.is_set(): return None
+    code = unquote(fund.get("fund_code", "")).strip()
+    url = fund.get("url", "")
+    if not code or not url: return None
+    try:
+        data = scrape_holdings(code, url)
+        if STOP_EVENT.is_set(): return None
+        if data:
+            with CSV_LOCK:
+                writer.writerows(data)
+            return f"{code} (holding/wealthmagik)"
+        elif data == []:
+             return f"{code} - No Data"
+        else:
+             raise Exception("Failed to fetch")
+
+    except Exception as e:
+        raise e
+    finally:
+        append_resume_state(code)
 
 def main():
     finished_funds = get_resume_state()
@@ -160,34 +191,55 @@ def main():
     try:
         with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f): funds.append(row)
-    except: return
+    except: 
+        log(f"Input file not found: {INPUT_FILENAME}")
+        return
     mode = 'a' if finished_funds else 'w'
+    f_out = open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig")
+    keys = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
+    writer = csv.DictWriter(f_out, fieldnames=keys)
+    if mode == 'w': writer.writeheader()
+    pending_funds = [f for f in funds if unquote(f.get("fund_code", "")).strip() not in finished_funds]
+    total = len(funds)
+    finished_count_start = len(finished_funds)
+    remaining = len(pending_funds)
+    log(f"Total: {total}, Finished: {finished_count_start}, Remaining: {remaining}")
+    if remaining == 0:
+        log("All done")
+        f_out.close()
+        return
+    log(f"Starting Scraper")
+    executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
+    futures = []
     try:
-        with open(OUTPUT_FILENAME, mode, newline="", encoding="utf-8-sig") as f_out:
-            keys = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
-            writer = csv.DictWriter(f_out, fieldnames=keys)
-            if mode == 'w': writer.writeheader()
-            total = len(funds)
-            log(f"Start Scraping Holdings (Total: {total})")
-            for i, fund in enumerate(funds, 1):
-                code = unquote(fund.get("fund_code", "")).strip()
-                url = fund.get("url", "")
-                if not code or not url: continue
-                if code in finished_funds: continue
-                log(f"[{i}/{total}] {code} (holding/wealthmagik)")
-                data = scrape_holdings(code, url)
-                if data:
-                    writer.writerows(data)
-                    f_out.flush()
-                append_resume_state(code)
-                polite_sleep()
+        count = 0
+        for fund in pending_funds:
+            if STOP_EVENT.is_set(): break
+            futures.append(executor.submit(process_fund_task, fund, writer))
+        for future in as_completed(futures):
+            if STOP_EVENT.is_set(): break
+            try:
+                result_msg = future.result()
+                if result_msg:
+                    count += 1
+                    current_total = finished_count_start + count
+                    if "No Data" in result_msg:
+                         log(f"[{current_total}/{total}] {result_msg}")
+                    else:
+                         log(f"[{current_total}/{total}] {result_msg}")
+                    if count % 10 == 0:
+                        with CSV_LOCK: f_out.flush()
+            except Exception as e:
+                pass
 
     except KeyboardInterrupt: 
-        log("Stopped by user")
+        log("Stopping Scraper")
+        STOP_EVENT.set()
+        executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
     finally:
-        # if not HAS_ERROR: cleanup_resume_file()
+        f_out.close()
         save_log_if_error()
         log("Done")
 

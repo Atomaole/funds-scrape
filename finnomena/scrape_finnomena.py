@@ -6,6 +6,8 @@ import re
 import random
 import pdfplumber
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from datetime import datetime
 
@@ -29,21 +31,24 @@ OUTPUT_CODES     = os.path.join(FN_RAW_DATA_DIR, "finnomena_codes.csv")
 WM_LIST_FILE = os.path.join(WM_RAW_DATA_DIR, "wealthmagik_fund_list.csv")
 RESUME_FILE = os.path.join(script_dir, "scrape_finnomena_resume.log")
 PDF_LOG_FILE = os.path.join(script_dir, "last_pdf_run.log")
-
+LOG_BUFFER = []
+HAS_ERROR = False
+CSV_LOCK = threading.Lock()
+LOG_LOCK = threading.Lock()
+STOP_EVENT = threading.Event()
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.finnomena.com/"
 }
-LOG_BUFFER = []
-HAS_ERROR = False
-
 def log(msg):
     global HAS_ERROR
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    print(f"[{timestamp}] {msg}")
-    LOG_BUFFER.append(f"[{timestamp}] {msg}")
+    with LOG_LOCK:
+        print(f"[{timestamp}] {msg}")
+        LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
 def save_log_if_error():
     if not HAS_ERROR: return
@@ -53,7 +58,8 @@ def save_log_if_error():
         filename = f"scrape_finnomena_{datetime.now().strftime('%Y-%m-%d')}.log"
         with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
-        print(f"Log saved at: {filename}")
+        with LOG_LOCK:
+            print(f"Log saved at: {filename}")
     except: pass
 
 def get_resume_state():
@@ -68,9 +74,9 @@ def get_resume_state():
         if len(first_line_parts) >= 2:
             saved_date = first_line_parts[1]
             if saved_date != current_date_str:
-                log(f"Resume file date ({saved_date})")
-                f.close()
-                os.remove(RESUME_FILE)
+                log(f"Resume file date ({saved_date}) mismatch. Starting fresh.")
+                try: os.remove(RESUME_FILE)
+                except: pass
                 return set()
         for line in lines:
             parts = line.strip().split('|')
@@ -83,11 +89,12 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    try:
-        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-            f.write(f"{code}|{current_date_str}\n")
-    except Exception as e:
-        log(f"Warning: Could not write to resume log: {e}")
+    with CSV_LOCK:
+        try:
+            with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+                f.write(f"{code}|{current_date_str}\n")
+        except Exception as e:
+            pass
 
 def cleanup_resume_file():
     if os.path.exists(RESUME_FILE):
@@ -99,9 +106,6 @@ def cleanup_resume_file():
 def sanitize_filename(name):
     if not name: return "unknown_fund"
     return re.sub(r'[<>:"/\\|?*]', '_', name).strip()
-
-def polite_sleep():
-    time.sleep(random.uniform(0.5, 0.9))
 
 def format_date(iso_date):
     if not iso_date: return ""
@@ -123,7 +127,7 @@ def safe_api_get(url, params=None):
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
             else:
-                raise e
+                pass
     return None
 
 def get_all_fund_list():
@@ -223,19 +227,23 @@ def parse_fee_value(fees_list, keywords):
             return fee.get("rate", ""), fee.get("actual_value", "")
     return "", ""
 
-def process_fund(fund, writers, existing_codes_map, is_monthly_run):
+def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
+    if STOP_EVENT.is_set(): return None
     fund_id = fund.get("fund_id")
     code = fund.get("short_code")
+    time.sleep(random.uniform(0.5, 2.0))
+    if STOP_EVENT.is_set(): return None
     info_json = {}
     factsheet_url = ""
 
     # 1. Info
     try:
+        if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}")
         info_json = res.get("data", {}) if res else {}
         factsheet_url = info_json.get("fund_fact_sheet", "")
         
-        writers['master'].writerow({
+        row_data = {
             "fund_code": code,
             "full_name_th": info_json.get("name_th", ""),
             "full_name_en": info_json.get("name_en", ""),
@@ -245,11 +253,15 @@ def process_fund(fund, writers, existing_codes_map, is_monthly_run):
             "is_dividend": "จ่าย" if info_json.get("dividend_policy") != "ไม่จ่าย" else "ไม่จ่าย",
             "inception_date": format_date(info_json.get("inception_date")),
             "source_url": f"https://www.finnomena.com/fund/{fund_id}"
-        })
+        }
+        with CSV_LOCK:
+            writers['master'].writerow(row_data)
+            
     except Exception as e: log(f"Error Info {code}: {e}")
 
     # 2. NAV
     try:
+        if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/nav/q?range=MAX")
         nav_data = res.get("data", {}).get("navs", []) if res else []
         if nav_data:
@@ -258,11 +270,13 @@ def process_fund(fund, writers, existing_codes_map, is_monthly_run):
                 w_nav = csv.writer(f_nav)
                 w_nav.writerow(["fund_code", "date", "value", "amount"]) 
                 for n in nav_data:
+                    if STOP_EVENT.is_set(): return None 
                     w_nav.writerow([code, format_date(n.get("date")), n.get("value"), n.get("amount")])
     except Exception as e: log(f"Error NAV {code}: {e}")
 
     # 3. Fee
     try:
+        if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/fee")
         fees_list = res.get("data", {}).get("fees", []) if res else []
         front_max, front_act = parse_fee_value(fees_list, ["front-end"])
@@ -271,7 +285,8 @@ def process_fund(fund, writers, existing_codes_map, is_monthly_run):
         switch_in_max, switch_in_act = parse_fee_value(fees_list, ["switching", "in"])
         switch_out_max, switch_out_act = parse_fee_value(fees_list, ["switching", "out"])
         ter_max, ter_act = parse_fee_value(fees_list, ["ค่าใช้จ่ายรวมทั้งหมด"])
-        writers['fees'].writerow({
+        
+        fee_row = {
             "fund_code": code, 
             "source_url": f"https://www.finnomena.com/fund/{fund_id}", 
             "front_end_max": front_max, "front_end_actual": front_act,
@@ -282,65 +297,77 @@ def process_fund(fund, writers, existing_codes_map, is_monthly_run):
             "switching_out_max": switch_out_max, "switching_out_actual": switch_out_act,
             "min_initial_buy": info_json.get("minimum_initial", ""), 
             "min_next_buy": info_json.get("minimum_subsequent", "")
-        })
+        }
+        with CSV_LOCK:
+            writers['fees'].writerow(fee_row)
     except Exception as e: log(f"Error Fee {code}: {e}")
 
     # 4. Holding & Allocations
     try:
+        if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/portfolio")
         port_data = res.get("data") if res else None
         if port_data:
-            # Top Holdings
+            holding_rows = []
+            alloc_rows = []
             top_holdings = port_data.get("top_holdings") or {}
             for item in (top_holdings.get("elements") or []):
-                writers['holdings'].writerow({
+                holding_rows.append({
                     "fund_code": code, "type": "holding", "name": item.get("name"),
                     "percent": item.get("percent"), "as_of_date": format_date(top_holdings.get("data_date")),
                     "source_url": f"https://www.finnomena.com/fund/{fund_id}"
                 })
-
-            # Asset Allocation
             asset_alloc = port_data.get("asset_allocation") or {}
             for item in (asset_alloc.get("elements") or []):
-                writers['allocations'].writerow({
+                alloc_rows.append({
                     "fund_code": code, "type": "asset_alloc", "name": item.get("name"),
                     "percent": item.get("percent"), "as_of_date": format_date(asset_alloc.get("data_date")),
                     "source_url": f"https://www.finnomena.com/fund/{fund_id}"
                 })
-
-            # Sector Allocation
             sector_alloc = port_data.get("global_stock_sector") or port_data.get("sector_allocation") or {}
             for item in (sector_alloc.get("elements") or []):
-                writers['allocations'].writerow({
+                alloc_rows.append({
                     "fund_code": code, "type": "sector_alloc", "name": item.get("name"),
                     "percent": item.get("percent"), "as_of_date": format_date(sector_alloc.get("data_date")),
                     "source_url": f"https://www.finnomena.com/fund/{fund_id}"
                 })
+            
+            with CSV_LOCK:
+                if holding_rows: writers['holdings'].writerows(holding_rows)
+                if alloc_rows: writers['allocations'].writerows(alloc_rows)
     except Exception as e: log(f"Error Holding {code}: {e}")
 
-    # 5. codes
+    # 5. codes (PDF)
     try:
+        if STOP_EVENT.is_set(): return None
         cached_rows = existing_codes_map.get(code, [])
         need_scrape = False
         if not cached_rows: need_scrape = True
         elif is_monthly_run: need_scrape = True
         elif cached_rows and cached_rows[0].get('factsheet_url') != factsheet_url: need_scrape = True 
+        
         if need_scrape:
              if factsheet_url and factsheet_url.endswith(".pdf"):
                  codes_found = extract_codes_from_pdf(factsheet_url, code)
-                 if codes_found: writers['codes'].writerows(codes_found)
+                 if codes_found: 
+                     with CSV_LOCK: writers['codes'].writerows(codes_found)
         else:
-             writers['codes'].writerows(cached_rows)
+             with CSV_LOCK: writers['codes'].writerows(cached_rows)
     except Exception as e: log(f"Error Codes {code}: {e}")
+    with CSV_LOCK:
+        for w in writers.values():
+            pass
+    append_resume_state(code)
+    return code
 
 def main():
     global HAS_ERROR
     log("Starting Finnomena Scraper")
     IS_MONTHLY_RUN = check_is_monthly_run()
     if IS_MONTHLY_RUN:
-        log("Status: NEW MONTH detected PDF scraping ENABLED.")
+        log("Status: NEW MONTH PDF scraping ENABLED")
     else:
-        log("Status: SAME MONTH. PDF scraping SKIPPED")
+        log("Status: SAME MONTH PDF scraping SKIPPED")
     finished_funds = get_resume_state()
     raw_funds = get_all_fund_list()
     log(f"Fetched {len(raw_funds)} funds from API")
@@ -386,23 +413,40 @@ def main():
         for w in writers.values(): w.writeheader()
     try:
         total = len(active_funds)
-        for i, fund in enumerate(active_funds):
-            code = fund.get('short_code').strip()
-            if code in finished_funds: continue
-            log(f"[{i+1}/{total}] {code} (finnomena)")
-            process_fund(fund, writers, existing_codes_map, IS_MONTHLY_RUN)
-            f_master.flush(); f_fees.flush(); f_holdings.flush(); f_allocations.flush(); f_codes.flush()
-            append_resume_state(code)
-            polite_sleep()
+        pending_funds = [f for f in active_funds if f.get('short_code').strip() not in finished_funds]
+        log(f"Processing {len(pending_funds)} funds (Skipped {total - len(pending_funds)})")
+        executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
+        futures = []
+        for fund in pending_funds:
+            if STOP_EVENT.is_set(): break
+            futures.append(executor.submit(process_fund_task, fund, writers, existing_codes_map, IS_MONTHLY_RUN))
+        count = 0
+        for future in as_completed(futures):
+            if STOP_EVENT.is_set(): break 
+            try:
+                result_code = future.result()
+                if result_code:
+                    count += 1
+                    completed = len(finished_funds) + count
+                    log(f"[{completed}/{total}] {result_code} (finnomena)")
+                    if count % 10 == 0:
+                        with CSV_LOCK:
+                            f_master.flush(); f_fees.flush(); f_holdings.flush(); f_allocations.flush(); f_codes.flush()
+            except Exception as e:
+                log(f"Task Failed: {e}")
+
     except KeyboardInterrupt: 
-        log("Stopped by user")
+        log("Stopping Scraper")
+        STOP_EVENT.set()
+        executor.shutdown(wait=False, cancel_futures=True)
         HAS_ERROR = True
     except Exception as e:
         log(f"Critical Error: {e}")
     finally:
         f_master.close(); f_fees.close(); f_holdings.close(); f_allocations.close(); f_codes.close()
+        try: executor.shutdown(wait=True) 
+        except: pass
         if not HAS_ERROR: 
-            # cleanup_resume_file() 
             if IS_MONTHLY_RUN:
                 update_pdf_run_log()
                 log("Monthly PDF completed. Updated log")
