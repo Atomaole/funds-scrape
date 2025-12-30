@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 
 # CONFIG
 AUTO_MODE = True   # True=loop, False=one round
-RUN_ON_START = False    # True=do now after run False=waiting time (3.00AM)
-SCHEDULE_TIME = "03:00"
+RUN_ON_START = False    # True=do now after run False=waiting time (4.00AM)
+SCHEDULE_TIME = "04:30" # time to start (can change)
 DAYS_TO_SKIP = [6,0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
 MODE_FOR_WEALTHMAGIK = 2 # 1=scrape one by one 2= bif_offer first and follow by holding, allocations 3=scrape all in one
