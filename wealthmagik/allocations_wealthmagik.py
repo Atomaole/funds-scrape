@@ -211,7 +211,7 @@ def main():
         log("All done")
         f_out.close()
         return
-    log(f"Starting Scraper")
+    log(f"Starting Scraper (allocations wealtmagik)")
     executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
     futures = []
     try:
