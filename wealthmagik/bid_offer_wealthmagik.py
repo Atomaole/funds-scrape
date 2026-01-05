@@ -174,26 +174,28 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
     try:
         driver = make_driver()
         for i, fund in enumerate(fund_list, 1):
-            if STOP_EVENT.is_set():
-                break
+            if STOP_EVENT.is_set(): break
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             try:
                 data = scrape_bid_offer(driver, code, url)
                 if STOP_EVENT.is_set(): break
                 current_total_done = 0
-                with COUNT_LOCK:
-                    PROCESSED_COUNT += 1
-                    current_total_done = finished_count_start + PROCESSED_COUNT
-                if data:
-                    with CSV_LOCK:
-                        with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
-                            writer = csv.DictWriter(f_out, fieldnames=fieldnames)
-                            writer.writerow(data)
-                    log(f"[{current_total_done}/{total_all_funds}] {code} (bid_offer/wealthmagik)")
+                if data is not None:
+                    with COUNT_LOCK:
+                        PROCESSED_COUNT += 1
+                        current_total_done = finished_count_start + PROCESSED_COUNT
+                    if data.get("nav_date"): 
+                        with CSV_LOCK:
+                            with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
+                                writer = csv.DictWriter(f_out, fieldnames=fieldnames)
+                                writer.writerow(data)
+                        log(f"[{current_total_done}/{total_all_funds}] {code} (bid_offer/wealthmagik)")
+                    else:
+                        log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
+                    append_resume_state(code) 
                 else:
-                    log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
-                append_resume_state(code)
+                    log(f"Skipping resume save for {code} due to scrape failure.")
                 polite_sleep()
                 
             except Exception as e:
@@ -202,7 +204,6 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
                     if 'current_total_done' not in locals() or current_total_done == 0:
                          PROCESSED_COUNT += 1
                          current_total_done = finished_count_start + PROCESSED_COUNT
-                         
                 log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
 
     except Exception as e:

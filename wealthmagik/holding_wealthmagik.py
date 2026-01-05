@@ -174,16 +174,16 @@ def process_fund_task(fund, writer):
         if data:
             with CSV_LOCK:
                 writer.writerows(data)
+            append_resume_state(code)
             return f"{code} (holding/wealthmagik)"
         elif data == []:
+             append_resume_state(code)
              return f"{code} - No Data"
         else:
-             raise Exception("Failed to fetch")
+             raise Exception("Failed to fetch (Max retries exceeded)")
 
     except Exception as e:
         raise e
-    finally:
-        append_resume_state(code)
 
 def main():
     finished_funds = get_resume_state()

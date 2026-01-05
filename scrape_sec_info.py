@@ -169,7 +169,7 @@ def scrape_sec_info(driver, fund_code):
         "tracking_error": "", "turnover_ratio": "", "fx_hedging": ""
     }
     for attempt in range(1, MAX_RETRIES + 1):
-        if STOP_EVENT.is_set(): return empty_data
+        if STOP_EVENT.is_set(): return None
         try:
             if attempt > 1:
                 try:
@@ -183,7 +183,8 @@ def scrape_sec_info(driver, fund_code):
             except:
                 if attempt < MAX_RETRIES: 
                     continue
-                else: return empty_data
+                else: 
+                    return None
             data = empty_data.copy()
             whole_page_text = driver.find_element(By.TAG_NAME, "body").text
             match = re.search(r"ข้อมูล ณ วันที่.*?(\d{1,2}/\d{1,2}/\d{4})", whole_page_text)
@@ -214,7 +215,7 @@ def scrape_sec_info(driver, fund_code):
         except Exception as e:
             log(f"Error {fund_code} (Attempt {attempt}): {e}")
             if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
-    return empty_data
+    return None
 
 def get_finnomena_funds(filepath):
     unique_codes = set()
@@ -242,17 +243,20 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
             if STOP_EVENT.is_set(): break
             try:
                 info = scrape_sec_info(driver, code)
-                if STOP_EVENT.is_set(): break
-                current_total_done = 0
-                with COUNT_LOCK:
-                    PROCESSED_COUNT += 1
-                    current_total_done = finished_count_start + PROCESSED_COUNT
-                with CSV_LOCK:
-                    with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
-                         writer = csv.DictWriter(f, fieldnames=fieldnames)
-                         writer.writerow(info)
-                log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
-                append_resume_state(code)
+                if info is not None:
+                    if STOP_EVENT.is_set(): break
+                    current_total_done = 0
+                    with COUNT_LOCK:
+                        PROCESSED_COUNT += 1
+                        current_total_done = finished_count_start + PROCESSED_COUNT
+                    with CSV_LOCK:
+                        with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
+                             writer = csv.DictWriter(f, fieldnames=fieldnames)
+                             writer.writerow(info)
+                    log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
+                    append_resume_state(code)
+                else:
+                    log(f"Failed to scrape {code} after retries")
                 polite_sleep()
                 
             except Exception as e:

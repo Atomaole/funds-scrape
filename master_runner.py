@@ -6,12 +6,13 @@ import signal
 from datetime import datetime, timedelta
 
 # CONFIG
-AUTO_MODE = True   # True=loop, False=one round
-RUN_ON_START = False    # True=do now after run False=waiting time (4.00AM)
-SCHEDULE_TIME = "04:30" # time to start (can change)
-DAYS_TO_SKIP = [6,0]   # skip [6=sunday, 0=monday]
+AUTO_MODE = True    # True=loop False=one round
+RUN_ON_START = False    # True=Manual test immediately (No save log)
+DAILY_START_TIME = "04:30"  # Time of round 1 to start
+HOURS_WAIT_FOR_ROUND_2 = 4  # Time to wating round 2
+DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
-MODE_FOR_WEALTHMAGIK = 2 # 1=scrape one by one 2= bif_offer first and follow by holding, allocations 3=scrape all in one
+MODE_FOR_WEALTHMAGIK = 2 
 
 # FILE PATHS
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -118,7 +119,7 @@ def check_is_new_month():
             if not last_run_str: return True
             last_run_date = datetime.strptime(last_run_str, "%Y-%m-%d")
             if last_run_date.month != current_date.month or last_run_date.year != current_date.year:
-                log(f"Month changed detected.")
+                log(f"Month changed detected")
                 return True
             return False
     except: return True
@@ -130,27 +131,28 @@ def update_date_log():
         log("Updated date.log")
     except Exception as e: log(f"Failed to update date.log: {e}")
 
-def get_seconds_until_next_run(target_time_str):
+def get_seconds_until_daily_start(start_time_str):
     now = datetime.now()
-    target_hour, target_minute = map(int, target_time_str.split(":"))
-    target = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
-    if target <= now: target = target + timedelta(days=1)
-    return (target - now).total_seconds()
+    h, m = map(int, start_time_str.split(":"))
+    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    if target <= now:
+        target = target + timedelta(days=1)
+    return (target - now).total_seconds(), target
 
 def is_skip_day():
     return datetime.now().weekday() in DAYS_TO_SKIP
 
 # MAIN PIPELINE
-def run_pipeline():
-    log("STARTING PIPELINE")
-    if is_skip_day() and not RUN_ON_START:
-        log(f"Today is skip day (Day {datetime.now().weekday()}). Skipping")
-        return
+def run_pipeline(current_slot=None):
+    log(f"STARTING PIPELINE for round: {current_slot if current_slot else 'Manual'}")
+    if current_slot == "ROUND_1" and is_skip_day():
+        log(f"Today is skip day (Day {datetime.now().weekday()}). Skipping pipeline")
+        return False
     start_time = time.time()
     run_sync(SCRIPT_UPDATE_DRIVER, "Update GeckoDriver")
     is_new_month = check_is_new_month()
-    if is_new_month: log("New Month: All tasks will run")
-    else: log("Same Month: Checking Resume Logs")
+    if is_new_month: log("New Month (Will scrape full set)")
+    else: log("Same Month (Checking Resume Logs)")
         
     # 1. list WealthMagik
     run_sync(SCRIPT_LIST_WM, "WealthMagik Fund List")
@@ -174,25 +176,17 @@ def run_pipeline():
         run_sync(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
             run_sync(SCRIPT_WM_HOLDING, "WM Holdings")
-        else:
-            log("Skipping WM Holdings (Done & Same Month)")
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
             run_sync(SCRIPT_WM_ALLOC, "WM Allocations")
-        else:
-            log("Skipping WM Allocations (Done & Same Month)")
 
     elif MODE_FOR_WEALTHMAGIK == 2:
         run_sync(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
             p_hold = launch_async(SCRIPT_WM_HOLDING, "WM Holdings")
             if p_hold: bg_procs.append(p_hold) 
-        else:
-            log("Skipping WM Holdings (Done & Same Month)")
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
             p_alloc = launch_async(SCRIPT_WM_ALLOC, "WM Allocations")
             if p_alloc: bg_procs.append(p_alloc)
-        else:
-            log("Skipping WM Allocations (Done & Same Month)")
 
     elif MODE_FOR_WEALTHMAGIK == 3:
         p_bid = launch_async(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
@@ -200,13 +194,9 @@ def run_pipeline():
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
             p_hold = launch_async(SCRIPT_WM_HOLDING, "WM Holdings")
             if p_hold: bg_procs.append(p_hold)
-        else:
-            log("Skipping WM Holdings (Done & Same Month)")
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
             p_alloc = launch_async(SCRIPT_WM_ALLOC, "WM Allocations")
             if p_alloc: bg_procs.append(p_alloc)
-        else:
-            log("Skipping WM Allocations (Done & Same Month)")
 
     if bg_procs:
         log(f"Waiting for ALL background processes ({len(bg_procs)}) to finish")
@@ -217,31 +207,41 @@ def run_pipeline():
     log("All scrapers finished")
     run_sync(SCRIPT_MERGE, "Merging Data")
     run_sync(SCRIPT_DB_LOADER, "Database Loader")
-    update_date_log()
+    
+    if current_slot == "ROUND_2":
+        log("Updating date.log to mark COMPLETED")
+        update_date_log()
+    else:
+        log(f"Finished {current_slot}. NOT updating date.log (Waiting for next round)")
+    
     log(f"PIPELINE FINISHED in {time.time() - start_time:.2f} seconds")
+    return True
 
 # MAIN
 def main():
-    log("Master Runner Initialized")
-    log(f"Config: AUTO={AUTO_MODE}, RUN_ON_START={RUN_ON_START}")
+    log("Master Runner Initialized (Dynamic Schedule)")
+    log(f"Config Start Time={DAILY_START_TIME}, Retry Delay={HOURS_WAIT_FOR_ROUND_2} Hours")
     try:
         if RUN_ON_START:
-            run_pipeline()
-        else:
-            log("Waiting for next schedule..")
+            run_pipeline(current_slot="MANUAL") 
         if not AUTO_MODE:
-            log("AUTO_MODE is False. Exiting")
+            log("AUTO_MODE is False Exiting")
             return
         while AUTO_MODE:
-            seconds_wait = get_seconds_until_next_run(SCHEDULE_TIME)
-            next_run_time = datetime.now() + timedelta(seconds=seconds_wait)
-            log(f"Sleeping {seconds_wait/3600:.2f} hours. Next run at: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            seconds_wait, next_dt = get_seconds_until_daily_start(DAILY_START_TIME)
+            log(f"[WAITING] Sleeping {seconds_wait/3600:.2f} hours until Daily Start at {next_dt.strftime('%H:%M:%S')}")
             time.sleep(seconds_wait)
-            if is_skip_day():
-                log(f"Skip Day. back to sleep")
+            log("Starting ROUND 1")
+            did_run = run_pipeline(current_slot="ROUND_1")
+            if not did_run:
+                log("Skip day detected.")
                 continue
-            run_pipeline()
-            
+            log(f"[WAITING] Round 1 Finished. waiting {HOURS_WAIT_FOR_ROUND_2} hours before Round 2 (Retry/Cleanup)..")
+            time.sleep(HOURS_WAIT_FOR_ROUND_2 * 3600)
+            log("Starting ROUND 2")
+            run_pipeline(current_slot="ROUND_2")
+            log("Daily Cycle Completed Looping back to wait for tomorrow")
+
     except KeyboardInterrupt:
         log("\nUSER INTERRUPT DETECTED")
         kill_all_process()

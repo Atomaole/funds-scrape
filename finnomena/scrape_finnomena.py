@@ -234,15 +234,18 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
     time.sleep(random.uniform(0.5, 2.0))
     if STOP_EVENT.is_set(): return None
     info_json = {}
+    is_success = False
     factsheet_url = ""
 
     # 1. Info
     try:
         if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}")
+        if res is None:
+            log(f"Error cannot fetch info for {code}")
+            return None 
         info_json = res.get("data", {}) if res else {}
         factsheet_url = info_json.get("fund_fact_sheet", "")
-        
         row_data = {
             "fund_code": code,
             "full_name_th": info_json.get("name_th", ""),
@@ -256,8 +259,11 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
         }
         with CSV_LOCK:
             writers['master'].writerow(row_data)
-            
-    except Exception as e: log(f"Error Info {code}: {e}")
+        is_success = True 
+
+    except Exception as e: 
+        log(f"Error Info {code}: {e}")
+        is_success = False
 
     # 2. NAV
     try:
@@ -357,8 +363,11 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
     with CSV_LOCK:
         for w in writers.values():
             pass
-    append_resume_state(code)
-    return code
+    if is_success:
+        append_resume_state(code)
+        return code
+    else:
+        return None
 
 def main():
     global HAS_ERROR
