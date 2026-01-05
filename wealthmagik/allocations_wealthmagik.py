@@ -26,7 +26,7 @@ HAS_ERROR = False
 CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+NUM_WORKERS = 1  # Number of threads. Don't set more than 3 to avoid ban
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

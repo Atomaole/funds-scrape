@@ -26,7 +26,7 @@ HAS_ERROR = False
 CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+NUM_WORKERS = 1  # Number of threads. Don't set more than 3 to avoid ban
 
 THAI_MONTH_MAP = {
     "ม.ค.": 1, "มกราคม": 1, "JAN": 1, "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
