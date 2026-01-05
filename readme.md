@@ -112,7 +112,7 @@ python master_runner.py
 You can tweak the constants at the top of the file:
 
 * `AUTO_MODE`: Set to `True` for continuous daily looping, `False` for a single run.
-* `DAILY_START_TIME`: Time to start the daily scraping cycle (Default: `"04:30"`).
+* `DAILY_START_TIME`: Time to start the daily scraping cycle (Default: `"04:00"`).
 * `MODE_FOR_WEALTHMAGIK`:
 * `1`: Sequential (Slowest, Most Stable)
 * `2`: Hybrid (Recommended)
@@ -141,7 +141,7 @@ The system populates the following tables in `funds_db`:
 โปรเจกต์นี้คือ **"ระบบดูดและรวบรวมข้อมูลกองทุนรวมไทยแบบอัตโนมัติ"** ที่ถูกออกแบบมาให้ทำงานได้ด้วยตัวเองทุกวัน โดยมีจุดเด่นคือ:
 
 1. **สั่งงานจุดเดียว:** รันแค่ไฟล์ `master_runner.py` ไฟล์เดียว ระบบจะจัดการทุกอย่างให้ (อัปเดต Driver -> ดูดข้อมูล -> รวมไฟล์ -> ลง Database)
-2. **ระบบกันเหนียว (Dual-Round):** หากเน็ตหลุดหรือเว็บล่มในรอบแรก (04:30) ระบบจะรอ 4 ชั่วโมงแล้วตื่นมา "เก็บตก" เฉพาะกองทุนที่ยังไม่เสร็จให้โดยอัตโนมัติ
+2. **ระบบกันเหนียว (Dual-Round):** หากเน็ตหลุดหรือเว็บล่มในรอบแรก (04:00) ระบบจะรอ 4 ชั่วโมงแล้วตื่นมา "เก็บตก" เฉพาะกองทุนที่ยังไม่เสร็จให้โดยอัตโนมัติ
 3. **ข้อมูลครบเครื่อง:** รวมข้อมูลจากทั้ง Finnomena (ข้อมูลพื้นฐาน/NAV), WealthMagik (Bid-Offer/พอร์ต) และ ก.ล.ต. (ค่าความเสี่ยง) มาไว้ในที่เดียว
 4. **พร้อมใช้:** มี Docker Compose เตรียม Database (PostgreSQL) ไว้ให้พร้อมใช้งานทันที
 

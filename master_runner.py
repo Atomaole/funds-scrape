@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 # CONFIG
 AUTO_MODE = True    # True=loop False=one round
 RUN_ON_START = False    # True=Manual test immediately (No save log)
-DAILY_START_TIME = "04:30"  # Time of round 1 to start
+DAILY_START_TIME = "04:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 4  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
