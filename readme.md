@@ -1,161 +1,158 @@
-# Thai Mutual Fund Data Aggregation Pipeline
+# 📈 Thai Mutual Fund Data Pipeline
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-elephant?style=flat-square)
-![Docker](https://img.shields.io/badge/Docker-Container-blue?style=flat-square)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square&logo=python)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)
+![Selenium](https://img.shields.io/badge/Selenium-Firefox-43B02A?style=flat-square&logo=selenium)
 
-## 📖 Executive Summary
+**A production-ready data aggregation pipeline** designed to construct a comprehensive database of Thai Mutual Funds. This system intelligently scrapes, normalizes, and merges data from multiple sources (**Finnomena**, **WealthMagik**, and **SEC**) into a unified PostgreSQL database.
 
-This repository houses a centralized **Data Aggregation and Normalization System** tailored for the Thai Mutual Fund market.
+---
 
-### 🚨 IMPORTANT — SINGLE ENTRY SYSTEM
+## 🚀 Key Features
 
-> **The entire system is driven by a SINGLE PRIMARY ENTRY POINT — `master_runner.py`**
-
-`master_runner.py` is the brain, heart, and control center of this pipeline. **No other script should be executed directly.**
-
-The architecture follows a **Single-Entry Orchestrator Model**, where `master_runner.py` manages the entire lifecycle: scraping data from multiple sources (Finnomena, WealthMagik, SEC), transforming and merging datasets, and upserting results into a PostgreSQL warehouse.
-
-The system is engineered for resilience and autonomy, featuring **resume-on-failure logic**, **date-aware scheduling** (Daily vs Monthly), and **configurable concurrency modes**.
+* **🛡️ Resilient Architecture:**
+    * **Smart Resume:** Automatically skips processed funds if interrupted.
+    * **Dual-Round Execution:** Runs a second "Retry Round" 4 hours after the main run to catch any failed requests or network timeouts.
+    * **Auto-Healing:** Automatically updates `geckodriver` to match the installed Firefox version.
+* **🔗 Data Fusion:**
+    * Combines **NAV History** from Finnomena with real-time **Bid/Offer** from WealthMagik.
+    * Merges **Portfolios (Holdings)** from both sources for maximum coverage.
+    * Enriches data with **Risk Metrics** (Sharpe, Alpha, Beta) directly from the SEC.
+* **⚡ High Performance:**
+    * Uses **Multithreading** for heavy scraping tasks (PDF parsing, Bid/Offer fetching).
+    * **Vectorized Processing** (Pandas) for efficient data merging.
+* **📦 Containerized Storage:**
+    * Pre-configured **PostgreSQL** and **PgAdmin4** via Docker Compose.
+    * Idempotent database loader (safe to re-run without duplicating data).
 
 ---
 
 ## 🏗️ System Architecture
 
-The pipeline operates under a centralized orchestration model:
+The system operates as a **Single-Entry Orchestrator Model**. You only need to interact with **one** script.
 
-| Component | Responsibility |
-| :--- | :--- |
-| **🔥 Orchestrator (CORE)** | `master_runner.py` — **THE ONLY ENTRY POINT.** Controls execution order, scheduling logic, concurrency mode, recovery, and lifecycle management. |
-| **Ingestion Layer** | Headless Selenium / Requests workers extracting NAV, Bid/Offer, Holdings, and Risk Metrics. |
-| **Transformation** | `merge_funds.py` — Vectorized Pandas operations to normalize and merge heterogeneous datasets. |
-| **Persistence** | `db_loader.py` — SQLAlchemy-based loader ensuring atomic transactions and idempotent upserts via `COALESCE`. |
-| **Infrastructure** | Dockerized PostgreSQL database for scalable and reliable storage. |
+```mermaid
+graph LR
+  A[Master Runner] --> B{Update Driver}
+  A --> C[Scrapers Group]
+  C --> D[WealthMagik List]
+  C --> E[Finnomena API/PDF]
+  C --> F[SEC Risk Info]
+  C --> G[WM Bid/Offer/Port]
+  C --> H[Raw CSVs]
+  H --> I[Merge Process]
+  I --> J[Merged CSVs]
+  J --> K[DB Loader]
+  K --> L[(PostgreSQL)]
+
+```
+
+| Component | Script | Description |
+| --- | --- | --- |
+| **👑 Orchestrator** | `master_runner.py` | **ENTRY POINT.** Manages scheduling, rounds, and process lifecycle. |
+| **🕷️ Scrapers** | `scrape_finnomena.py`<br>
+
+<br>`list_fund_wealthmagik.py`<br>
+
+<br>`scrape_sec_info.py` | Extract data using API reversing, PDF parsing, and Headless Selenium. |
+| **🌪️ Transformer** | `merge_funds.py` | Cleans, normalizes, and joins data from raw CSVs into unified datasets. |
+| **💾 Loader** | `db_loader.py` | Upserts data into SQL tables using `ON CONFLICT DO UPDATE` strategies. |
 
 ---
 
-## 🚀 Deployment Guide
+## 🛠️ Installation & Setup
 
-### 1. Environment Prerequisites
-Ensure the following are installed:
-* Python 3.9+
-* Docker & Docker Compose
-* Mozilla Firefox (Latest)
+### 1. Prerequisites
 
-### 2. Infrastructure Setup (Database)
+* **Python 3.9+**
+* **Docker & Docker Compose**
+* **Mozilla Firefox** (Latest version installed on host)
+
+### 2. Infrastructure (Database)
+
+Start the PostgreSQL and PgAdmin containers:
+
 ```bash
 docker-compose up -d
 
 ```
+**Accessing the Database UI (PgAdmin):**
+After starting the containers, access PgAdmin4 at `http://localhost:8080`
 
-*Note: The database schema is automatically initialized using `init.sql` on the first connection.*
+* **Email:** `atom@admin.com`
+* **Password:** `admin`
+* **Host Name/Address (for server connection):** `db`
 
-### 3. Application Dependencies
+**Tip:** You can customize these credentials (Username, Password, DB Name) by editing the environment variables in the `docker-compose.yml` file before starting the containers.
+
+*Note: The database schema (`funds_db`) will be automatically initialized using `init.sql` on the first run.*
+
+
+### 3. Python Dependencies
 
 ```bash
 pip install -r requirements.txt
 
 ```
 
-### 4. Configuration
-
-Verify database credentials in `db_loader.py`:
-
-```python
-DB_USER = "admin"
-DB_PASS = "password"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-
-```
-
 ---
 
-## ⚡ Execution (Single Entry Execution Model)
+## ⚡ Usage
 
-⚠️ **DO NOT run individual scripts manually.**
-This system strictly enforces a Single Entry Execution Model. Only `master_runner.py` is allowed to be executed directly.
+⚠️ **IMPORTANT:** Always run the pipeline through the master runner. Do not run individual scraper scripts manually unless debugging.
 
 ```bash
 python master_runner.py
 
 ```
 
-*All other modules (scrapers, `merge_funds.py`, `db_loader.py`) are internal components invoked exclusively by `master_runner.py`.*
+### Configuration (`master_runner.py`)
 
-### Runtime Configuration
+You can tweak the constants at the top of the file:
 
-Adjust execution behavior via the `MODE` constant in `master_runner.py`:
+* `AUTO_MODE`: Set to `True` for continuous daily looping, `False` for a single run.
+* `DAILY_START_TIME`: Time to start the daily scraping cycle (Default: `"04:30"`).
+* `MODE_FOR_WEALTHMAGIK`:
+* `1`: Sequential (Slowest, Most Stable)
+* `2`: Hybrid (Recommended)
+* `3`: Parallel (Fastest, High Resource Usage)
 
-* **`MODE = 1` (Sequential):** Maximum stability, lowest resource usage.
-* **`MODE = 2` (Hybrid – Recommended):** Critical tasks synchronous, heavy tasks in background.
-* **`MODE = 3` (Parallel):** Full concurrency for high-bandwidth environments.
 
----
-
-## 🗄️ Data Model
-
-The system populates a normalized relational schema (`funds_db`):
-
-| Table | Description |
-| --- | --- |
-| `funds_master_info` | Static fund metadata, AMC, policies, inception dates |
-| `funds_daily` | Time-series NAV, AUM, Bid, and Offer prices |
-| `funds_statistics` | Risk metrics (Sharpe, Alpha, Beta, Max Drawdown) |
-| `funds_holding` | Portfolio composition and holdings |
-| `funds_allocations` | Asset class and geographic allocations |
-| `funds_fee` | Comprehensive fee structures |
 
 ---
 
-## 🛡️ Reliability Features
+## 🗄️ Database Schema
 
-* **Smart Resume:** Execution resumes automatically from last successful checkpoint.
-* **Date-Aware Scheduling:** Differentiates full monthly scrape vs incremental daily updates.
-* **Data Integrity:** Uses `ON CONFLICT DO UPDATE` with `COALESCE` to prevent data loss.
+The system populates the following tables in `funds_db`:
 
----
-
-#### ระบบรวมและประมวลผลข้อมูลกองทุนรวมไทย (Thai Language Section)
-
-### 📖 ภาพรวมระบบ
-
-Repository นี้เป็นระบบ **รวมข้อมูลและปรับมาตรฐานข้อมูล** สำหรับตลาดกองทุนรวมไทย โดยใช้สถาปัตยกรรมแบบ **Single-Entry Orchestrator**
-
-### 🚨 สำคัญมาก — ระบบทางเข้าเดียว
-
-ระบบทั้งหมดถูกควบคุมโดยไฟล์หลักเพียงไฟล์เดียวคือ `master_runner.py`
-❌ **อย่ารันไฟล์อื่นโดยตรง**
-
-`master_runner.py` คือศูนย์ควบคุมของระบบ ทำหน้าที่ตั้งแต่ดึงข้อมูลจากหลายแหล่ง รวมข้อมูล ประมวลผล และบันทึกลงฐานข้อมูล PostgreSQL
-ระบบถูกออกแบบให้ **เสถียร, ทำงานอัตโนมัติ, และ สามารถ resume ได้เมื่อเกิดข้อผิดพลาด**
+1. **`funds_master_info`**: Core fund details (AMC, Dividend Policy, Inception Date).
+2. **`funds_daily`**: Time-series data for NAV, AUM, Bid, and Offer prices.
+3. **`funds_statistics`**: Risk metrics (SD, Sharpe, Alpha, Beta, Drawdown) from SEC.
+4. **`funds_fee`**: Front-end, Back-end, Management fees, and TER.
+5. **`funds_holding`**: Top 5 or Full portfolio holdings (Stock/Bond names).
+6. **`funds_allocations`**: Asset allocation (Equity/Fixed Income) and Country allocation.
+7. **`funds_codes`**: Mapping of Fund Codes to ISIN codes parsed from Factsheets.
 
 ---
 
-### 🏗️ โครงสร้างระบบ
+## 🇹🇭 Thai Summary
 
-| ส่วนประกอบ | หน้าที่ |
-| --- | --- |
-| **🔥 Orchestrator (CORE)** | `master_runner.py` — จุดเริ่มต้นเพียงจุดเดียวของระบบ ควบคุม flow ทั้งหมด |
-| **Ingestion Layer** | ดึงข้อมูลด้วย Selenium / Requests |
-| **Transformation** | `merge_funds.py` รวมและปรับโครงสร้างข้อมูล |
-| **Persistence** | `db_loader.py` บันทึกข้อมูลลง PostgreSQL อย่างปลอดภัย |
-| **Infrastructure** | PostgreSQL ผ่าน Docker |
+โปรเจกต์นี้คือ **"ระบบดูดและรวบรวมข้อมูลกองทุนรวมไทยแบบอัตโนมัติ"** ที่ถูกออกแบบมาให้ทำงานได้ด้วยตัวเองทุกวัน โดยมีจุดเด่นคือ:
 
----
+1. **สั่งงานจุดเดียว:** รันแค่ไฟล์ `master_runner.py` ไฟล์เดียว ระบบจะจัดการทุกอย่างให้ (อัปเดต Driver -> ดูดข้อมูล -> รวมไฟล์ -> ลง Database)
+2. **ระบบกันเหนียว (Dual-Round):** หากเน็ตหลุดหรือเว็บล่มในรอบแรก (04:30) ระบบจะรอ 4 ชั่วโมงแล้วตื่นมา "เก็บตก" เฉพาะกองทุนที่ยังไม่เสร็จให้โดยอัตโนมัติ
+3. **ข้อมูลครบเครื่อง:** รวมข้อมูลจากทั้ง Finnomena (ข้อมูลพื้นฐาน/NAV), WealthMagik (Bid-Offer/พอร์ต) และ ก.ล.ต. (ค่าความเสี่ยง) มาไว้ในที่เดียว
+4. **พร้อมใช้:** มี Docker Compose เตรียม Database (PostgreSQL) ไว้ให้พร้อมใช้งานทันที
 
-### ⚡ การรันระบบ
+**วิธีใช้งาน:**
 
-⚠️ ระบบนี้อนุญาตให้รันเพียงไฟล์เดียวเท่านั้น
+1. รัน Docker: `docker-compose up -d`
+* *สามารถเข้าดูข้อมูลผ่าน PgAdmin ได้ที่ `localhost:8080` (แก้ไข User/Pass ได้ในไฟล์ docker-compose.yml)*
 
-```bash
-python master_runner.py
-
-```
-
-*ไฟล์อื่นทั้งหมดเป็นโมดูลภายในที่ถูกเรียกโดย `master_runner.py` เท่านั้น*
+2. ติดตั้ง Library: `pip install -r requirements.txt`
+3. เริ่มระบบ: `python master_runner.py`
 
 ---
 
-*Disclaimer: This project is intended for data aggregation purposes only.*
+*Project maintained by Atom. Generated for educational and data aggregation purposes.*
