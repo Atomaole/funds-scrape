@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 
 # CONFIG
 AUTO_MODE = True    # True=loop False=one round
-RUN_ON_START = False    # True=Manual test immediately (No save log)
+RUN_ON_START = True # True=Manual test immediately (No save log)
 DAILY_START_TIME = "04:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 4  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
@@ -20,8 +20,10 @@ SCRIPT_UPDATE_DRIVER = os.path.join(script_dir, "update_driver.py")
 SCRIPT_LIST_WM      = os.path.join(script_dir, "wealthmagik", "list_fund_wealthmagik.py")
 SCRIPT_SCRAPE_FIN   = os.path.join(script_dir, "finnomena", "scrape_finnomena.py")
 SCRIPT_WM_BID_OFFER = os.path.join(script_dir, "wealthmagik", "bid_offer_wealthmagik.py")
-SCRIPT_WM_HOLDING   = os.path.join(script_dir, "wealthmagik", "holding_wealthmagik.py")
-SCRIPT_WM_ALLOC     = os.path.join(script_dir, "wealthmagik", "allocations_wealthmagik.py")
+SCRIPT_WM_HOLDING_REQ = os.path.join(script_dir, "wealthmagik", "holding_wealthmagik.py")
+SCRIPT_WM_ALLOC_REQ   = os.path.join(script_dir, "wealthmagik", "allocations_wealthmagik.py")
+SCRIPT_WM_HOLDING_SEL = os.path.join(script_dir, "wealthmagik", "holding_wealthmagik_selenium.py")
+SCRIPT_WM_ALLOC_SEL   = os.path.join(script_dir, "wealthmagik", "allocations_wealthmagik_selenium.py")
 SCRIPT_SEC          = os.path.join(script_dir, "scrape_sec_info.py")
 SCRIPT_MERGE        = os.path.join(script_dir, "merge_funds.py")
 SCRIPT_DB_LOADER    = os.path.join(script_dir, "db_loader.py")
@@ -153,49 +155,61 @@ def run_pipeline(current_slot=None):
     is_new_month = check_is_new_month()
     if is_new_month: log("New Month (Will scrape full set)")
     else: log("Same Month (Checking Resume Logs)")
-        
+
     # 1. list WealthMagik
     run_sync(SCRIPT_LIST_WM, "WealthMagik Fund List")
     bg_procs = []
-    
+
     # 2. Finnomena
     p_fin = launch_async(SCRIPT_SCRAPE_FIN, "Finnomena Scraper")
     if p_fin: bg_procs.append(p_fin)
-    time.sleep(8)
+    time.sleep(5)
 
     # 3. SEC Info
     if is_new_month or os.path.exists(RESUME_SEC):
         p_sec = launch_async(SCRIPT_SEC, "SEC Info")
         if p_sec: bg_procs.append(p_sec)
     else:
-        log("Skipping SEC Info (Done & Same Month)")
+        log("Skipping SEC Info (Resume file not found - Assuming Done)")
     time.sleep(5)
 
     # 4. Wealthmagik
+    target_holding = SCRIPT_WM_HOLDING_REQ
+    target_alloc   = SCRIPT_WM_ALLOC_REQ
+    engine_name    = "Requests"
+
+    if current_slot == "ROUND_2":
+        log("ROUND 2 SELENIUM")
+        target_holding = SCRIPT_WM_HOLDING_SEL
+        target_alloc   = SCRIPT_WM_ALLOC_SEL
+        engine_name    = "Selenium"
+    else:
+        log("ROUND 1 REQUESTS engine")
+
     if MODE_FOR_WEALTHMAGIK == 1:
-        run_sync(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
+        run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
-            run_sync(SCRIPT_WM_HOLDING, "WM Holdings")
+            run_sync(target_holding, f"WM Holdings ({engine_name})")
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
-            run_sync(SCRIPT_WM_ALLOC, "WM Allocations")
+            run_sync(target_alloc, f"WM Allocations ({engine_name})")
 
     elif MODE_FOR_WEALTHMAGIK == 2:
-        run_sync(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
+        run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
-            p_hold = launch_async(SCRIPT_WM_HOLDING, "WM Holdings")
+            p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
             if p_hold: bg_procs.append(p_hold) 
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
-            p_alloc = launch_async(SCRIPT_WM_ALLOC, "WM Allocations")
+            p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
             if p_alloc: bg_procs.append(p_alloc)
 
     elif MODE_FOR_WEALTHMAGIK == 3:
-        p_bid = launch_async(SCRIPT_WM_BID_OFFER, "WealthMagik Bid/Offer")
+        p_bid = launch_async(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if p_bid: bg_procs.append(p_bid)
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
-            p_hold = launch_async(SCRIPT_WM_HOLDING, "WM Holdings")
+            p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
             if p_hold: bg_procs.append(p_hold)
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
-            p_alloc = launch_async(SCRIPT_WM_ALLOC, "WM Allocations")
+            p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
             if p_alloc: bg_procs.append(p_alloc)
 
     if bg_procs:
@@ -207,7 +221,6 @@ def run_pipeline(current_slot=None):
     log("All scrapers finished")
     run_sync(SCRIPT_MERGE, "Merging Data")
     run_sync(SCRIPT_DB_LOADER, "Database Loader")
-    
     if current_slot == "ROUND_2":
         log("Updating date.log to mark COMPLETED")
         update_date_log()
@@ -219,11 +232,10 @@ def run_pipeline(current_slot=None):
 
 # MAIN
 def main():
-    log("Master Runner Initialized (Dynamic Schedule)")
     log(f"Config Start Time={DAILY_START_TIME}, Retry Delay={HOURS_WAIT_FOR_ROUND_2} Hours")
     try:
         if RUN_ON_START:
-            run_pipeline(current_slot="MANUAL") 
+            run_pipeline(current_slot="ROUND_2") 
         if not AUTO_MODE:
             log("AUTO_MODE is False Exiting")
             return
@@ -231,14 +243,14 @@ def main():
             seconds_wait, next_dt = get_seconds_until_daily_start(DAILY_START_TIME)
             log(f"[WAITING] Sleeping {seconds_wait/3600:.2f} hours until Daily Start at {next_dt.strftime('%H:%M:%S')}")
             time.sleep(seconds_wait)
-            log("Starting ROUND 1")
+            log("Starting ROUND 1 (Requests)")
             did_run = run_pipeline(current_slot="ROUND_1")
             if not did_run:
-                log("Skip day detected.")
+                log("Skip day detected")
                 continue
-            log(f"[WAITING] Round 1 Finished. waiting {HOURS_WAIT_FOR_ROUND_2} hours before Round 2 (Retry/Cleanup)..")
+            log(f"[WAITING] Round 1 Finished waiting {HOURS_WAIT_FOR_ROUND_2} hours before Round 2")
             time.sleep(HOURS_WAIT_FOR_ROUND_2 * 3600)
-            log("Starting ROUND 2")
+            log("Starting ROUND 2 (Cleanup)")
             run_pipeline(current_slot="ROUND_2")
             log("Daily Cycle Completed Looping back to wait for tomorrow")
 
