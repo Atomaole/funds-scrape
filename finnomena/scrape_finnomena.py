@@ -422,8 +422,10 @@ def main():
         for w in writers.values(): w.writeheader()
     try:
         total = len(active_funds)
+        active_fund_codes_set = {f.get('short_code').strip() for f in active_funds}
+        finished_funds = finished_funds.intersection(active_fund_codes_set)
         pending_funds = [f for f in active_funds if f.get('short_code').strip() not in finished_funds]
-        log(f"Processing {len(pending_funds)} funds (Skipped {total - len(pending_funds)})")
+        log(f"Processing {len(pending_funds)} funds (Skipped {len(finished_funds)})")
         executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
         futures = []
         for fund in pending_funds:

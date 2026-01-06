@@ -248,7 +248,8 @@ def main():
         return
     pending_funds = [f for f in funds if unquote(f.get("fund_code", "")).strip() not in finished_funds]
     total_all_funds = len(funds)
-    finished_count_start = len(finished_funds)
+    current_fund_codes = {unquote(f.get("fund_code", "")).strip() for f in funds}
+    finished_count_start = len(finished_funds.intersection(current_fund_codes))
     remaining = len(pending_funds)
     log(f"Total Funds: {total_all_funds}")
     log(f"Finished (from Logs): {finished_count_start}")

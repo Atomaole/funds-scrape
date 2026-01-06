@@ -333,7 +333,7 @@ def main():
             writer.writeheader()
     pending_funds = [code for code in all_funds if code not in finished_funds]
     total_all_funds = len(all_funds)
-    finished_count_start = len(finished_funds)
+    finished_count_start = len(finished_funds.intersection(set(all_funds)))
     remaining = len(pending_funds)
     log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
     if remaining == 0:

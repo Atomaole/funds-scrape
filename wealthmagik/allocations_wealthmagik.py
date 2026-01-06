@@ -204,7 +204,8 @@ def main():
     if mode == 'w': writer.writeheader()
     pending_funds = [f for f in funds if unquote(f.get("fund_code", "")).strip() not in finished_funds]
     total = len(funds)
-    finished_count_start = len(finished_funds)
+    current_fund_codes = {unquote(f.get("fund_code", "")).strip() for f in funds}
+    finished_count_start = len(finished_funds.intersection(current_fund_codes))
     remaining = len(pending_funds)
     log(f"Total: {total}, Finished: {finished_count_start}, Remaining: {remaining}")
     if remaining == 0:
