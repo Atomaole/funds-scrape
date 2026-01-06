@@ -460,7 +460,7 @@ def main():
                 update_pdf_run_log()
                 log("Monthly PDF completed. Updated log")
         save_log_if_error()
-        log("Done All tasks completed")
+        log("Done All tasks completed (finnomena)")
 
 if __name__ == "__main__":
     main()

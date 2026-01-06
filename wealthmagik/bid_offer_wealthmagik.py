@@ -260,7 +260,7 @@ def main():
         HAS_ERROR = True
     finally:
         save_log_if_error()
-        log("Done")
+        log("Done (bid_offer/WM)")
 
 if __name__ == "__main__":
     main()

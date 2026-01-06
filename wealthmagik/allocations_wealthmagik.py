@@ -245,7 +245,7 @@ def main():
     finally:
         f_out.close()
         save_log_if_error()
-        log("Done")
+        log("Done (allocations/WM)")
 
 if __name__ == "__main__":
     main()
