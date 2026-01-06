@@ -13,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from selenium.common.exceptions import TimeoutException, UnexpectedAlertPresentException, NoAlertPresentException
 
 # CONFIG
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -157,7 +158,22 @@ def make_driver():
     driver_path = os.path.join(current_script_dir, "geckodriver")
     if not os.path.exists(driver_path):
          driver_path = os.path.join(os.path.dirname(current_script_dir), "geckodriver")
-    return webdriver.Firefox(service=Service(driver_path), options=options)
+    driver = webdriver.Firefox(service=Service(driver_path), options=options)
+    driver.set_page_load_timeout(45)
+    return driver
+
+def check_is_not_found(driver):
+    try:
+        src = driver.page_source
+        if "ไม่พบข้อมูล" in src or "ไม่พบกองทุน" in src or "Data not found" in src:
+            return True
+    except: pass
+    try:
+        driver.switch_to.alert.accept()
+        return True
+    except: pass
+    
+    return False
 
 def scrape_sec_info(driver, fund_code):
     safe_code = quote(fund_code, safe='') 
@@ -178,9 +194,20 @@ def scrape_sec_info(driver, fund_code):
                     time.sleep(2)
                 except: pass
             driver.get(url)
-            wait = WebDriverWait(driver, 10)
-            try: wait.until(EC.presence_of_element_located((By.CLASS_NAME, "card-body")))
-            except:
+            if check_is_not_found(driver):
+                 return empty_data
+
+            wait = WebDriverWait(driver, 25)
+            
+            try: 
+                wait.until(EC.presence_of_element_located((By.CLASS_NAME, "card-body")))
+            
+            except UnexpectedAlertPresentException:
+                return empty_data
+                
+            except TimeoutException:
+                if check_is_not_found(driver):
+                    return empty_data
                 if attempt < MAX_RETRIES: 
                     continue
                 else: 
@@ -212,7 +239,12 @@ def scrape_sec_info(driver, fund_code):
             except: data["fx_hedging"] = ""
             return data
             
+        except UnexpectedAlertPresentException:
+            return empty_data
+
         except Exception as e:
+            if check_is_not_found(driver):
+                return empty_data
             log(f"Error {fund_code} (Attempt {attempt}): {e}")
             if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
     return None
@@ -253,7 +285,10 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
                         with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
                              writer = csv.DictWriter(f, fieldnames=fieldnames)
                              writer.writerow(info)
-                    log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
+                    if info.get("as_of_date") == "N/A" and info.get("sharpe_ratio") == "":
+                         log(f"[{current_total_done}/{total_all_funds}] {code} - Not Found (Skipped)")
+                    else:
+                         log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
                     append_resume_state(code)
                 else:
                     log(f"Failed to scrape {code} after retries")
