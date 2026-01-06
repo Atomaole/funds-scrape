@@ -202,7 +202,7 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
                             with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
                                 writer = csv.DictWriter(f_out, fieldnames=fieldnames)
                                 writer.writerows(data_list)
-                        log(f"[{current_total_done}/{total_all_funds}] {code} (holding/wm-selenium) - Found {len(data_list)} items")
+                        log(f"[{current_total_done}/{total_all_funds}] {code} (holding/wm-selenium)")
                     else:
                         log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
                     append_resume_state(code)
