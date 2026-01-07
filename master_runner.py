@@ -12,7 +12,7 @@ DAILY_START_TIME = "01:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 5  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
-MODE_FOR_WEALTHMAGIK = 2 
+MODE_FOR_WEALTHMAGIK = 1 
 
 # FILE PATHS
 script_dir = os.path.dirname(os.path.abspath(__file__))
