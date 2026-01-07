@@ -63,7 +63,7 @@ def get_resume_state():
             lines = f.readlines()
         if not lines: return set()
         first_line_parts = lines[0].strip().split('|')
-        if len(first_line_parts) < 2 or first_line_parts[-1] != current_date_str:
+        if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
             log(f"Resume file date mismatch Deleting and starting new")
             try: os.remove(RESUME_FILE)
             except: pass
@@ -80,8 +80,9 @@ def get_resume_state():
 def append_resume_state(code):
     with CSV_LOCK:
         try:
+            current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-                f.write(f"{code}|{current_date_str}\n")
+                f.write(f"{code}|{current_date_str}|{current_time}\n")
         except: pass
 
 def cleanup_resume_file():
