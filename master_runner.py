@@ -12,7 +12,7 @@ DAILY_START_TIME = "01:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 5  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
-MODE_FOR_WEALTHMAGIK = 1 
+MODE_FOR_WEALTHMAGIK = 1
 
 # FILE PATHS
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -177,23 +177,24 @@ def run_pipeline(current_slot=None):
     target_holding = SCRIPT_WM_HOLDING_REQ
     target_alloc   = SCRIPT_WM_ALLOC_REQ
     engine_name    = "Requests"
-
+    current_wm_mode = MODE_FOR_WEALTHMAGIK
     if current_slot == "ROUND_2":
         log("ROUND 2 SELENIUM")
         target_holding = SCRIPT_WM_HOLDING_SEL
         target_alloc   = SCRIPT_WM_ALLOC_SEL
         engine_name    = "Selenium"
+        current_wm_mode = 2
     else:
         log("ROUND 1 REQUESTS engine")
 
-    if MODE_FOR_WEALTHMAGIK == 1:
+    if current_wm_mode == 1:
         run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
             run_sync(target_holding, f"WM Holdings ({engine_name})")
         if is_new_month or os.path.exists(RESUME_WM_ALLOC):
             run_sync(target_alloc, f"WM Allocations ({engine_name})")
 
-    elif MODE_FOR_WEALTHMAGIK == 2:
+    elif current_wm_mode == 2:
         run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
             p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
@@ -202,7 +203,7 @@ def run_pipeline(current_slot=None):
             p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
             if p_alloc: bg_procs.append(p_alloc)
 
-    elif MODE_FOR_WEALTHMAGIK == 3:
+    elif current_wm_mode == 3:
         p_bid = launch_async(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
         if p_bid: bg_procs.append(p_bid)
         if is_new_month or os.path.exists(RESUME_WM_HOLDING):
