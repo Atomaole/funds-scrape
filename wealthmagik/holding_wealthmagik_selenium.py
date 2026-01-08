@@ -253,7 +253,7 @@ def main():
             writer.writeheader()
     batches = split_list(pending_funds, NUM_WORKERS)
     batches = [b for b in batches if len(b) > 0]
-    log(f"Launching {len(batches)} browser threads")
+    log(f"Launching {len(batches)} browser threads (holding/WM)")
     global PROCESSED_COUNT
     PROCESSED_COUNT = 0 
     executor = ThreadPoolExecutor(max_workers=len(batches))
