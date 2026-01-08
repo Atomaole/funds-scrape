@@ -35,7 +35,7 @@ HEADERS = {
 }
 
 def polite_sleep():
-    time.sleep(random.uniform(0.7, 1.3))
+    time.sleep(random.uniform(1, 3))
 
 def log(msg):
     global HAS_ERROR
@@ -149,7 +149,7 @@ def scrape_allocations(fund_code, profile_url):
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache'
                 })
-            response = requests.get(alloc_url, headers=current_headers, timeout=20)
+            response = requests.get(alloc_url, headers=current_headers, timeout=10)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 all_data = []
