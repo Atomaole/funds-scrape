@@ -7,13 +7,19 @@ from datetime import datetime, timedelta
 
 # CONFIG
 AUTO_MODE = True    # True=loop False=one round
-RUN_ON_START = False # True=Manual test immediately (No save log)
+RUN_ON_START = False # True=Manual test immediately (NO save log)
 DAILY_START_TIME = "01:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 5  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
-MODE_FOR_WEALTHMAGIK = 2 # This config only work round 1 (round 2 always Mode=2)
-ALWAYS_SELENIUM = True # True=always selenium for holding and allocations wealthmagik
+MODE_FOR_WEALTHMAGIK = 2 # This config only work for round 1 (round 2 always Mode=2)
+"""
+MODE FOR WEALTHMAGIK
+1 = work one thing at the time
+2 = work bid_offer first and then will work allocations and holding at the same time (recommend)
+3 = work together at the same time
+"""
+ALWAYS_SELENIUM = True # True=always selenium for holding and allocations wealthmagik (Recommend to use because requests it easy to get error timeout)
 
 # FILE PATHS
 script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -32,7 +32,7 @@ CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 COUNT_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 3
+NUM_WORKERS = 4
 PROCESSED_COUNT = 0
 
 THAI_MONTH_MAP = {
