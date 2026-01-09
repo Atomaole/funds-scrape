@@ -272,7 +272,7 @@ def main():
         HAS_ERROR = True
     finally:
         save_log_if_error()
-        log("Selenium Scraper Finished")
+        log("Selenium Scraper Finished (holding/WM)")
 
 if __name__ == "__main__":
     main()
