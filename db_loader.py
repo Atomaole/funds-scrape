@@ -295,7 +295,7 @@ def sync_portfolio_table(engine, csv_name, table_name):
 def main():
     log("Starting DB Loader Process")
     try:
-        engine = create_engine(DB_URL, connect_args={'options': '-c timezone=Asia/Bangkok'})
+        engine = create_engine(DB_URL, connect_args={'options': '-c timezone=Asia/Bangkok -c search_path=thai_funds'})
         if not check_and_init_db(engine):
             log("Aborting process due to DB initialization failure")
             return

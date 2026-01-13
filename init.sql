@@ -1,3 +1,6 @@
+CREATE SCHEMA IF NOT EXISTS thai_funds;
+SET search_path TO thai_funds;
+
 DROP TABLE IF EXISTS funds_allocations;
 DROP TABLE IF EXISTS funds_holding;
 DROP TABLE IF EXISTS funds_daily;
