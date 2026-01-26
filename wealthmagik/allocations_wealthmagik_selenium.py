@@ -1,7 +1,7 @@
 import csv
 import time
 import re
-import os
+from pathlib import Path
 import random
 import threading
 from urllib.parse import unquote
@@ -15,14 +15,14 @@ from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 
 # CONFIG
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.dirname(script_dir)
+script_dir = Path(__file__).resolve().parent
+root = script_dir.parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
-RAW_DATA_DIR = os.path.join(script_dir, "raw_data")
-if not os.path.exists(RAW_DATA_DIR): os.makedirs(RAW_DATA_DIR)
-INPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_fund_list.csv")
-OUTPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_allocations.csv")
-RESUME_FILE = os.path.join(script_dir, "allocations_resume.log")
+RAW_DATA_DIR = script_dir/"raw_data"
+if not RAW_DATA_DIR.exists(): RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+INPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_fund_list.csv"
+OUTPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_allocations.csv"
+RESUME_FILE = script_dir/"allocations_resume.log"
 HEADLESS = True
 MAX_RETRIES = 3
 RETRY_DELAY = 2
@@ -59,15 +59,15 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(root, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        log_dir = root/"Logs"
+        if not log_dir.exists(): log_dir.mkdir(parents=True, exist_ok=True)
         filename = f"alloc_wm_selenium_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
     except: pass
 
 def get_resume_state():
-    if not os.path.exists(RESUME_FILE): return set()
+    if not RESUME_FILE.exists(): return set()
     finished = set()
     try:
         with open(RESUME_FILE, 'r', encoding='utf-8') as f:
@@ -76,7 +76,7 @@ def get_resume_state():
         first_line_parts = lines[0].strip().split('|')
         if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
             log(f"Resume file date mismatch Deleting and starting new")
-            try: os.remove(RESUME_FILE)
+            try: RESUME_FILE.unlink()
             except: pass
             return set()
         for line in lines:
@@ -103,9 +103,9 @@ def make_driver():
     options.set_preference("permissions.default.image", 2)
     options.set_preference("permissions.default.stylesheet", 2)
     options.set_preference("dom.webnotifications.enabled", False)
-    driver_path = os.path.join(root, "geckodriver")
-    if not os.path.exists(driver_path):
-         driver_path = os.path.join(script_dir, "geckodriver")
+    driver_path = root/"geckodriver"
+    if not driver_path.exists():
+         driver_path = script_dir/"geckodriver"
     return webdriver.Firefox(service=Service(driver_path), options=options)
 
 def close_ad_if_present(driver):
@@ -261,7 +261,7 @@ def main():
         log("All done Nothing to scrape")
         return
     fieldnames = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
-    if not os.path.exists(OUTPUT_FILENAME) or os.path.getsize(OUTPUT_FILENAME) == 0:
+    if not OUTPUT_FILENAME.exists() or OUTPUT_FILENAME.stat().st_size == 0:
          with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f_out:
             writer = csv.DictWriter(f_out, fieldnames=fieldnames)
             writer.writeheader()

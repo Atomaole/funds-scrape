@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 import random
 import threading
+import math
 from urllib.parse import unquote
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -19,10 +20,10 @@ script_dir = Path(__file__).resolve().parent
 root = script_dir.parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
 RAW_DATA_DIR = script_dir/"raw_data"
-if not RAW_DATA_DIR.exists(): RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+if not RAW_DATA_DIR.exists():RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 INPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_fund_list.csv"
-OUTPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_holdings.csv"
-RESUME_FILE = script_dir/"holding_resume.log"
+OUTPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_bid_offer.csv"
+RESUME_FILE = script_dir/"bid_offer_resume.log"
 HEADLESS = True
 MAX_RETRIES = 3
 RETRY_DELAY = 2
@@ -32,20 +33,11 @@ CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 COUNT_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 4
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 PROCESSED_COUNT = 0
 
-THAI_MONTH_MAP = {
-    "ม.ค.": 1, "มกราคม": 1, "JAN": 1, "ก.พ.": 2, "กุมภาพันธ์": 2, "FEB": 2,
-    "มี.ค.": 3, "มีนาคม": 3, "MAR": 3, "เม.ย.": 4, "เมษายน": 4, "APR": 4,
-    "พ.ค.": 5, "พฤษภาคม": 5, "MAY": 5, "มิ.ย.": 6, "มิถุนายน": 6, "JUN": 6,
-    "ก.ค.": 7, "กรกฎาคม": 7, "JUL": 7, "ส.ค.": 8, "สิงหาคม": 8, "AUG": 8,
-    "ก.ย.": 9, "กันยายน": 9, "SEP": 9, "ต.ค.": 10, "ตุลาคม": 10, "OCT": 10,
-    "พ.ย.": 11, "พฤศจิกายน": 11, "NOV": 11, "ธ.ค.": 12, "ธันวาคม": 12, "DEC": 12,
-}
-
 def polite_sleep():
-    time.sleep(random.uniform(1.0, 2.0))
+    time.sleep(random.uniform(0.5, 1.5))
 
 def log(msg):
     global HAS_ERROR
@@ -60,8 +52,8 @@ def save_log_if_error():
     if not HAS_ERROR: return
     try:
         log_dir = root/"Logs"
-        if not log_dir.exists(): log_dir.mkdir(parents=True, exist_ok=True)
-        filename = f"holding_wm_selenium_{datetime.now().strftime('%Y-%m-%d')}.log"
+        if not log_dir.exists():log_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"bidoffer_wm_selenium_{datetime.now().strftime('%Y-%m-%d')}.log"
         with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
     except: pass
@@ -96,6 +88,11 @@ def append_resume_state(code):
                 f.write(f"{code}|{current_date_str}|{current_time}\n")
         except: pass
 
+def cleanup_resume_file():
+    if RESUME_FILE.exists():
+        try: RESUME_FILE.unlink()
+        except: pass
+
 def make_driver():
     options = Options()
     if HEADLESS: options.add_argument("-headless")
@@ -103,84 +100,76 @@ def make_driver():
     options.set_preference("permissions.default.image", 2)
     options.set_preference("permissions.default.stylesheet", 2)
     options.set_preference("dom.webnotifications.enabled", False)
+    options.add_argument("--width=1920")
+    options.add_argument("--height=1080")
     driver_path = root/"geckodriver"
     if not driver_path.exists():
          driver_path = script_dir/"geckodriver"
     return webdriver.Firefox(service=Service(driver_path), options=options)
+
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text).strip() if text else ""
+
+def clean_number(text):
+    if not text: return ""
+    text = re.sub(r'[%,]', '', text)
+    return text.strip()
+
+def parse_wm_date(text):
+    if not text: return ""
+    text = clean_text(text)
+    if re.match(r"^\d{8}$", text):
+        try: return datetime.strptime(text, "%Y%m%d").strftime("%d-%m-%Y")
+        except: pass
+    match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", text)
+    if match:
+        d, m, y = map(int, match.groups())
+        if y > 2400: y -= 543
+        try: return datetime(y, m, d).strftime("%d-%m-%Y")
+        except: pass
+    return text
+
+def get_value_from_id_attribute(driver, prefix):
+    try:
+        el = driver.find_element(By.CSS_SELECTOR, f"[id^='{prefix}']")
+        full_id = el.get_attribute("id")
+        return full_id.replace(prefix, "")
+    except: return ""
 
 def close_ad_if_present(driver):
     try: 
         WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.ID, "popupAdsClose"))).click()
     except: pass
 
-def clean_text(text):
-    return re.sub(r'\s+', ' ', text).strip() if text else ""
-
-def parse_thai_date(text):
-    if not text: return ""
-    text = re.sub(r"(ข้อมูล\s*ณ\s*วันที่|ณ\s*วันที่|as of)", "", text, flags=re.IGNORECASE).strip()
-    match = re.search(r"(\d{1,2})\s+([^\s\d]+)\s+(\d{2,4})", text)
-    if match:
-        d_str, m_str, y_str = match.groups()
-        month_num = THAI_MONTH_MAP.get(m_str.strip(), 0)
-        if month_num == 0: return text 
-        try:
-            day, year = int(d_str), int(y_str)
-            if year < 100: year += 1957
-            elif year > 2400: year -= 543
-            return datetime(year, month_num, day).strftime("%d-%m-%Y")
-        except: pass
-    return text
-
-def scrape_holdings(driver, fund_code, profile_url):
-    port_url = re.sub(r"/profile/?$", "/port", profile_url)
-    results = []
-    
+def scrape_bid_offer(driver, fund_code, url):
+    data = {
+        "fund_code": fund_code,
+        "nav_date": "",
+        "bid_price": "",
+        "offer_price": ""
+    }
     for attempt in range(1, MAX_RETRIES + 1):
         if STOP_EVENT.is_set(): return None
         try:
-            driver.get(port_url)
+            if attempt > 1: pass
+            driver.get(url)
             close_ad_if_present(driver)
-            try:
-                WebDriverWait(driver, 10).until(
-                    EC.any_of(
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".portallocation-list")),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".emptyData")),
-                        EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName"))
-                    )
-                )
-            except:
-                if attempt < MAX_RETRIES: continue
+            try: WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
+            except: 
+                if attempt < MAX_RETRIES: continue 
                 else: return None
-            as_of_date = ""
-            try:
-                date_el = driver.find_element(By.CSS_SELECTOR, ".date-detail-text")
-                as_of_date = parse_thai_date(clean_text(date_el.text))
-            except: pass
-            rows = driver.find_elements(By.CSS_SELECTOR, ".portallocation-list")
-            if not rows:
-                if driver.find_elements(By.CSS_SELECTOR, ".emptyData") or driver.find_elements(By.CSS_SELECTOR, ".fundName"):
-                    return []
-                raise Exception("Page structure unknown or incomplete")
-            for row in rows:
-                try:
-                    name_el = row.find_element(By.CSS_SELECTOR, ".name-text")
-                    weight_el = row.find_element(By.CSS_SELECTOR, ".ratio-text")
-                    name = clean_text(name_el.text)
-                    weight = clean_text(weight_el.text).replace("%", "")
-                    if name and weight:
-                        results.append({
-                            "fund_code": fund_code,
-                            "type": "holding",
-                            "name": name,
-                            "percent": weight,
-                            "as_of_date": as_of_date,
-                            "source_url": port_url
-                        })
-                except: continue
-            return results
+            raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
+            data["nav_date"] = parse_wm_date(raw_nav_date)
+            raw_bid = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
+            data["bid_price"] = clean_number(raw_bid)
+            raw_offer = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
+            data["offer_price"] = clean_number(raw_offer)
+            return data
+
         except Exception as e:
+            log(f"Error {fund_code}: {e}")
             if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
+            
     return None
 
 def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_count_start):
@@ -193,27 +182,34 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             try:
-                data_list = scrape_holdings(driver, code, url)
+                data = scrape_bid_offer(driver, code, url)
                 if STOP_EVENT.is_set(): break
                 current_total_done = 0
-                with COUNT_LOCK:
-                    PROCESSED_COUNT += 1
-                    current_total_done = finished_count_start + PROCESSED_COUNT
-                if data_list is not None:
-                    if data_list:
+                if data is not None:
+                    with COUNT_LOCK:
+                        PROCESSED_COUNT += 1
+                        current_total_done = finished_count_start + PROCESSED_COUNT
+                    if data.get("nav_date"): 
                         with CSV_LOCK:
                             with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
                                 writer = csv.DictWriter(f_out, fieldnames=fieldnames)
-                                writer.writerows(data_list)
-                        log(f"[{current_total_done}/{total_all_funds}] {code} (holding/wm-selenium)")
+                                writer.writerow(data)
+                        log(f"[{current_total_done}/{total_all_funds}] {code} (bid_offer/wealthmagik)")
                     else:
                         log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
-                    append_resume_state(code)
+                    append_resume_state(code) 
                 else:
-                    log(f"[{current_total_done}/{total_all_funds}] FAILED {code} (Max retries)")
+                    log(f"Skipping resume save for {code} due to scrape failure")
                 polite_sleep()
+                
             except Exception as e:
-                log(f"ERROR processing {code}: {e}")
+                current_total_done = 0
+                with COUNT_LOCK:
+                    if 'current_total_done' not in locals() or current_total_done == 0:
+                         PROCESSED_COUNT += 1
+                         current_total_done = finished_count_start + PROCESSED_COUNT
+                log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
+
     except Exception as e:
         if not STOP_EVENT.is_set():
              log(f"Thread-{thread_id} Crashed: {e}")
@@ -226,7 +222,6 @@ def split_list(lst, n):
     return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
 
 def main():
-    log("Starting Wealthmagik Holding (SELENIUM)")
     finished_funds = get_resume_state()
     funds = []
     try:
@@ -240,20 +235,18 @@ def main():
     current_fund_codes = {unquote(f.get("fund_code", "")).strip() for f in funds}
     finished_count_start = len(finished_funds.intersection(current_fund_codes))
     remaining = len(pending_funds)
-    log(f"Total Funds: {total_all_funds}")
-    log(f"Finished (from Logs): {finished_count_start}")
-    log(f"Remaining for Selenium: {remaining}")
+    log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
     if remaining == 0:
-        log("All done Nothing to scrape")
+        log("All done")
         return
-    fieldnames = ["fund_code", "type", "name", "percent", "as_of_date", "source_url"]
+    fieldnames = ["fund_code", "nav_date", "bid_price", "offer_price"]
     if not OUTPUT_FILENAME.exists() or OUTPUT_FILENAME.stat().st_size == 0:
          with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f_out:
             writer = csv.DictWriter(f_out, fieldnames=fieldnames)
             writer.writeheader()
     batches = split_list(pending_funds, NUM_WORKERS)
     batches = [b for b in batches if len(b) > 0]
-    log(f"Launching {len(batches)} browser threads (holding/WM)")
+    log(f"Starting {len(batches)}")
     global PROCESSED_COUNT
     PROCESSED_COUNT = 0 
     executor = ThreadPoolExecutor(max_workers=len(batches))
@@ -272,7 +265,7 @@ def main():
         HAS_ERROR = True
     finally:
         save_log_if_error()
-        log("Selenium Scraper Finished (holding/WM)")
+        log("Done (bid_offer/WM)")
 
 if __name__ == "__main__":
     main()

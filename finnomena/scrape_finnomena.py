@@ -1,46 +1,48 @@
 import requests
 import csv
 import time
-import os
 import re
 import random
 import pdfplumber
 import logging
 import threading
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from datetime import datetime
 
 # CONFIG
 logging.getLogger("pdfminer").setLevel(logging.CRITICAL)
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = Path(__file__).resolve().parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
-root = os.path.dirname(script_dir)
-FN_RAW_DATA_DIR = os.path.join(script_dir, "raw_data")
-NAV_ALL_DIR = os.path.join(script_dir, "all_nav")
-WM_DIR = os.path.join(root, "wealthmagik") 
-WM_RAW_DATA_DIR = os.path.join(WM_DIR, "raw_data")
+root = script_dir.parent
+FN_RAW_DATA_DIR = script_dir/"raw_data"
+NAV_ALL_DIR = script_dir/"all_nav"
+WM_DIR = root/"wealthmagik"
+WM_RAW_DATA_DIR = WM_DIR/"raw_data"
 for d in [FN_RAW_DATA_DIR, NAV_ALL_DIR]:
-    if not os.path.exists(d): os.makedirs(d)
-OUTPUT_FUND_LIST = os.path.join(FN_RAW_DATA_DIR, "finnomena_fund_list.csv")
-OUTPUT_MASTER    = os.path.join(FN_RAW_DATA_DIR, "finnomena_info.csv")
-OUTPUT_HOLDINGS  = os.path.join(FN_RAW_DATA_DIR, "finnomena_holdings.csv")
-OUTPUT_ALLOCATIONS = os.path.join(FN_RAW_DATA_DIR, "finnomena_allocations.csv")
-OUTPUT_FEES      = os.path.join(FN_RAW_DATA_DIR, "finnomena_fees.csv")
-OUTPUT_CODES     = os.path.join(FN_RAW_DATA_DIR, "finnomena_codes.csv")
-WM_LIST_FILE = os.path.join(WM_RAW_DATA_DIR, "wealthmagik_fund_list.csv")
-RESUME_FILE = os.path.join(script_dir, "scrape_finnomena_resume.log")
-PDF_LOG_FILE = os.path.join(script_dir, "last_pdf_run.log")
+    d.mkdir(parents=True, exist_ok=True)
+OUTPUT_FUND_LIST = FN_RAW_DATA_DIR/"finnomena_fund_list.csv"
+OUTPUT_MASTER    = FN_RAW_DATA_DIR/"finnomena_info.csv"
+OUTPUT_HOLDINGS  = FN_RAW_DATA_DIR/"finnomena_holdings.csv"
+OUTPUT_ALLOCATIONS = FN_RAW_DATA_DIR/"finnomena_allocations.csv"
+OUTPUT_FEES      = FN_RAW_DATA_DIR/"finnomena_fees.csv"
+OUTPUT_CODES     = FN_RAW_DATA_DIR/"finnomena_codes.csv"
+WM_LIST_FILE = WM_RAW_DATA_DIR/"wealthmagik_fund_list.csv"
+RESUME_FILE = script_dir/"scrape_finnomena_resume.log"
+PDF_LOG_FILE = script_dir/"last_pdf_run.log"
 LOG_BUFFER = []
 HAS_ERROR = False
 CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
 NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.finnomena.com/"
 }
+
 def log(msg):
     global HAS_ERROR
     if "error" in msg.lower() or "failed" in msg.lower():
@@ -53,17 +55,17 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(root, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        log_dir = root/"Logs"
+        if not log_dir.exists(): log_dir.mkdir(parents=True, exist_ok=True)
         filename = f"scrape_finnomena_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
         with LOG_LOCK:
             print(f"Log saved at: {filename}")
     except: pass
 
 def get_resume_state():
-    if not os.path.exists(RESUME_FILE): return set()
+    if not RESUME_FILE.exists(): return set()
     finished = set()
     try:
         with open(RESUME_FILE, 'r', encoding='utf-8') as f:
@@ -72,7 +74,7 @@ def get_resume_state():
         first_line_parts = lines[0].strip().split('|')
         if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
             log(f"Resume file date mismatch Deleting and starting new")
-            try: os.remove(RESUME_FILE)
+            try: RESUME_FILE.unlink()
             except: pass
             return set()
         for line in lines:
@@ -93,9 +95,9 @@ def append_resume_state(code):
         except: pass
 
 def cleanup_resume_file():
-    if os.path.exists(RESUME_FILE):
+    if RESUME_FILE.exists():
         try:
-            os.remove(RESUME_FILE)
+            RESUME_FILE.unlink()
             log("Resume file deleted")
         except: pass
 
@@ -136,7 +138,7 @@ def get_all_fund_list():
         return []
     
 def load_existing_codes():
-    if not os.path.exists(OUTPUT_CODES): return {}
+    if not OUTPUT_CODES.exists(): return {}
     codes_map = {}
     try:
         with open(OUTPUT_CODES, 'r', encoding='utf-8-sig') as f:
@@ -171,7 +173,7 @@ def extract_codes_from_pdf(pdf_url, fund_code):
     return codes
 
 def check_is_monthly_run():
-    if not os.path.exists(PDF_LOG_FILE): return True
+    if not PDF_LOG_FILE.exists(): return True
     try:
         with open(PDF_LOG_FILE, 'r') as f:
             last_date_str = f.read().strip()
@@ -190,7 +192,7 @@ def update_pdf_run_log():
     except: pass
 
 def sync_and_clean_wealthmagik_list(valid_fn_codes):
-    if not os.path.exists(WM_LIST_FILE):
+    if not WM_LIST_FILE.exists():
         log("WealthMagik list file not found Skipping")
         return
     log("Cleaning WealthMagik list")
@@ -268,7 +270,7 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
         nav_data = res.get("data", {}).get("navs", []) if res else []
         if nav_data:
             safe_code_filename = sanitize_filename(code)
-            with open(os.path.join(NAV_ALL_DIR, f"{safe_code_filename}.csv"), "w", newline="", encoding="utf-8") as f_nav:
+            with open(NAV_ALL_DIR/f"{safe_code_filename}.csv", "w", newline="", encoding="utf-8") as f_nav:
                 w_nav = csv.writer(f_nav)
                 w_nav.writerow(["fund_code", "date", "value", "amount"]) 
                 for n in nav_data:
@@ -398,7 +400,7 @@ def main():
             })
     log(f"Saved Finnomena Fund List to {OUTPUT_FUND_LIST}")
     mode = 'a'
-    write_header = not os.path.exists(OUTPUT_MASTER)
+    write_header = not OUTPUT_MASTER.exists()
     if not finished_funds:
         mode = 'w'
         write_header = True

@@ -1,8 +1,8 @@
 import subprocess
-import os
 import sys
 import time
 import signal
+from pathlib import Path
 from datetime import datetime, timedelta
 
 # CONFIG
@@ -12,31 +12,32 @@ DAILY_START_TIME = "01:00"  # Time of round 1 to start
 HOURS_WAIT_FOR_ROUND_2 = 5  # Time to wating round 2
 DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
 DATE_LOG_FILE = "date.log"
-MODE_FOR_WEALTHMAGIK = 2 # This config only work for round 1 (round 2 always Mode=2)
+MODE_FOR_WEALTHMAGIK = 1
 """
 MODE FOR WEALTHMAGIK
-1 = work one thing at the time
-2 = work bid_offer first and then will work allocations and holding at the same time (recommend)
-3 = work together at the same time
+1 = work one thing at the time (recommend)
+2 = work bid_offer first and then will work allocations and holding at the same time
+3 = work together at the same time 
 """
-ALWAYS_SELENIUM = True # True=always selenium for holding and allocations wealthmagik (Recommend to use because requests it easy to get error timeout)
+ALWAYS_SELENIUM_WM = False
 
 # FILE PATHS
-script_dir = os.path.dirname(os.path.abspath(__file__))
-SCRIPT_UPDATE_DRIVER = os.path.join(script_dir, "update_driver.py")
-SCRIPT_LIST_WM      = os.path.join(script_dir, "wealthmagik", "list_fund_wealthmagik.py")
-SCRIPT_SCRAPE_FIN   = os.path.join(script_dir, "finnomena", "scrape_finnomena.py")
-SCRIPT_WM_BID_OFFER = os.path.join(script_dir, "wealthmagik", "bid_offer_wealthmagik.py")
-SCRIPT_WM_HOLDING_REQ = os.path.join(script_dir, "wealthmagik", "holding_wealthmagik.py")
-SCRIPT_WM_ALLOC_REQ   = os.path.join(script_dir, "wealthmagik", "allocations_wealthmagik.py")
-SCRIPT_WM_HOLDING_SEL = os.path.join(script_dir, "wealthmagik", "holding_wealthmagik_selenium.py")
-SCRIPT_WM_ALLOC_SEL   = os.path.join(script_dir, "wealthmagik", "allocations_wealthmagik_selenium.py")
-SCRIPT_SEC          = os.path.join(script_dir, "scrape_sec_info.py")
-SCRIPT_MERGE        = os.path.join(script_dir, "merge_funds.py")
-SCRIPT_DB_LOADER    = os.path.join(script_dir, "db_loader.py")
-RESUME_WM_HOLDING = os.path.join(script_dir, "wealthmagik", "holding_resume.log")
-RESUME_WM_ALLOC   = os.path.join(script_dir, "wealthmagik", "allocations_resume.log")
-RESUME_SEC        = os.path.join(script_dir, "scrape_sec_resume.log")
+script_dir = Path(__file__).resolve().parent
+SCRIPT_UPDATE_DRIVER = script_dir/"update_driver.py"
+SCRIPT_LIST_WM       = script_dir/"wealthmagik/list_fund_wealthmagik.py"
+SCRIPT_SCRAPE_FIN    = script_dir/"finnomena/scrape_finnomena.py"
+SCRIPT_WM_BID_OFFER_REQ = script_dir/"wealthmagik/bid_offer_wealthmagik.py"
+SCRIPT_WM_BID_OFFER_SEL = script_dir/"wealthmagik/bid_offer_wealthmagik_selenium.py"
+SCRIPT_WM_HOLDING_REQ   = script_dir/"wealthmagik/holding_wealthmagik.py"
+SCRIPT_WM_ALLOC_REQ     = script_dir/"wealthmagik/allocations_wealthmagik.py"
+SCRIPT_WM_HOLDING_SEL   = script_dir/"wealthmagik/holding_wealthmagik_selenium.py"
+SCRIPT_WM_ALLOC_SEL     = script_dir/"wealthmagik/allocations_wealthmagik_selenium.py"
+SCRIPT_SEC           = script_dir/"scrape_sec_info.py"
+SCRIPT_MERGE         = script_dir/"merge_funds.py"
+SCRIPT_DB_LOADER     = script_dir/"db_loader.py"
+RESUME_WM_HOLDING    = script_dir/"wealthmagik/holding_resume.log"
+RESUME_WM_ALLOC      = script_dir/"wealthmagik/allocations_resume.log"
+RESUME_SEC           = script_dir/"scrape_sec_resume.log"
 LOG_BUFFER = []
 active_processes = []
 
@@ -76,7 +77,7 @@ def kill_all_process():
 
 def launch_async(path, description):
     global active_processes
-    if not os.path.exists(path):
+    if not path.exists():
         log(f"Error: Script not found {path}")
         return None
     log(f"Launching Async: {description}")
@@ -84,7 +85,7 @@ def launch_async(path, description):
         kw = {}
         if sys.platform == "win32":
             kw['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        p = subprocess.Popen([sys.executable, path], **kw)
+        p = subprocess.Popen([sys.executable, str(path)], **kw)
         active_processes.append(p)
         return p
     except Exception as e:
@@ -93,7 +94,7 @@ def launch_async(path, description):
 
 def run_sync(path, description):
     global active_processes
-    if not os.path.exists(path):
+    if not path.exists():
         log(f"Error: Script not found {path}")
         return False
     log(f"Running Sync: {description}")
@@ -101,7 +102,7 @@ def run_sync(path, description):
         kw = {}
         if sys.platform == "win32":
             kw['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        p = subprocess.Popen([sys.executable, path], **kw)
+        p = subprocess.Popen([sys.executable, str(path)], **kw)
         active_processes.append(p)
         p.wait()
         exit_code = p.returncode
@@ -119,9 +120,9 @@ def run_sync(path, description):
         return False
 
 def check_is_new_month():
-    log_path = os.path.join(script_dir, DATE_LOG_FILE)
+    log_path = script_dir / DATE_LOG_FILE
     current_date = datetime.now()
-    if not os.path.exists(log_path): return True
+    if not log_path.exists(): return True
     try:
         with open(log_path, 'r') as f:
             last_run_str = f.read().strip()
@@ -135,7 +136,7 @@ def check_is_new_month():
 
 def update_date_log():
     try:
-        with open(os.path.join(script_dir, DATE_LOG_FILE), 'w') as f:
+        with open(script_dir / DATE_LOG_FILE, 'w') as f:
             f.write(datetime.now().strftime("%Y-%m-%d"))
         log("Updated date.log")
     except Exception as e: log(f"Failed to update date.log: {e}")
@@ -158,7 +159,7 @@ def run_pipeline(current_slot=None):
         log(f"Today is skip day (Day {datetime.now().weekday()}). Skipping pipeline")
         return False
     start_time = time.time()
-    run_sync(SCRIPT_UPDATE_DRIVER, "Update GeckoDriver")
+    if ALWAYS_SELENIUM_WM: run_sync(SCRIPT_UPDATE_DRIVER, "Update GeckoDriver")
     is_new_month = check_is_new_month()
     if is_new_month: log("New Month (Will scrape full set)")
     else: log("Same Month (Checking Resume Logs)")
@@ -173,7 +174,7 @@ def run_pipeline(current_slot=None):
     time.sleep(5)
 
     # 3. SEC Info
-    if is_new_month or os.path.exists(RESUME_SEC):
+    if is_new_month or RESUME_SEC.exists():
         p_sec = launch_async(SCRIPT_SEC, "SEC Info")
         if p_sec: bg_procs.append(p_sec)
     else:
@@ -181,44 +182,47 @@ def run_pipeline(current_slot=None):
     time.sleep(5)
 
     # 4. Wealthmagik
-    current_wm_mode = MODE_FOR_WEALTHMAGIK
-    if ALWAYS_SELENIUM or current_slot == "ROUND_2":
+    if ALWAYS_SELENIUM_WM:
         target_holding = SCRIPT_WM_HOLDING_SEL
         target_alloc   = SCRIPT_WM_ALLOC_SEL
+        target_bid_offer = SCRIPT_WM_BID_OFFER_SEL
         engine_name    = "Selenium"
-        if current_slot == "ROUND_2":
-            current_wm_mode = 2
-            log(f"ROUND 2 {engine_name} engine")
     else:
         target_holding = SCRIPT_WM_HOLDING_REQ
         target_alloc   = SCRIPT_WM_ALLOC_REQ
+        target_bid_offer = SCRIPT_WM_BID_OFFER_REQ
         engine_name    = "Requests"
-    if current_slot != "ROUND_2":
-        log(f"ROUND 1 {engine_name} engine")
 
-    if current_wm_mode == 1:
-        run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
-        if is_new_month or os.path.exists(RESUME_WM_HOLDING):
+    if current_slot == "ROUND_1":
+        log(f"ROUND 1 {engine_name} engine")
+    elif current_slot == "ROUND_2":
+        log(f"ROUND 2 {engine_name} engine")
+    else:
+        log(f"MANUAL {engine_name} engine")
+
+    if MODE_FOR_WEALTHMAGIK == 1:
+        run_sync(target_bid_offer, "WM Bid/Offer")
+        if is_new_month or RESUME_WM_HOLDING.exists():
             run_sync(target_holding, f"WM Holdings ({engine_name})")
-        if is_new_month or os.path.exists(RESUME_WM_ALLOC):
+        if is_new_month or RESUME_WM_ALLOC.exists():
             run_sync(target_alloc, f"WM Allocations ({engine_name})")
 
-    elif current_wm_mode == 2:
-        run_sync(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
-        if is_new_month or os.path.exists(RESUME_WM_HOLDING):
+    elif MODE_FOR_WEALTHMAGIK == 2:
+        run_sync(target_bid_offer, "WM Bid/Offer")
+        if is_new_month or RESUME_WM_HOLDING.exists():
             p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
             if p_hold: bg_procs.append(p_hold) 
-        if is_new_month or os.path.exists(RESUME_WM_ALLOC):
+        if is_new_month or RESUME_WM_ALLOC.exists():
             p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
             if p_alloc: bg_procs.append(p_alloc)
 
-    elif current_wm_mode == 3:
-        p_bid = launch_async(SCRIPT_WM_BID_OFFER, "WM Bid/Offer")
+    elif MODE_FOR_WEALTHMAGIK == 3:
+        p_bid = launch_async(target_bid_offer, "WM Bid/Offer")
         if p_bid: bg_procs.append(p_bid)
-        if is_new_month or os.path.exists(RESUME_WM_HOLDING):
+        if is_new_month or RESUME_WM_HOLDING.exists():
             p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
             if p_hold: bg_procs.append(p_hold)
-        if is_new_month or os.path.exists(RESUME_WM_ALLOC):
+        if is_new_month or RESUME_WM_ALLOC.exists():
             p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
             if p_alloc: bg_procs.append(p_alloc)
 

@@ -1,29 +1,24 @@
 import csv
 import time
 import re
-import os
+from pathlib import Path
 import random
+import requests
+import math
 import threading
 from urllib.parse import quote, unquote
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
-from selenium.common.exceptions import TimeoutException, UnexpectedAlertPresentException, NoAlertPresentException
 
 # CONFIG
-script_dir = os.path.dirname(os.path.abspath(__file__))
+script_dir = Path(__file__).resolve().parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
-INPUT_FILE = os.path.join(script_dir, "finnomena", "raw_data", "finnomena_fund_list.csv")
-OUTPUT_DIR = os.path.join(script_dir, "merged_output")
-if not os.path.exists(OUTPUT_DIR): os.makedirs(OUTPUT_DIR)
-OUTPUT_FILENAME = os.path.join(OUTPUT_DIR, "all_sec_fund_info.csv")
-RESUME_FILE = os.path.join(script_dir, "scrape_sec_resume.log")
-HEADLESS = True
+INPUT_FILE = script_dir/"finnomena/raw_data/finnomena_fund_list.csv"
+OUTPUT_DIR = script_dir/"merged_output"
+if not OUTPUT_DIR.exists():OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_FILENAME = OUTPUT_DIR/"all_sec_fund_info.csv"
+RESUME_FILE = script_dir/"scrape_sec_resume.log"
+API_URL = "https://web-fct-api.sec.or.th/api/funds"
+BATCH_SIZE = 2
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
@@ -32,8 +27,10 @@ CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 COUNT_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 PROCESSED_COUNT = 0
+
+def polite_sleep():
+    time.sleep(random.uniform(1, 3))
 
 def log(msg):
     global HAS_ERROR
@@ -47,16 +44,16 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(script_dir, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        log_dir = script_dir/"Logs"
+        if not log_dir.exists():log_dir.mkdir(parents=True, exist_ok=True)
         filename = f"scrape_sec_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
     except Exception as e:
         print(f"Cannot save log file: {e}")
 
 def get_resume_state():
-    if not os.path.exists(RESUME_FILE): return set()
+    if not RESUME_FILE.exists(): return set()
     finished = set()
     try:
         with open(RESUME_FILE, 'r', encoding='utf-8') as f:
@@ -65,7 +62,7 @@ def get_resume_state():
         first_line_parts = lines[0].strip().split('|')
         if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
             log(f"Resume file date mismatch Deleting and starting new")
-            try: os.remove(RESUME_FILE)
+            try: RESUME_FILE.unlink()
             except: pass
             return set()
         for line in lines:
@@ -78,61 +75,22 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    with CSV_LOCK:
-        try:
-            current_time = datetime.now().strftime("%H:%M:%S")
-            with open(RESUME_FILE, 'a', encoding='utf-8') as f:
-                f.write(f"{code}|{current_date_str}|{current_time}\n")
-        except: pass
-
-def cleanup_resume_file():
-    if os.path.exists(RESUME_FILE):
-        try: os.remove(RESUME_FILE)
-        except: pass
-
-def polite_sleep():
-    time.sleep(random.uniform(0.3, 0.7))
-
-def clean_text(text):
-    if not text: return ""
-    cleaned = re.sub(r'\s+', ' ', text).strip()
-    if cleaned == "-": return ""
-    return cleaned
+    try:
+        current_time = datetime.now().strftime("%H:%M:%S")
+        with open(RESUME_FILE, 'a', encoding='utf-8') as f:
+            f.write(f"{code}|{current_date_str}|{current_time}\n")
+    except: pass
 
 def clean_number(text):
-    if not text: return ""
+    if text is None: return ""
+    text = str(text)
     text = re.sub(r'[%,]', '', text)
     text = re.sub(r'\s+', '', text)
-    if text == "-" or text == "N/A": return ""
-    return text
-
-def parse_recovering_period(text):
-    if not text or text == "-" or text == "N/A": return ""
-    text_clean = text.replace(" ", "")
-    total_days = 0
-    found_match = False
-    
-    match_year = re.search(r'(\d+)ปี', text_clean)
-    if match_year:
-        total_days += int(match_year.group(1)) * 365
-        found_match = True
-        
-    match_month = re.search(r'(\d+)เดือน', text_clean)
-    if match_month:
-        total_days += int(match_month.group(1)) * 30
-        found_match = True
-        
-    match_day = re.search(r'(\d+)วัน', text_clean)
-    if match_day:
-        total_days += int(match_day.group(1))
-        found_match = True
-        
-    if found_match: return str(total_days)
-    if text.strip() == "-": return ""
+    if text in ["-", "N/A", "null", "None"]: return ""
     return text
 
 def convert_thai_date(date_str):
-    if not date_str or date_str.startswith("N/A"): return date_str
+    if not date_str or date_str == "null": return "N/A"
     try:
         parts = date_str.split('/')
         if len(parts) == 3:
@@ -142,180 +100,68 @@ def convert_thai_date(date_str):
     except: return date_str
     return date_str
 
-def make_driver():
-    options = Options()
-    if HEADLESS: options.add_argument("-headless")
-    options.page_load_strategy = 'eager'
-    options.set_preference("permissions.default.image", 2)
-    options.set_preference("permissions.default.stylesheet", 2)
-    options.set_preference("dom.webnotifications.enabled", False)
-    options.add_argument("--width=1920")
-    options.add_argument("--height=1080")
-    
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    driver_path = os.path.join(current_script_dir, "geckodriver")
-    if not os.path.exists(driver_path):
-         driver_path = os.path.join(os.path.dirname(current_script_dir), "geckodriver")
-    driver = webdriver.Firefox(service=Service(driver_path), options=options)
-    driver.set_page_load_timeout(45)
-    return driver
+def calculate_recovering_days(rp_data):
+    if not rp_data or not isinstance(rp_data, dict): return ""
+    total_days = 0
+    y = rp_data.get("year", 0)
+    m = rp_data.get("month", 0)
+    d = rp_data.get("day", 0)
+    if y is None and m is None and d is None: return ""
+    if y: total_days += int(y) * 365
+    if m: total_days += int(m) * 30
+    if d: total_days += int(d)
+    return str(total_days) if total_days > 0 else ""
 
-def check_is_not_found(driver):
-    try:
-        src = driver.page_source
-        if "ไม่พบข้อมูล" in src or "ไม่พบกองทุน" in src or "Data not found" in src:
-            return True
-    except: pass
-    try:
-        driver.switch_to.alert.accept()
-        return True
-    except: pass
-    
-    return False
+def create_session():
+    s = requests.Session()
+    s.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+        "Origin": "https://fundcheck.sec.or.th",
+        "Referer": "https://fundcheck.sec.or.th/",
+        "Accept": "application/json, text/plain, */*"
+    })
+    return s
 
-def scrape_sec_info(driver, fund_code):
-    safe_code = quote(fund_code, safe='') 
-    url = f"https://fundcheck.sec.or.th/fund-detail;funds={safe_code}"
-    empty_data = {
-        "fund_code": fund_code, "sec_url": url, "as_of_date": "N/A",
-        "sharpe_ratio": "", "alpha": "", "beta": "",
-        "max_drawdown": "", "recovering_period": "",
-        "tracking_error": "", "turnover_ratio": "", "fx_hedging": ""
-    }
+def fetch_batch_data(session, fund_codes_batch):
     for attempt in range(1, MAX_RETRIES + 1):
-        if STOP_EVENT.is_set(): return None
         try:
-            if attempt > 1:
-                try:
-                    driver.delete_all_cookies()
-                    driver.get("about:blank")
-                    time.sleep(2)
-                except: pass
-            driver.get(url)
-            if check_is_not_found(driver):
-                 return empty_data
-
-            wait = WebDriverWait(driver, 25)
-            
-            try: 
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, "card-body")))
-            
-            except UnexpectedAlertPresentException:
-                return empty_data
-                
-            except TimeoutException:
-                if check_is_not_found(driver):
-                    return empty_data
-                if attempt < MAX_RETRIES: 
-                    continue
-                else: 
-                    return None
-            data = empty_data.copy()
-            whole_page_text = driver.find_element(By.TAG_NAME, "body").text
-            match = re.search(r"ข้อมูล ณ วันที่.*?(\d{1,2}/\d{1,2}/\d{4})", whole_page_text)
-            if match: data["as_of_date"] = convert_thai_date(match.group(1))
-            else: data["as_of_date"] = "N/A"
-            id_map = {
-                "sharpe_ratio": "sharpe-ratio", "alpha": "alpha", "beta": "beta",
-                "tracking_error": "tracking-error", "max_drawdown": "max-drawdown",
-                "recovering_period": "recovering-period", "turnover_ratio": "turnover-ratio"
-            }
-            for field, html_id in id_map.items():
-                try:
-                    val = driver.execute_script(
-                        f"return document.getElementById('{html_id}')?.nextElementSibling?.textContent"
-                    )
-                    if field == "recovering_period": 
-                        data[field] = parse_recovering_period(clean_text(val))
-                    else: 
-                        data[field] = clean_number(val)
-                except: data[field] = "" 
-            try:
-                fx_xpath = "//div[contains(text(), 'FX Hedging')]/following-sibling::div//div[contains(@class, 'progress-bar')]"
-                fx_el = driver.find_element(By.XPATH, fx_xpath)
-                data["fx_hedging"] = clean_number(fx_el.get_attribute("textContent"))
-            except: data["fx_hedging"] = ""
-            return data
-            
-        except UnexpectedAlertPresentException:
-            return empty_data
-
+            response = session.post(API_URL, json=fund_codes_batch, timeout=20)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 400:
+                return [] 
+            elif response.status_code == 429:
+                time.sleep(5)
+            else:
+                log(f"API Error {response.status_code} (Batch size: {len(fund_codes_batch)})")
         except Exception as e:
-            if check_is_not_found(driver):
-                return empty_data
-            log(f"Error {fund_code} (Attempt {attempt}): {e}")
-            if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
-    return None
-
-def get_finnomena_funds(filepath):
-    unique_codes = set()
-    if not os.path.exists(filepath):
-        log(f"Warning File not found {filepath}")
-        return []
-    log(f"Reading MASTER list from {os.path.basename(filepath)}")
-    with open(filepath, "r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            raw_code = row.get("fund_code", "")
-            if not raw_code: continue
-            clean_code = unquote(raw_code).strip()
-            if clean_code: unique_codes.add(clean_code)
-    sorted_list = sorted(list(unique_codes))
-    log(f"Total funds found in list: {len(sorted_list)}")
-    return sorted_list
-
-def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_count_start):
-    global PROCESSED_COUNT
-    driver = None
-    try:
-        driver = make_driver()
-        for i, code in enumerate(fund_list, 1):
-            if STOP_EVENT.is_set(): break
-            try:
-                info = scrape_sec_info(driver, code)
-                if info is not None:
-                    if STOP_EVENT.is_set(): break
-                    current_total_done = 0
-                    with COUNT_LOCK:
-                        PROCESSED_COUNT += 1
-                        current_total_done = finished_count_start + PROCESSED_COUNT
-                    with CSV_LOCK:
-                        with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
-                             writer = csv.DictWriter(f, fieldnames=fieldnames)
-                             writer.writerow(info)
-                    if info.get("as_of_date") == "N/A" and info.get("sharpe_ratio") == "":
-                         log(f"[{current_total_done}/{total_all_funds}] {code} - Not Found (Skipped)")
-                    else:
-                         log(f"[{current_total_done}/{total_all_funds}] {code} (sec info)")
-                    append_resume_state(code)
-                else:
-                    log(f"Failed to scrape {code} after retries")
-                polite_sleep()
-                
-            except Exception as e:
-                current_total_done = 0
-                with COUNT_LOCK:
-                    if 'current_total_done' not in locals() or current_total_done == 0:
-                        PROCESSED_COUNT += 1
-                        current_total_done = finished_count_start + PROCESSED_COUNT
-                log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
-
-    except Exception as e:
-        if not STOP_EVENT.is_set():
-             log(f"Thread-{thread_id} Crashed: {e}")
-    finally:
-        if driver:
-            driver.quit()
-
-def split_list(lst, n):
-    k, m = divmod(len(lst), n)
-    return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+            log(f"Connection Error (Attempt {attempt}): {e}")
+            time.sleep(RETRY_DELAY)
+            
+    return []
 
 def main():
     finished_funds = get_resume_state()
-    all_funds = get_finnomena_funds(INPUT_FILE)
-    if not all_funds:
-        log("No funds found in input file")
+    all_funds = []
+    if not INPUT_FILE.exists():
+        log(f"Error Input file not found {INPUT_FILE}")
+        return
+    log(f"Reading funds from {INPUT_FILE.name}")
+    with open(INPUT_FILE, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            raw = row.get("fund_code", "")
+            if raw:
+                code = unquote(raw).strip()
+                if code: all_funds.append(code)
+    all_funds = sorted(list(set(all_funds)))
+    pending_funds = [c for c in all_funds if c not in finished_funds]
+    total_all = len(all_funds)
+    finished_start = total_all - len(pending_funds)
+    log(f"Total: {total_all}, Finished: {finished_start}, Remaining: {len(pending_funds)}")
+    if not pending_funds:
+        log("All done (SEC)")
         return
 
     headers = [
@@ -325,37 +171,62 @@ def main():
         "tracking_error", "turnover_ratio", "fx_hedging",
         "sec_url"
     ]
-    if not os.path.exists(OUTPUT_FILENAME) or os.path.getsize(OUTPUT_FILENAME) == 0:
+    if not OUTPUT_FILENAME.exists() or OUTPUT_FILENAME.stat().st_size == 0:
         with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f:
             writer = csv.DictWriter(f, fieldnames=headers)
             writer.writeheader()
-    pending_funds = [code for code in all_funds if code not in finished_funds]
-    total_all_funds = len(all_funds)
-    finished_count_start = len(finished_funds.intersection(set(all_funds)))
-    remaining = len(pending_funds)
-    log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
-    if remaining == 0:
-        log("All done")
-        return
-    batches = split_list(pending_funds, NUM_WORKERS)
-    batches = [b for b in batches if len(b) > 0]
-    log(f"Starting Scraper {len(batches)}")
+    session = create_session()
+    chunks = [pending_funds[i:i + BATCH_SIZE] for i in range(0, len(pending_funds), BATCH_SIZE)]
+    log(f"Starting processing {len(chunks)} batches")
     global PROCESSED_COUNT
-    PROCESSED_COUNT = 0 
-    executor = ThreadPoolExecutor(max_workers=len(batches))
-    futures = []
+    PROCESSED_COUNT = 0
     try:
-        for i, batch in enumerate(batches):
-            futures.append(executor.submit(process_batch, i+1, batch, headers, total_all_funds, finished_count_start))
-        for future in as_completed(futures):
-            try: future.result()
-            except Exception: pass
-            
+        for batch in chunks:
+            if STOP_EVENT.is_set(): break
+            api_data_list = fetch_batch_data(session, batch)
+            api_data_map = {item.get("abbrName"): item for item in api_data_list if item.get("abbrName")}
+            batch_rows = []
+            for fund_code in batch:
+                match_data = api_data_map.get(fund_code)
+                safe_code = quote(fund_code, safe='')
+                sec_page_url = f"https://fundcheck.sec.or.th/fund-detail;funds={safe_code}"
+                row_data = {
+                    "fund_code": fund_code,
+                    "sec_url": sec_page_url,
+                    "as_of_date": "N/A",
+                    "sharpe_ratio": "", "alpha": "", "beta": "",
+                    "max_drawdown": "", "recovering_period": "",
+                    "tracking_error": "", "turnover_ratio": "", "fx_hedging": ""
+                }
+                if match_data:
+                    row_data["as_of_date"] = convert_thai_date(match_data.get("representDate"))
+                    row_data["sharpe_ratio"] = clean_number(match_data.get("sharpRatio"))
+                    row_data["alpha"] = clean_number(match_data.get("alpha"))
+                    row_data["beta"] = clean_number(match_data.get("beta"))
+                    row_data["max_drawdown"] = clean_number(match_data.get("maximumDrawdown"))
+                    row_data["tracking_error"] = clean_number(match_data.get("trackingError"))
+                    row_data["turnover_ratio"] = clean_number(match_data.get("turnoverRatio"))
+                    row_data["fx_hedging"] = clean_number(match_data.get("fxHedging"))
+                    row_data["recovering_period"] = calculate_recovering_days(match_data.get("recoveringPeriod"))
+                batch_rows.append(row_data)
+                with COUNT_LOCK:
+                    PROCESSED_COUNT += 1
+                    current_total = finished_start + PROCESSED_COUNT
+                status_msg = "(SEC)" if match_data else "(Not Found SEC)"
+                log(f"[{current_total}/{total_all}] {fund_code} {status_msg}")
+                append_resume_state(fund_code)
+            with CSV_LOCK:
+                with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
+                    writer = csv.DictWriter(f, fieldnames=headers)
+                    writer.writerows(batch_rows)
+            polite_sleep()
+
     except KeyboardInterrupt:
         log("\nStopping Scraper")
         STOP_EVENT.set()
-        executor.shutdown(wait=False, cancel_futures=True)
-        global HAS_ERROR
+        HAS_ERROR = True
+    except Exception as e:
+        log(f"Critical Error: {e}")
         HAS_ERROR = True
     finally:
         save_log_if_error()

@@ -1,20 +1,21 @@
+from pathlib import Path
 import os
 import shutil
 import stat
 from webdriver_manager.firefox import GeckoDriverManager
 
 def update_geckodriver():
-    current_folder = os.path.dirname(os.path.abspath(__file__))
-    temp_cache_dir = os.path.join(current_folder, ".temp_wdm")
+    current_folder = Path(__file__).resolve().parent
+    temp_cache_dir = current_folder/".temp_wdm"
     print(f"Checking for geckodriver updates (Temp dir: {temp_cache_dir})")
     try:
-        os.environ['WDM_CACHE_PATH'] = temp_cache_dir
+        os.environ['WDM_CACHE_PATH'] = str(temp_cache_dir)
         downloaded_path = GeckoDriverManager().install()
-        destination_path = os.path.join(current_folder, "geckodriver")
+        destination_path = current_folder/"geckodriver"
         print(f"Copying from: {downloaded_path}")
         shutil.copy2(downloaded_path, destination_path)
-        st = os.stat(destination_path)
-        os.chmod(destination_path, st.st_mode | stat.S_IEXEC)
+        st = destination_path.stat()
+        destination_path.chmod(st.st_mode | stat.S_IEXEC)
         print(f"Updated & ready at: {destination_path}")
         return True
 
@@ -23,7 +24,7 @@ def update_geckodriver():
         return False
         
     finally:
-        if os.path.exists(temp_cache_dir):
+        if temp_cache_dir.exists():
             print(f"Cleaning up temp folder")
             try:
                 shutil.rmtree(temp_cache_dir)
