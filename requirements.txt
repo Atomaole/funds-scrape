@@ -13,4 +13,5 @@ pdfplumber
 
 # --- Database ---
 sqlalchemy
-psycopg2-binary
+pymysql
+cryptography

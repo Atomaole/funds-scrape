@@ -1,6 +1,5 @@
 import pandas as pd
-import os
-import glob
+from pathlib import Path
 import time
 import urllib.parse
 import numpy as np
@@ -8,20 +7,20 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text, inspect
 
 # CONFIGURATION
-DB_USER = "admin"
-DB_PASS = "password"
+DB_USER = "root"
+DB_PASS = "1234"
 DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "funds_db"
-script_dir = os.path.dirname(os.path.abspath(__file__))
-MERGED_DIR = os.path.join(script_dir, "merged_output")
-NAV_DIR = os.path.join(MERGED_DIR, "merged_nav_all")
-INIT_SQL_PATH = os.path.join(script_dir, "init.sql")
+DB_PORT = "3306"
+DB_NAME = "thai_funds"
+script_dir = Path(__file__).resolve().parent
+MERGED_DIR = script_dir/"merged_output"
+NAV_DIR = MERGED_DIR/"merged_nav_all"
+INIT_SQL_PATH = script_dir/"init.sql"
 LOOKBACK_DAYS = 7
 
 encoded_password = urllib.parse.quote_plus(DB_PASS)
-DB_URL = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
+ROOT_URL = f"mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}"
+DB_URL = f"mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 LOG_BUFFER = []
 HAS_ERROR = False
 
@@ -36,10 +35,10 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(script_dir, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        log_dir = script_dir/"Logs"
+        if not log_dir.exists():log_dir.mkdir(parents=True, exist_ok=True)
         filename = f"db_loader_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
     except: pass
 
@@ -75,36 +74,55 @@ def get_sql_val(val, is_date=False):
              return clean_num
     except: 
         pass
-    safe_str = val_str.replace("'", "''")
+    safe_str = val_str.replace("'", "''").replace("\\", "\\\\")
     if "%" in safe_str:
         safe_str = safe_str.replace("%", " percent") 
     return f"'{safe_str}'"
 
-def check_and_init_db(engine):
-    log("Checking Database Schema")
-    inspector = inspect(engine)
-    existing_tables = inspector.get_table_names()
-    required_tables = ["funds_master_info", "funds_daily"]
-    missing = [t for t in required_tables if t not in existing_tables]
-    if missing:
-        log(f"Missing tables {missing}. Initializing Database from init.sql")
-        if not os.path.exists(INIT_SQL_PATH):
-            log(f"Critical Error: init.sql not found at {INIT_SQL_PATH}")
-            return False
-        with open(INIT_SQL_PATH, 'r', encoding='utf-8') as f:
-            sql_script = f.read()
-        with engine.begin() as conn:
-            for statement in sql_script.split(';'):
-                if statement.strip():
-                    conn.execute(text(statement))
-            log("Database Initialized Successfully")
-    else:
-        log("Database schema exists skip")
+def check_and_init_db():
+    log("Checking Database existence")
+    root_engine = create_engine(ROOT_URL)
+    try:
+        with root_engine.connect() as conn:
+            existing_dbs = conn.execute(text("SHOW DATABASES LIKE 'thai_funds'")).fetchall()
+            
+            if not existing_dbs:
+                log("Database 'thai_funds' not found. Initializing from init.sql")
+                if not INIT_SQL_PATH.exists():
+                    log(f"Critical Error: init.sql not found at {INIT_SQL_PATH}")
+                    return False
+                with open(INIT_SQL_PATH, 'r', encoding='utf-8') as f:
+                    sql_script = f.read()
+                for statement in sql_script.split(';'):
+                    if statement.strip():
+                        try:
+                            conn.execute(text(statement))
+                        except Exception as e:
+                            log(f"Warning executing statement: {e}")
+                log("Database & User Initialized Successfully")
+            else:
+                log("Database 'thai_funds' exists. Checking tables")
+                db_engine = create_engine(DB_URL)
+                insp = inspect(db_engine)
+                if 'funds_master_info' not in insp.get_table_names():
+                    log("Tables missing! Re-running init.sql inside DB...")
+                    with open(INIT_SQL_PATH, 'r', encoding='utf-8') as f:
+                        sql_script = f.read()
+                    with db_engine.connect() as conn:
+                        for statement in sql_script.split(';'):
+                             if statement.strip():
+                                try:
+                                    conn.execute(text(statement))
+                                except: pass
+                    log("Tables created.")
+    except Exception as e:
+        log(f"Initialization Failed: {e}")
+        return False
     return True
 
 def sync_master_info(engine):
-    filepath = os.path.join(MERGED_DIR, "merged_info.csv")
-    if not os.path.exists(filepath):
+    filepath = MERGED_DIR/"merged_info.csv"
+    if not filepath.exists():
         log(f"Skipping Master Info: {filepath} not found")
         return
 
@@ -114,36 +132,38 @@ def sync_master_info(engine):
     date_cols = ['inception_date']
     with engine.connect() as conn:
         try:
-            with conn.begin():
-                existing_codes = set(pd.read_sql("SELECT fund_code FROM funds_master_info", conn)['fund_code'])
-                current_codes = set(df['fund_code'].unique())
-                for _, row in df.iterrows():
-                    cols = list(row.index)
-                    vals = [get_sql_val(row[c], is_date=(c in date_cols)) for c in cols]
-                    col_str = ", ".join(cols)
-                    val_str = ", ".join(vals)
-                    update_sets = [f"{c} = {get_sql_val(row[c], is_date=(c in date_cols))}" for c in cols if c != 'fund_code']
-                    update_sets.append("fund_status = 'active'")
-                    sql = f"""
-                        INSERT INTO funds_master_info ({col_str}, fund_status) 
-                        VALUES ({val_str}, 'active')
-                        ON CONFLICT (fund_code) 
-                        DO UPDATE SET {", ".join(update_sets)};
-                    """
-                    conn.execute(text(sql))
-                inactive_codes = existing_codes - current_codes
-                if inactive_codes:
-                    codes_str = ", ".join([f"'{c}'" for c in inactive_codes])
-                    sql_inactive = f"UPDATE funds_master_info SET fund_status = 'inactive' WHERE fund_code IN ({codes_str})"
-                    conn.execute(text(sql_inactive))
-                    log(f"Set {len(inactive_codes)} funds to INACTIVE")
+            existing = pd.read_sql("SELECT fund_code FROM funds_master_info", conn)
+            existing_codes = set(existing['fund_code']) if not existing.empty else set()
+            current_codes = set(df['fund_code'].unique())
+            for _, row in df.iterrows():
+                cols = list(row.index)
+                vals = [get_sql_val(row[c], is_date=(c in date_cols)) for c in cols]
+                col_str = ", ".join(cols)
+                val_str = ", ".join(vals)
+                update_assignments = [f"{c} = VALUES({c})" for c in cols if c != 'fund_code']
+                update_assignments.append("fund_status = 'active'")
+                sql = f"""
+                    INSERT INTO funds_master_info ({col_str}, fund_status) 
+                    VALUES ({val_str}, 'active')
+                    ON DUPLICATE KEY UPDATE 
+                    {", ".join(update_assignments)};
+                """
+                conn.execute(text(sql))
+                conn.commit()
+            inactive_codes = existing_codes - current_codes
+            if inactive_codes:
+                codes_str = ", ".join([f"'{c}'" for c in inactive_codes])
+                sql_inactive = f"UPDATE funds_master_info SET fund_status = 'inactive' WHERE fund_code IN ({codes_str})"
+                conn.execute(text(sql_inactive))
+                conn.commit()
+                log(f"Set {len(inactive_codes)} funds to INACTIVE")
             log("Master Info Synced")
         except Exception as e:
             log(f"Error syncing Master Info: {e}")
 
 def sync_daily_nav(engine):
     log("Syncing Daily NAVs")
-    nav_files = glob.glob(os.path.join(NAV_DIR, "merged_nav_*.csv"))
+    nav_files = list(NAV_DIR.glob("merged_nav_*.csv"))
     if not nav_files:
         log("No NAV files found")
         return
@@ -156,7 +176,7 @@ def sync_daily_nav(engine):
             if 'fund_code' in df.columns:
                 fund_code = str(df.iloc[0]['fund_code']).strip()
             else:
-                fund_code = os.path.basename(filepath).replace("merged_nav_", "").replace(".csv", "")
+                fund_code = filepath.stem.removeprefix("merged_nav_")
             with engine.connect() as conn:
                 res = conn.execute(text(f"SELECT MAX(nav_date) FROM funds_daily WHERE fund_code = '{fund_code}'"))
                 max_date = res.scalar()
@@ -181,13 +201,12 @@ def sync_daily_nav(engine):
                     sql = f"""
                         INSERT INTO funds_daily (fund_code, nav_date, nav_value, aum, bid, offer, source)
                         VALUES {", ".join(values_list)}
-                        ON CONFLICT (fund_code, nav_date) 
-                        DO UPDATE SET 
-                            nav_value = COALESCE(EXCLUDED.nav_value, funds_daily.nav_value),
-                            aum = COALESCE(EXCLUDED.aum, funds_daily.aum),
-                            bid = COALESCE(EXCLUDED.bid, funds_daily.bid),
-                            offer = COALESCE(EXCLUDED.offer, funds_daily.offer),
-                            source = EXCLUDED.source;
+                        ON DUPLICATE KEY UPDATE 
+                            nav_value = VALUES(nav_value),
+                            aum = VALUES(aum),
+                            bid = VALUES(bid),
+                            offer = VALUES(offer),
+                            source = VALUES(source);
                     """
                     conn.execute(text(sql))
                     conn.commit()
@@ -197,8 +216,8 @@ def sync_daily_nav(engine):
     log(f"Updated NAVs for {count} funds")
 
 def sync_generic_table(engine, csv_name, table_name, pk_col):
-    filepath = os.path.join(MERGED_DIR, csv_name)
-    if not os.path.exists(filepath): return
+    filepath = MERGED_DIR/csv_name
+    if not filepath.exists(): return
     log(f"Syncing {table_name}")
     df = pd.read_csv(filepath)
     if df.empty: return
@@ -210,83 +229,70 @@ def sync_generic_table(engine, csv_name, table_name, pk_col):
     target_date_cols = date_cols_map.get(table_name, [])
     with engine.connect() as conn:
         try:
-            with conn.begin():
-                for _, row in df.iterrows():
-                    cols = list(row.index)
-                    vals = [get_sql_val(row[c], is_date=(c in target_date_cols)) for c in cols]
-                    col_str = ", ".join(cols)
-                    val_str = ", ".join(vals)
-                    update_sets = [f"{c} = {get_sql_val(row[c], is_date=(c in target_date_cols))}" for c in cols if c != pk_col]
-                    conflict_target = pk_col
-                    if table_name == "funds_codes": conflict_target = "fund_code, code"
-                    update_clause = f"DO UPDATE SET {', '.join(update_sets)}" if update_sets else "DO NOTHING"
-                    sql = f"""
-                        INSERT INTO {table_name} ({col_str}) VALUES ({val_str})
-                        ON CONFLICT ({conflict_target}) {update_clause};
-                    """
-                    conn.execute(text(sql))
+            for _, row in df.iterrows():
+                cols = list(row.index)
+                vals = [get_sql_val(row[c], is_date=(c in target_date_cols)) for c in cols]
+                col_str = ", ".join(cols)
+                val_str = ", ".join(vals)
+                update_clause = ""
+                update_sets = [f"{c} = VALUES({c})" for c in cols if c != pk_col and c not in pk_col.split(', ')]
+                if update_sets:
+                    update_clause = f"ON DUPLICATE KEY UPDATE {', '.join(update_sets)}"
+                else:
+                    update_clause = "ON DUPLICATE KEY UPDATE scraped_at = VALUES(scraped_at)"
+
+                sql = f"""
+                    INSERT INTO {table_name} ({col_str}) VALUES ({val_str})
+                    {update_clause};
+                """
+                conn.execute(text(sql))
+            conn.commit()
             log(f"Synced {table_name}")
         except Exception as e:
             log(f"Error syncing {table_name}: {e}")
 
 def sync_portfolio_table(engine, csv_name, table_name):
-    filepath = os.path.join(MERGED_DIR, csv_name)
-    if not os.path.exists(filepath): return
+    filepath = MERGED_DIR/csv_name
+    if not filepath.exists(): return
     log(f"Syncing {table_name}")
     df = pd.read_csv(filepath)
     if df.empty: return
-    use_holding_type = True
-    if table_name == "funds_allocations":
-        use_holding_type = False
+    use_holding_type = (table_name == "funds_holding")
     with engine.connect() as conn:
         try:
-            with conn.begin():
-                active_funds_in_file = df['fund_code'].unique()
-                for fund in active_funds_in_file:
-                    conn.execute(text(f"DELETE FROM {table_name} WHERE fund_code = :fund_code"), {"fund_code": fund})
-                    fund_rows = df[df['fund_code'] == fund]
-                    if fund_rows.empty:
-                        continue
+            active_funds_in_file = df['fund_code'].unique()
+            for fund in active_funds_in_file:
+                conn.execute(text(f"DELETE FROM {table_name} WHERE fund_code = :fund_code"), {"fund_code": fund})
+                fund_rows = df[df['fund_code'] == fund]
+                if fund_rows.empty: continue
+                cols = "fund_code, type, name, percent, as_of_date, source_url, source"
+                if use_holding_type: cols += ", holding_type"
+                insert_sql = text(f"INSERT INTO {table_name} ({cols}) VALUES ({', '.join([':'+c.strip() for c in cols.split(',')])})")
+                params = []
+                for _, row in fund_rows.iterrows():
+                    def norm(v, is_date=False):
+                        if pd.isna(v): return None
+                        if is_date and str(v).strip():
+                            try: return pd.to_datetime(v, dayfirst=True).strftime("%Y-%m-%d")
+                            except: return None
+                        return v
+                    raw_name = str(row.get("name")) if not pd.isna(row.get("name")) else ""
+                    clean_name = raw_name.replace("%", " percent")
+                    row_data = {
+                        "fund_code": str(row.get("fund_code")).strip(),
+                        "type": row.get("type"),
+                        "name": clean_name,
+                        "percent": None if pd.isna(row.get("percent")) else float(str(row.get("percent")).replace(',', '')),
+                        "as_of_date": norm(row.get("as_of_date"), is_date=True),
+                        "source_url": row.get("source_url"),
+                        "source": row.get("source"),
+                    }
                     if use_holding_type:
-                        insert_sql = text(f"""
-                            INSERT INTO {table_name}
-                            (fund_code, type, name, percent, as_of_date, source_url, source, holding_type)
-                            VALUES
-                            (:fund_code, :type, :name, :percent, :as_of_date, :source_url, :source, :holding_type)
-                        """)
-                    else:
-                        insert_sql = text(f"""
-                            INSERT INTO {table_name}
-                            (fund_code, type, name, percent, as_of_date, source_url, source)
-                            VALUES
-                            (:fund_code, :type, :name, :percent, :as_of_date, :source_url, :source)
-                        """)
-                    params = []
-                    for _, row in fund_rows.iterrows():
-                        def norm(v, is_date=False):
-                            if pd.isna(v): return None
-                            if is_date and str(v).strip():
-                                try:
-                                    return pd.to_datetime(v, dayfirst=True).strftime("%Y-%m-%d")
-                                except:
-                                    return None
-                            return v
-                        raw_name = str(row.get("name")) if not pd.isna(row.get("name")) else ""
-                        clean_name = raw_name.replace("%", " percent")
-                        row_data = {
-                            "fund_code": str(row.get("fund_code")).strip(),
-                            "type": row.get("type"),
-                            "name": clean_name,
-                            "percent": None if pd.isna(row.get("percent")) else float(str(row.get("percent")).replace(',', '')),
-                            "as_of_date": norm(row.get("as_of_date"), is_date=True),
-                            "source_url": row.get("source_url"),
-                            "source": row.get("source"),
-                        }
-                        if use_holding_type:
-                            row_data["holding_type"] = row.get("holding_type")
-                        params.append(row_data)
-                    if params:
-                        conn.execute(insert_sql, params)
+                        row_data["holding_type"] = row.get("holding_type")
+                    params.append(row_data)
+                if params:
+                    conn.execute(insert_sql, params)
+            conn.commit()
             log(f"Synced {table_name}")
         except Exception as e:
             log(f"Error syncing {table_name}: {e}")
@@ -294,11 +300,12 @@ def sync_portfolio_table(engine, csv_name, table_name):
 # MAIN
 def main():
     log("Starting DB Loader Process")
+    if not check_and_init_db():
+        log("Aborting process due to DB initialization failure")
+        return
     try:
-        engine = create_engine(DB_URL, connect_args={'options': '-c timezone=Asia/Bangkok -c search_path=thai_funds'})
-        if not check_and_init_db(engine):
-            log("Aborting process due to DB initialization failure")
-            return
+        engine = create_engine(DB_URL)
+        log("Connected to Database 'thai_funds'")
     except Exception as e:
         log(f"Database Connection Failed: {e}")
         return
