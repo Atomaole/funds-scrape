@@ -1,43 +1,43 @@
 import csv
 import time
-import re
-import os
+from pathlib import Path
 import random
 import threading
-import math
-from urllib.parse import unquote
+import json
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
 
 # CONFIG
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.dirname(script_dir)
+script_dir = Path(__file__).resolve().parent
+root = script_dir.parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
-RAW_DATA_DIR = os.path.join(script_dir, "raw_data")
-if not os.path.exists(RAW_DATA_DIR): os.makedirs(RAW_DATA_DIR)
-INPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_fund_list.csv")
-OUTPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_bid_offer.csv")
-RESUME_FILE = os.path.join(script_dir, "bid_offer_resume.log")
-HEADLESS = True
+RAW_DATA_DIR = script_dir/"raw_data"
+if not RAW_DATA_DIR.exists():RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+INPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_fund_list.csv"
+OUTPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_bid_offer.csv"
+RESUME_FILE = script_dir/"bid_offer_resume.log"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
+NUM_WORKERS = 3
 LOG_BUFFER = []
 HAS_ERROR = False
 CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 COUNT_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
-PROCESSED_COUNT = 0
+RESUME_LOCK = threading.Lock()
+PROCESSED_COUNT = 0 
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+]
 
 def polite_sleep():
-    time.sleep(random.uniform(0.5, 1.5))
+    time.sleep(random.uniform(1, 2))
 
 def log(msg):
     global HAS_ERROR
@@ -51,205 +51,144 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(root, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
-        filename = f"bidoffer_wm_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        log_dir = root/"Logs"
+        if not log_dir.exists(): log_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"bid_offer_wm_{datetime.now().strftime('%Y-%m-%d')}.log"
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
+        with LOG_LOCK:
+            print(f"Log saved at: {filename}")
     except: pass
 
-def get_resume_state():
-    if not os.path.exists(RESUME_FILE): return set()
+def load_finished_funds():
     finished = set()
-    try:
-        with open(RESUME_FILE, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        if not lines: return set()
-        first_line_parts = lines[0].strip().split('|')
-        if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
-            log(f"Resume file date mismatch Deleting and starting new")
-            try: os.remove(RESUME_FILE)
-            except: pass
-            return set()
-        for line in lines:
-            parts = line.strip().split('|')
-            if len(parts) >= 1: finished.add(parts[0])
-        log(f"Resuming Found {len(finished)} funds done")
-        return finished
-    except Exception as e: 
-        log(f"Error reading resume file: {e}")
-        return set()
+    if OUTPUT_FILENAME.exists():
+        try:
+            with open(OUTPUT_FILENAME, 'r', encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if row.get("fund_code"):
+                        finished.add(row["fund_code"])
+        except Exception as e:
+            log(f"Error reading output file: {e}")
+    if RESUME_FILE.exists():
+        try:
+            with open(RESUME_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    parts = line.strip().split('|')
+                    if len(parts) >= 1: finished.add(parts[0])
+        except Exception as e:
+            log(f"Error reading resume file: {e}")
+    return finished
 
 def append_resume_state(code):
-    with CSV_LOCK:
+    with RESUME_LOCK:
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
                 f.write(f"{code}|{current_date_str}|{current_time}\n")
         except: pass
 
-def cleanup_resume_file():
-    if os.path.exists(RESUME_FILE):
-        try: os.remove(RESUME_FILE)
-        except: pass
-
-def make_driver():
-    options = Options()
-    if HEADLESS: options.add_argument("-headless")
-    options.page_load_strategy = 'eager'
-    options.set_preference("permissions.default.image", 2)
-    options.set_preference("permissions.default.stylesheet", 2)
-    options.set_preference("dom.webnotifications.enabled", False)
-    options.add_argument("--width=1920")
-    options.add_argument("--height=1080")
-    driver_path = os.path.join(root, "geckodriver")
-    if not os.path.exists(driver_path):
-         driver_path = os.path.join(script_dir, "geckodriver")
-    return webdriver.Firefox(service=Service(driver_path), options=options)
-
-def clean_text(text):
-    return re.sub(r'\s+', ' ', text).strip() if text else ""
-
-def clean_number(text):
-    if not text: return ""
-    text = re.sub(r'[%,]', '', text)
-    return text.strip()
-
-def parse_wm_date(text):
-    if not text: return ""
-    text = clean_text(text)
-    if re.match(r"^\d{8}$", text):
-        try: return datetime.strptime(text, "%Y%m%d").strftime("%d-%m-%Y")
-        except: pass
-    match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", text)
-    if match:
-        d, m, y = map(int, match.groups())
-        if y > 2400: y -= 543
-        try: return datetime(y, m, d).strftime("%d-%m-%Y")
-        except: pass
-    return text
-
-def get_value_from_id_attribute(driver, prefix):
+def format_date(date_str):
+    if not date_str: return ""
     try:
-        el = driver.find_element(By.CSS_SELECTOR, f"[id^='{prefix}']")
-        full_id = el.get_attribute("id")
-        return full_id.replace(prefix, "")
-    except: return ""
+        return datetime.strptime(str(date_str), "%Y%m%d").strftime("%d-%m-%Y")
+    except:
+        return date_str
 
-def close_ad_if_present(driver):
-    try: 
-        WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.ID, "popupAdsClose"))).click()
-    except: pass
-
-def scrape_bid_offer(driver, fund_code, url):
-    data = {
-        "fund_code": fund_code,
-        "nav_date": "",
-        "bid_price": "",
-        "offer_price": ""
+def fetch_fund_data(fund_code, fund_url):
+    url = fund_url 
+    headers = {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Referer": "https://www.wealthmagik.com/",
+        "Connection": "keep-alive"
     }
-    for attempt in range(1, MAX_RETRIES + 1):
+    for attempt in range(MAX_RETRIES):
         if STOP_EVENT.is_set(): return None
         try:
-            if attempt > 1: pass
-            driver.get(url)
-            close_ad_if_present(driver)
-            try: WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".fundName h1")))
-            except: 
-                if attempt < MAX_RETRIES: continue 
-                else: return None
-            raw_nav_date = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.tnaclassDate.")
-            data["nav_date"] = parse_wm_date(raw_nav_date)
-            raw_bid = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.bidPrice.")
-            data["bid_price"] = clean_number(raw_bid)
-            raw_offer = get_value_from_id_attribute(driver, "wmg.funddetailinfo.text.offerPrice.")
-            data["offer_price"] = clean_number(raw_offer)
-            return data
-
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                script_tag = soup.find("script", {"id": "serverApp-state"})
+                if script_tag:
+                    raw_json = script_tag.string.replace('&q;', '"')
+                    data = json.loads(raw_json)
+                    fund_detail = data.get('fund-detail', {})
+                    return {
+                        "fund_code": fund_detail.get('fundCode'),
+                        "nav_date": format_date(fund_detail.get('tnaclassDate')),
+                        "bid_price": fund_detail.get('bidPrice'),
+                        "offer_price": fund_detail.get('offerPrice')
+                    }
+                else:
+                    return "Script Not Found"
+            elif response.status_code == 404:
+                return "Not Found"
         except Exception as e:
-            log(f"Error {fund_code}: {e}")
-            if attempt < MAX_RETRIES: time.sleep(RETRY_DELAY)
-            
+            pass
+        time.sleep(RETRY_DELAY * (attempt + 1))
     return None
 
-def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_count_start):
+def process_batch(worker_id, funds, fieldnames, total_all_funds, finished_count_start):
     global PROCESSED_COUNT
-    driver = None
-    try:
-        driver = make_driver()
-        for i, fund in enumerate(fund_list, 1):
+    with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
+        writer = csv.DictWriter(f_out, fieldnames=fieldnames)
+        for fund_item in funds:
             if STOP_EVENT.is_set(): break
-            code = unquote(fund.get("fund_code", "")).strip()
-            url = fund.get("url", "")
-            try:
-                data = scrape_bid_offer(driver, code, url)
-                if STOP_EVENT.is_set(): break
-                current_total_done = 0
-                if data is not None:
-                    with COUNT_LOCK:
-                        PROCESSED_COUNT += 1
-                        current_total_done = finished_count_start + PROCESSED_COUNT
-                    if data.get("nav_date"): 
-                        with CSV_LOCK:
-                            with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
-                                writer = csv.DictWriter(f_out, fieldnames=fieldnames)
-                                writer.writerow(data)
-                        log(f"[{current_total_done}/{total_all_funds}] {code} (bid_offer/wealthmagik)")
-                    else:
-                        log(f"[{current_total_done}/{total_all_funds}] {code} - No Data")
-                    append_resume_state(code) 
-                else:
-                    log(f"Skipping resume save for {code} due to scrape failure.")
-                polite_sleep()
-                
-            except Exception as e:
-                current_total_done = 0
-                with COUNT_LOCK:
-                    if 'current_total_done' not in locals() or current_total_done == 0:
-                         PROCESSED_COUNT += 1
-                         current_total_done = finished_count_start + PROCESSED_COUNT
-                log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
-
-    except Exception as e:
-        if not STOP_EVENT.is_set():
-             log(f"Thread-{thread_id} Crashed: {e}")
-    finally:
-        if driver:
-            driver.quit()
-
-def split_list(lst, n):
-    k, m = divmod(len(lst), n)
-    return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+            fund_code = fund_item['fund_code']
+            fund_url = fund_item['url']
+            result = fetch_fund_data(fund_code, fund_url)
+            with COUNT_LOCK:
+                PROCESSED_COUNT += 1
+                current_progress = finished_count_start + PROCESSED_COUNT
+            if isinstance(result, dict):
+                with CSV_LOCK:
+                    writer.writerow(result)
+                    f_out.flush()
+                append_resume_state(fund_code)
+                log(f"[{current_progress}/{total_all_funds}] {fund_code} (bid_offer/wealthmagik)")
+            elif result == "Not Found":
+                log(f"[{current_progress}/{total_all_funds}] {fund_code} (Not Found)")
+                append_resume_state(fund_code)
+            else:
+                log(f"[{current_progress}/{total_all_funds}] {fund_code} (No Data)")
+            polite_sleep()
 
 def main():
-    finished_funds = get_resume_state()
-    funds = []
-    try:
-        with open(INPUT_FILENAME, "r", encoding="utf-8-sig") as f:
-            for row in csv.DictReader(f): funds.append(row)
-    except: 
-        log(f"Input file not found: {INPUT_FILENAME}")
+    log("Starting Bid/Offer Scraper")
+    if not INPUT_FILENAME.exists():
+        log(f"Error: Input file not found: {INPUT_FILENAME}")
         return
-    pending_funds = [f for f in funds if unquote(f.get("fund_code", "")).strip() not in finished_funds]
-    total_all_funds = len(funds)
-    current_fund_codes = {unquote(f.get("fund_code", "")).strip() for f in funds}
-    finished_count_start = len(finished_funds.intersection(current_fund_codes))
+    all_funds = []
+    with open(INPUT_FILENAME, 'r', encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if 'fund_code' in row and row['fund_code']:
+                all_funds.append({
+                    'fund_code': row['fund_code'].strip(),
+                    'url': row['url'].strip()
+                })
+    total_all_funds = len(all_funds)
+    finished_funds = load_finished_funds()
+    pending_funds = [f for f in all_funds if f['fund_code'] not in finished_funds]
+    finished_count_start = len(finished_funds)
     remaining = len(pending_funds)
     log(f"Total: {total_all_funds}, Finished: {finished_count_start}, Remaining: {remaining}")
     if remaining == 0:
         log("All done")
         return
     fieldnames = ["fund_code", "nav_date", "bid_price", "offer_price"]
-    if not os.path.exists(OUTPUT_FILENAME) or os.path.getsize(OUTPUT_FILENAME) == 0:
+    if not OUTPUT_FILENAME.exists() or OUTPUT_FILENAME.stat().st_size == 0:
          with open(OUTPUT_FILENAME, 'w', newline="", encoding="utf-8-sig") as f_out:
             writer = csv.DictWriter(f_out, fieldnames=fieldnames)
             writer.writeheader()
-    batches = split_list(pending_funds, NUM_WORKERS)
-    batches = [b for b in batches if len(b) > 0]
-    log(f"Starting {len(batches)}")
+    chunk_size = (len(pending_funds) // NUM_WORKERS) + 1
+    batches = [pending_funds[i:i + chunk_size] for i in range(0, len(pending_funds), chunk_size)]
+    log(f"Starting {len(batches)} workers")
     global PROCESSED_COUNT
     PROCESSED_COUNT = 0 
-    executor = ThreadPoolExecutor(max_workers=len(batches))
+    executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
     futures = []
     try:
         for i, batch in enumerate(batches):
@@ -260,7 +199,6 @@ def main():
     except KeyboardInterrupt:
         log("Stopping Scraper")
         STOP_EVENT.set()
-        executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
     finally:

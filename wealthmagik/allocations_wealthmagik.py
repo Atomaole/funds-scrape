@@ -1,7 +1,7 @@
 import csv
 import time
 import re
-import os
+from pathlib import Path
 import random
 import requests
 import threading
@@ -11,14 +11,14 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # CONFIG
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.dirname(script_dir)
+script_dir = Path(__file__).resolve().parent
+root = script_dir.parent
 current_date_str = datetime.now().strftime("%Y-%m-%d")
-RAW_DATA_DIR = os.path.join(script_dir, "raw_data")
-if not os.path.exists(RAW_DATA_DIR): os.makedirs(RAW_DATA_DIR)
-INPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_fund_list.csv")
-OUTPUT_FILENAME = os.path.join(RAW_DATA_DIR, "wealthmagik_allocations.csv")
-RESUME_FILE = os.path.join(script_dir, "allocations_resume.log")
+RAW_DATA_DIR = script_dir/"raw_data"
+if not RAW_DATA_DIR.exists():RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+INPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_fund_list.csv"
+OUTPUT_FILENAME = RAW_DATA_DIR/"wealthmagik_allocations.csv"
+RESUME_FILE = script_dir/"allocations_resume.log"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
@@ -26,13 +26,39 @@ HAS_ERROR = False
 CSV_LOCK = threading.Lock()
 LOG_LOCK = threading.Lock()
 STOP_EVENT = threading.Event()
-NUM_WORKERS = 1  # Number of threads. Don't set more than 3 to avoid ban
+NUM_WORKERS = 3
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9,th;q=0.8"
-}
+def create_authenticated_session():
+    s = requests.Session()
+    user_profiles = [
+        {
+            "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "platform": '"Windows"'
+        },
+        {
+            "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "platform": '"macOS"'
+        },
+        {
+            "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "platform": '"Linux"'
+        }
+    ]
+    chosen_profile = random.choice(user_profiles)
+    s.headers.update({
+        "User-Agent": chosen_profile["ua"],
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive",
+        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": chosen_profile["platform"],
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Upgrade-Insecure-Requests": "1"
+    })
+    return s
 
 def polite_sleep():
     time.sleep(random.uniform(1, 3))
@@ -48,15 +74,15 @@ def log(msg):
 def save_log_if_error():
     if not HAS_ERROR: return
     try:
-        log_dir = os.path.join(root, "Logs")
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
+        log_dir = root/"Logs"
+        if not log_dir.exists():log_dir.mkdir(parents=True, exist_ok=True)
         filename = f"alloc_wm_{datetime.now().strftime('%Y-%m-%d')}.log"
-        with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
+        with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
     except: pass
 
 def get_resume_state():
-    if not os.path.exists(RESUME_FILE): return set()
+    if not RESUME_FILE.exists(): return set()
     finished = set()
     try:
         with open(RESUME_FILE, 'r', encoding='utf-8') as f:
@@ -65,7 +91,7 @@ def get_resume_state():
         first_line_parts = lines[0].strip().split('|')
         if len(first_line_parts) < 2 or first_line_parts[1] != current_date_str:
             log(f"Resume file date mismatch Deleting and starting new")
-            try: os.remove(RESUME_FILE)
+            try: RESUME_FILE.unlink()
             except: pass
             return set()
         for line in lines:
@@ -86,8 +112,8 @@ def append_resume_state(code):
         except: pass
 
 def cleanup_resume_file():
-    if os.path.exists(RESUME_FILE):
-        try: os.remove(RESUME_FILE)
+    if RESUME_FILE.exists():
+        try: RESUME_FILE.unlink()
         except: pass
 
 def clean_text(text):
@@ -137,19 +163,13 @@ def scrape_section_soup(soup, container_class, data_type, fund_code, url):
     except: pass
     return results
 
-def scrape_allocations(fund_code, profile_url):
+def scrape_allocations(session, fund_code, profile_url):
     alloc_url = re.sub(r"/profile/?$", "/allocation", profile_url)
-    time.sleep(random.uniform(0.5, 1.5))
+    polite_sleep()
     for attempt in range(1, MAX_RETRIES + 1):
         if STOP_EVENT.is_set(): return None
         try:
-            current_headers = HEADERS.copy()
-            if attempt > 1:
-                current_headers.update({
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                })
-            response = requests.get(alloc_url, headers=current_headers, timeout=10)
+            response = session.get(alloc_url, timeout=10)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 all_data = []
@@ -169,25 +189,27 @@ def scrape_allocations(fund_code, profile_url):
 
 def process_fund_task(fund, writer):
     if STOP_EVENT.is_set(): return None
-    code = unquote(fund.get("fund_code", "")).strip()
-    url = fund.get("url", "")
-    if not code or not url: return None
+    session = create_authenticated_session()
     try:
-        data = scrape_allocations(code, url)
+        code = unquote(fund.get("fund_code", "")).strip()
+        url = fund.get("url", "")
+        if not code or not url: return None
+        data = scrape_allocations(session, code, url) 
         if STOP_EVENT.is_set(): return None
         if data:
             with CSV_LOCK:
                 writer.writerows(data)
             append_resume_state(code)
-            return f"{code} (allocations/wealthmagik)"
+            return f"{code} Done (allocations/wealthmagik)" 
         elif data == []:
              append_resume_state(code)
              return f"{code} - No Data"
         else:
-             raise Exception("Failed to fetch (Max retries exceeded)")
-
+             raise Exception("Failed to fetch")
     except Exception as e:
         raise e
+    finally:
+        session.close()
 
 def main():
     finished_funds = get_resume_state()
