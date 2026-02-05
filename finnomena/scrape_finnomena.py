@@ -24,7 +24,6 @@ for d in [FN_RAW_DATA_DIR, NAV_ALL_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 OUTPUT_FUND_LIST = FN_RAW_DATA_DIR/"finnomena_fund_list.csv"
 OUTPUT_MASTER    = FN_RAW_DATA_DIR/"finnomena_info.csv"
-OUTPUT_HOLDINGS  = FN_RAW_DATA_DIR/"finnomena_holdings.csv"
 OUTPUT_ALLOCATIONS = FN_RAW_DATA_DIR/"finnomena_allocations.csv"
 OUTPUT_FEES      = FN_RAW_DATA_DIR/"finnomena_fees.csv"
 OUTPUT_CODES     = FN_RAW_DATA_DIR/"finnomena_codes.csv"
@@ -306,21 +305,13 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
             writers['fees'].writerow(fee_row)
     except Exception as e: log(f"Error Fee {code}: {e}")
 
-    # 4. Holding & Allocations
+    # 4. Allocations
     try:
         if STOP_EVENT.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/portfolio")
         port_data = res.get("data") if res else None
         if port_data:
-            holding_rows = []
             alloc_rows = []
-            top_holdings = port_data.get("top_holdings") or {}
-            for item in (top_holdings.get("elements") or []):
-                holding_rows.append({
-                    "fund_code": code, "type": "holding", "name": item.get("name"),
-                    "percent": item.get("percent"), "as_of_date": format_date(top_holdings.get("data_date")),
-                    "source_url": f"https://www.finnomena.com/fund/{fund_id}"
-                })
             asset_alloc = port_data.get("asset_allocation") or {}
             for item in (asset_alloc.get("elements") or []):
                 alloc_rows.append({
@@ -337,7 +328,6 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
                 })
             
             with CSV_LOCK:
-                if holding_rows: writers['holdings'].writerows(holding_rows)
                 if alloc_rows: writers['allocations'].writerows(alloc_rows)
     except Exception as e: log(f"Error Holding {code}: {e}")
 
@@ -406,13 +396,11 @@ def main():
         write_header = True
     f_master = open(OUTPUT_MASTER, mode, newline="", encoding="utf-8-sig")
     f_fees = open(OUTPUT_FEES, mode, newline="", encoding="utf-8-sig")
-    f_holdings = open(OUTPUT_HOLDINGS, mode, newline="", encoding="utf-8-sig")
     f_allocations = open(OUTPUT_ALLOCATIONS, mode, newline="", encoding="utf-8-sig")
     f_codes = open(OUTPUT_CODES, mode, newline="", encoding="utf-8-sig")
     writers = {
         'master': csv.DictWriter(f_master, fieldnames=["fund_code", "full_name_th", "full_name_en", "amc", "category", "risk_level", "is_dividend", "inception_date", "source_url"]),
         'fees': csv.DictWriter(f_fees, fieldnames=["fund_code", "source_url", "front_end_max", "front_end_actual", "back_end_max", "back_end_actual", "management_max", "management_actual", "ter_max", "ter_actual", "switching_in_max", "switching_in_actual", "switching_out_max", "switching_out_actual", "min_initial_buy", "min_next_buy"]),
-        'holdings': csv.DictWriter(f_holdings, fieldnames=["fund_code", "type", "name", "percent", "as_of_date", "source_url"]),
         'allocations': csv.DictWriter(f_allocations, fieldnames=["fund_code", "type", "name", "percent", "as_of_date", "source_url"]),
         'codes': csv.DictWriter(f_codes, fieldnames=["fund_code", "type", "code", "factsheet_url"])
     }
@@ -440,7 +428,7 @@ def main():
                     log(f"[{completed}/{total}] {result_code} (finnomena)")
                     if count % 10 == 0:
                         with CSV_LOCK:
-                            f_master.flush(); f_fees.flush(); f_holdings.flush(); f_allocations.flush(); f_codes.flush()
+                            f_master.flush(); f_fees.flush(); f_allocations.flush(); f_codes.flush()
             except Exception as e:
                 log(f"Task Failed: {e}")
 
@@ -452,7 +440,7 @@ def main():
     except Exception as e:
         log(f"Critical Error: {e}")
     finally:
-        f_master.close(); f_fees.close(); f_holdings.close(); f_allocations.close(); f_codes.close()
+        f_master.close(); f_fees.close(); f_allocations.close(); f_codes.close()
         try: executor.shutdown(wait=True) 
         except: pass
         if not HAS_ERROR: 
