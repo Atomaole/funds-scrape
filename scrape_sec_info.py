@@ -8,6 +8,7 @@ import math
 import threading
 from urllib.parse import quote, unquote
 from datetime import datetime
+from prefect import task
 
 # CONFIG
 script_dir = Path(__file__).resolve().parent
@@ -22,11 +23,14 @@ BATCH_SIZE = 2
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
-HAS_ERROR = False
-CSV_LOCK = threading.Lock()
-LOG_LOCK = threading.Lock()
-COUNT_LOCK = threading.Lock()
-STOP_EVENT = threading.Event()
+_G_STORAGE = {}
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 PROCESSED_COUNT = 0
 
 def polite_sleep():
@@ -37,7 +41,7 @@ def log(msg):
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    with LOG_LOCK:
+    with get_obj("LOG_LOCK"): 
         print(f"[{timestamp}] {msg}")
         LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
@@ -141,7 +145,8 @@ def fetch_batch_data(session, fund_codes_batch):
             
     return []
 
-def main():
+@task(name="sec_scraper", log_prints=True)
+def sec_scrape():
     finished_funds = get_resume_state()
     all_funds = []
     if not INPUT_FILE.exists():
@@ -182,7 +187,7 @@ def main():
     PROCESSED_COUNT = 0
     try:
         for batch in chunks:
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set():break
             api_data_list = fetch_batch_data(session, batch)
             api_data_map = {item.get("abbrName"): item for item in api_data_list if item.get("abbrName")}
             batch_rows = []
@@ -209,13 +214,13 @@ def main():
                     row_data["fx_hedging"] = clean_number(match_data.get("fxHedging"))
                     row_data["recovering_period"] = calculate_recovering_days(match_data.get("recoveringPeriod"))
                 batch_rows.append(row_data)
-                with COUNT_LOCK:
+                with get_obj("COUNT_LOCK"):
                     PROCESSED_COUNT += 1
                     current_total = finished_start + PROCESSED_COUNT
                 status_msg = "(SEC)" if match_data else "(Not Found SEC)"
                 log(f"[{current_total}/{total_all}] {fund_code} {status_msg}")
                 append_resume_state(fund_code)
-            with CSV_LOCK:
+            with get_obj("CSV_LOCK"):
                 with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f:
                     writer = csv.DictWriter(f, fieldnames=headers)
                     writer.writerows(batch_rows)
@@ -223,7 +228,7 @@ def main():
 
     except KeyboardInterrupt:
         log("\nStopping Scraper")
-        STOP_EVENT.set()
+        get_obj("STOP_EVENT").set()
         HAS_ERROR = True
     except Exception as e:
         log(f"Critical Error: {e}")
@@ -233,4 +238,4 @@ def main():
         log("Done (SEC)")
 
 if __name__ == "__main__":
-    main()
+    sec_scrape()

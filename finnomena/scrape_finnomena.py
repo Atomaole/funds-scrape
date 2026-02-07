@@ -10,6 +10,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from datetime import datetime
+from prefect import task
 
 # CONFIG
 logging.getLogger("pdfminer").setLevel(logging.CRITICAL)
@@ -32,9 +33,14 @@ RESUME_FILE = script_dir/"scrape_finnomena_resume.log"
 PDF_LOG_FILE = script_dir/"last_pdf_run.log"
 LOG_BUFFER = []
 HAS_ERROR = False
-CSV_LOCK = threading.Lock()
-LOG_LOCK = threading.Lock()
-STOP_EVENT = threading.Event()
+_G_STORAGE = {}
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 
 HEADERS = {
@@ -47,7 +53,7 @@ def log(msg):
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    with LOG_LOCK:
+    with get_obj("LOG_LOCK"):
         print(f"[{timestamp}] {msg}")
         LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
@@ -59,7 +65,7 @@ def save_log_if_error():
         filename = f"scrape_finnomena_{datetime.now().strftime('%Y-%m-%d')}.log"
         with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
-        with LOG_LOCK:
+        with get_obj("LOG_LOCK"):
             print(f"Log saved at: {filename}")
     except: pass
 
@@ -86,7 +92,7 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    with CSV_LOCK:
+    with get_obj("CSV_LOCK"):
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
@@ -224,19 +230,19 @@ def parse_fee_value(fees_list, keywords):
             return fee.get("rate", ""), fee.get("actual_value", "")
     return "", ""
 
-def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
-    if STOP_EVENT.is_set(): return None
+def process_fund_task(fund, writers, existing_codes_map, is_monthly_run, stop_event):
+    if stop_event.is_set(): return None
     fund_id = fund.get("fund_id")
     code = fund.get("short_code")
     time.sleep(random.uniform(0.5, 2.0))
-    if STOP_EVENT.is_set(): return None
+    if stop_event.is_set(): return None
     info_json = {}
     is_success = False
     factsheet_url = ""
 
     # 1. Info
     try:
-        if STOP_EVENT.is_set(): return None
+        if stop_event.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}")
         if res is None:
             log(f"Error cannot fetch info for {code}")
@@ -254,7 +260,7 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
             "inception_date": format_date(info_json.get("inception_date")),
             "source_url": f"https://www.finnomena.com/fund/{fund_id}"
         }
-        with CSV_LOCK:
+        with get_obj("CSV_LOCK"):
             writers['master'].writerow(row_data)
         is_success = True 
 
@@ -264,7 +270,7 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
 
     # 2. NAV
     try:
-        if STOP_EVENT.is_set(): return None
+        if stop_event.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/nav/q?range=MAX")
         nav_data = res.get("data", {}).get("navs", []) if res else []
         if nav_data:
@@ -273,13 +279,13 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
                 w_nav = csv.writer(f_nav)
                 w_nav.writerow(["fund_code", "date", "value", "amount"]) 
                 for n in nav_data:
-                    if STOP_EVENT.is_set(): return None 
+                    if stop_event.is_set(): return None 
                     w_nav.writerow([code, format_date(n.get("date")), n.get("value"), n.get("amount")])
     except Exception as e: log(f"Error NAV {code}: {e}")
 
     # 3. Fee
     try:
-        if STOP_EVENT.is_set(): return None
+        if stop_event.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/fee")
         fees_list = res.get("data", {}).get("fees", []) if res else []
         front_max, front_act = parse_fee_value(fees_list, ["front-end"])
@@ -301,13 +307,13 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
             "min_initial_buy": info_json.get("minimum_initial", ""), 
             "min_next_buy": info_json.get("minimum_subsequent", "")
         }
-        with CSV_LOCK:
+        with get_obj("CSV_LOCK"):
             writers['fees'].writerow(fee_row)
     except Exception as e: log(f"Error Fee {code}: {e}")
 
     # 4. Allocations
     try:
-        if STOP_EVENT.is_set(): return None
+        if stop_event.is_set(): return None
         res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/portfolio")
         port_data = res.get("data") if res else None
         if port_data:
@@ -327,13 +333,13 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
                     "source_url": f"https://www.finnomena.com/fund/{fund_id}"
                 })
             
-            with CSV_LOCK:
+            with get_obj("CSV_LOCK"):
                 if alloc_rows: writers['allocations'].writerows(alloc_rows)
     except Exception as e: log(f"Error Holding {code}: {e}")
 
     # 5. codes (PDF)
     try:
-        if STOP_EVENT.is_set(): return None
+        if stop_event.is_set(): return None
         cached_rows = existing_codes_map.get(code, [])
         need_scrape = False
         if not cached_rows: need_scrape = True
@@ -344,11 +350,11 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
              if factsheet_url and factsheet_url.endswith(".pdf"):
                  codes_found = extract_codes_from_pdf(factsheet_url, code)
                  if codes_found: 
-                     with CSV_LOCK: writers['codes'].writerows(codes_found)
+                    with get_obj("CSV_LOCK"): writers['codes'].writerows(codes_found)
         else:
-             with CSV_LOCK: writers['codes'].writerows(cached_rows)
+            with get_obj("CSV_LOCK"): writers['codes'].writerows(cached_rows)
     except Exception as e: log(f"Error Codes {code}: {e}")
-    with CSV_LOCK:
+    with get_obj("CSV_LOCK"):
         for w in writers.values():
             pass
     if is_success:
@@ -357,7 +363,8 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run):
     else:
         return None
 
-def main():
+@task(name="Finnomena scraper", log_prints=True)
+def finnomena_scraper():
     global HAS_ERROR
     log("Starting Finnomena Scraper")
     IS_MONTHLY_RUN = check_is_monthly_run()
@@ -415,11 +422,11 @@ def main():
         executor = ThreadPoolExecutor(max_workers=NUM_WORKERS)
         futures = []
         for fund in pending_funds:
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set(): break
             futures.append(executor.submit(process_fund_task, fund, writers, existing_codes_map, IS_MONTHLY_RUN))
         count = 0
         for future in as_completed(futures):
-            if STOP_EVENT.is_set(): break 
+            if get_obj("STOP_EVENT").is_set(): break
             try:
                 result_code = future.result()
                 if result_code:
@@ -427,14 +434,14 @@ def main():
                     completed = len(finished_funds) + count
                     log(f"[{completed}/{total}] {result_code} (finnomena)")
                     if count % 10 == 0:
-                        with CSV_LOCK:
+                        with get_obj("CSV_LOCK"):
                             f_master.flush(); f_fees.flush(); f_allocations.flush(); f_codes.flush()
             except Exception as e:
                 log(f"Task Failed: {e}")
 
     except KeyboardInterrupt: 
         log("Stopping Scraper")
-        STOP_EVENT.set()
+        get_obj("STOP_EVENT").set()
         executor.shutdown(wait=False, cancel_futures=True)
         HAS_ERROR = True
     except Exception as e:
@@ -451,4 +458,4 @@ def main():
         log("Done All tasks completed (finnomena)")
 
 if __name__ == "__main__":
-    main()
+    finnomena_scraper()

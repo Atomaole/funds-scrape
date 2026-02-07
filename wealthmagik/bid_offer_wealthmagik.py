@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from prefect import task
 
 # CONFIG
 script_dir = Path(__file__).resolve().parent
@@ -23,11 +24,14 @@ RETRY_DELAY = 2
 NUM_WORKERS = 3
 LOG_BUFFER = []
 HAS_ERROR = False
-CSV_LOCK = threading.Lock()
-LOG_LOCK = threading.Lock()
-COUNT_LOCK = threading.Lock()
-STOP_EVENT = threading.Event()
-RESUME_LOCK = threading.Lock()
+_G_STORAGE = {}
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 PROCESSED_COUNT = 0 
 
 USER_AGENTS = [
@@ -44,7 +48,7 @@ def log(msg):
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    with LOG_LOCK:
+    with get_obj("LOG_LOCK"):
         print(f"[{timestamp}] {msg}")
         LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
@@ -56,7 +60,7 @@ def save_log_if_error():
         filename = f"bid_offer_wm_{datetime.now().strftime('%Y-%m-%d')}.log"
         with open(log_dir/filename, "w", encoding="utf-8") as f:
             f.write("\n".join(LOG_BUFFER))
-        with LOG_LOCK:
+        with get_obj("LOG_LOCK"):
             print(f"Log saved at: {filename}")
     except: pass
 
@@ -82,7 +86,7 @@ def load_finished_funds():
     return finished
 
 def append_resume_state(code):
-    with RESUME_LOCK:
+    with get_obj("RESUME_LOCK"):
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
@@ -105,7 +109,7 @@ def fetch_fund_data(fund_code, fund_url):
         "Connection": "keep-alive"
     }
     for attempt in range(MAX_RETRIES):
-        if STOP_EVENT.is_set(): return None
+        if get_obj("STOP_EVENT").is_set(): return None
         try:
             response = requests.get(url, headers=headers, timeout=10)
             if response.status_code == 200:
@@ -135,15 +139,15 @@ def process_batch(worker_id, funds, fieldnames, total_all_funds, finished_count_
     with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
         writer = csv.DictWriter(f_out, fieldnames=fieldnames)
         for fund_item in funds:
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set(): break
             fund_code = fund_item['fund_code']
             fund_url = fund_item['url']
             result = fetch_fund_data(fund_code, fund_url)
-            with COUNT_LOCK:
+            with get_obj("COUNT_LOCK"):
                 PROCESSED_COUNT += 1
                 current_progress = finished_count_start + PROCESSED_COUNT
             if isinstance(result, dict):
-                with CSV_LOCK:
+                with get_obj("CSV_LOCK"):
                     writer.writerow(result)
                     f_out.flush()
                 append_resume_state(fund_code)
@@ -155,7 +159,8 @@ def process_batch(worker_id, funds, fieldnames, total_all_funds, finished_count_
                 log(f"[{current_progress}/{total_all_funds}] {fund_code} (No Data)")
             polite_sleep()
 
-def main():
+@task(name="bid_offer_wm_request", log_prints=True)
+def bid_offer_wm_req():
     log("Starting Bid/Offer Scraper")
     if not INPUT_FILENAME.exists():
         log(f"Error: Input file not found: {INPUT_FILENAME}")
@@ -198,7 +203,7 @@ def main():
             except Exception as e: pass 
     except KeyboardInterrupt:
         log("Stopping Scraper")
-        STOP_EVENT.set()
+        get_obj("STOP_EVENT").set()
         global HAS_ERROR
         HAS_ERROR = True
     finally:
@@ -206,4 +211,4 @@ def main():
         log("Done (bid_offer/WM)")
 
 if __name__ == "__main__":
-    main()
+    bid_offer_wm_req()

@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from prefect import task
 
 # CONFIG
 script_dir = Path(__file__).resolve().parent
@@ -23,9 +24,14 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
-CSV_LOCK = threading.Lock()
-LOG_LOCK = threading.Lock()
-STOP_EVENT = threading.Event()
+_G_STORAGE = {}
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 NUM_WORKERS = 3
 
 def create_authenticated_session():
@@ -65,9 +71,10 @@ def polite_sleep():
 
 def log(msg):
     global HAS_ERROR
-    if "error" in msg.lower() or "failed" in msg.lower(): HAS_ERROR = True
+    if "error" in msg.lower() or "failed" in msg.lower():
+        HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    with LOG_LOCK:
+    with get_obj("LOG_LOCK"): # แก้ตรงนี้!
         print(f"[{timestamp}] {msg}")
         LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
@@ -104,7 +111,7 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    with CSV_LOCK:
+    with get_obj("CSV_LOCK"):
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
@@ -167,7 +174,7 @@ def scrape_allocations(session, fund_code, profile_url):
     alloc_url = re.sub(r"/profile/?$", "/allocation", profile_url)
     polite_sleep()
     for attempt in range(1, MAX_RETRIES + 1):
-        if STOP_EVENT.is_set(): return None
+        if get_obj("STOP_EVENT").is_set(): return None
         try:
             response = session.get(alloc_url, timeout=10)
             if response.status_code == 200:
@@ -188,16 +195,16 @@ def scrape_allocations(session, fund_code, profile_url):
     return None
 
 def process_fund_task(fund, writer):
-    if STOP_EVENT.is_set(): return None
+    if get_obj("STOP_EVENT").is_set(): return None
     session = create_authenticated_session()
     try:
         code = unquote(fund.get("fund_code", "")).strip()
         url = fund.get("url", "")
         if not code or not url: return None
         data = scrape_allocations(session, code, url) 
-        if STOP_EVENT.is_set(): return None
+        if get_obj("STOP_EVENT").is_set(): return None
         if data:
-            with CSV_LOCK:
+            with get_obj("CSV_LOCK"):
                 writer.writerows(data)
             append_resume_state(code)
             return f"{code} Done (allocations/wealthmagik)" 
@@ -211,7 +218,8 @@ def process_fund_task(fund, writer):
     finally:
         session.close()
 
-def main():
+@task(name="allocations_wm_request", log_prints=True)
+def allo_wm_req():
     finished_funds = get_resume_state()
     funds = []
     try:
@@ -241,10 +249,10 @@ def main():
     try:
         count = 0
         for fund in pending_funds:
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set(): break
             futures.append(executor.submit(process_fund_task, fund, writer))
         for future in as_completed(futures):
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set(): break
             try:
                 result_msg = future.result()
                 if result_msg:
@@ -255,14 +263,14 @@ def main():
                     else:
                          log(f"[{current_total}/{total}] {result_msg}")
                     if count % 10 == 0:
-                        with CSV_LOCK: f_out.flush()
+                        with get_obj("CSV_LOCK"): f_out.flush()
 
             except Exception as e:
                 pass
 
     except KeyboardInterrupt: 
         log("Stopping Scraper")
-        STOP_EVENT.set()
+        get_obj("STOP_EVENT").is_set()
         executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
@@ -272,4 +280,4 @@ def main():
         log("Done (allocations/WM)")
 
 if __name__ == "__main__":
-    main()
+    allo_wm_req()

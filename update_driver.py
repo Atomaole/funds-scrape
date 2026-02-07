@@ -3,7 +3,9 @@ import os
 import shutil
 import stat
 from webdriver_manager.firefox import GeckoDriverManager
+from prefect import task
 
+@task(name="update driver", log_prints=True)
 def update_geckodriver():
     current_folder = Path(__file__).resolve().parent
     temp_cache_dir = current_folder/".temp_wdm"

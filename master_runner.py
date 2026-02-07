@@ -1,16 +1,31 @@
-import subprocess
-import sys
-import time
-import signal
-from pathlib import Path
-from datetime import datetime, timedelta
+import os
+os.environ["PREFECT_API_URL"] = "http://127.0.0.1:4200/api"
 
-# CONFIG
-AUTO_MODE = True    # True=loop False=one round
-RUN_ON_START = False # True=Manual test immediately (NO save log)
-DAILY_START_TIME = "01:00"  # Time of round 1 to start
-HOURS_WAIT_FOR_ROUND_2 = 5  # Time to wating round 2
-DAYS_TO_SKIP = [6, 0]   # skip [6=sunday, 0=monday]
+import time
+from pathlib import Path
+from datetime import datetime
+from prefect import task, flow, get_run_logger
+from prefect.client.schemas.schedules import CronSchedule
+
+# File Path (Prefect)
+from finnomena.scrape_finnomena import finnomena_scraper
+from wealthmagik.allocations_wealthmagik import allo_wm_req
+from wealthmagik.bid_offer_wealthmagik import bid_offer_wm_req
+from wealthmagik.holding_wealthmagik import holding_wm_req
+#from wealthmagik.allocations_wealthmagik_selenium import allo_wm_sel
+#from wealthmagik.bid_offer_wealthmagik_selenium import bid_offer_wm_sel
+#from wealthmagik.holding_wealthmagik_selenium import holding_wm_sel
+from wealthmagik.list_fund_wealthmagik import list_wm
+from db_loader import db_loader
+from clean_type_holding import clean_holding
+from merge_funds import merged_file
+from scrape_sec_info import sec_scrape
+from update_driver import update_geckodriver
+
+#CONFIG
+DAILY_START_TIME = "01:00"
+HOURS_WAIT_FOR_ROUND_2 = 5
+DAYS_TO_SKIP = [6, 0]   # 6=Sunday, 0=Monday
 DATE_LOG_FILE = "date.log"
 MODE_FOR_WEALTHMAGIK = 1
 """
@@ -19,105 +34,16 @@ MODE FOR WEALTHMAGIK
 2 = work bid_offer first and then will work allocations and holding at the same time
 3 = work together at the same time 
 """
-ALWAYS_SELENIUM_WM = False
+ALWAYS_SELENIUM_WM = False # No longer support selenium
 
 # FILE PATHS
 script_dir = Path(__file__).resolve().parent
-SCRIPT_UPDATE_DRIVER = script_dir/"update_driver.py"
-SCRIPT_LIST_WM       = script_dir/"wealthmagik/list_fund_wealthmagik.py"
-SCRIPT_SCRAPE_FIN    = script_dir/"finnomena/scrape_finnomena.py"
-SCRIPT_WM_BID_OFFER_REQ = script_dir/"wealthmagik/bid_offer_wealthmagik.py"
-SCRIPT_WM_BID_OFFER_SEL = script_dir/"wealthmagik/bid_offer_wealthmagik_selenium.py"
-SCRIPT_WM_HOLDING_REQ   = script_dir/"wealthmagik/holding_wealthmagik.py"
-SCRIPT_WM_ALLOC_REQ     = script_dir/"wealthmagik/allocations_wealthmagik.py"
-SCRIPT_WM_HOLDING_SEL   = script_dir/"wealthmagik/holding_wealthmagik_selenium.py"
-SCRIPT_WM_ALLOC_SEL     = script_dir/"wealthmagik/allocations_wealthmagik_selenium.py"
-SCRIPT_SEC           = script_dir/"scrape_sec_info.py"
-SCRIPT_MERGE         = script_dir/"merge_funds.py"
-SCRIPT_DB_LOADER     = script_dir/"db_loader.py"
 RESUME_WM_HOLDING    = script_dir/"wealthmagik/holding_resume.log"
 RESUME_WM_ALLOC      = script_dir/"wealthmagik/allocations_resume.log"
 RESUME_SEC           = script_dir/"scrape_sec_resume.log"
-LOG_BUFFER = []
-active_processes = []
 
-def log(msg):
-    timestamp = time.strftime('%H:%M:%S')
-    print(f"[{timestamp}] [MASTER] {msg}")
-    LOG_BUFFER.append(f"[{timestamp}] {msg}")
-
-def kill_all_process():
-    global active_processes
-    if not active_processes:
-        log("No active processes to stop")
-        return
-    log(f"Stopping {len(active_processes)} active processes")
-    for p in active_processes:
-        if p.poll() is None:
-            try:
-                if sys.platform == "win32":
-                    p.send_signal(signal.CTRL_C_EVENT)
-                else:
-                    p.send_signal(signal.SIGINT)
-            except: pass
-    
-    start_wait = time.time()
-    while time.time() - start_wait < 10:
-        if all(p.poll() is not None for p in active_processes):
-            break
-        time.sleep(0.5)
-        
-    for p in active_processes:
-        if p.poll() is None:
-            log(f"Process {p.pid} unresponsive KILLING it")
-            try: p.kill()
-            except: pass
-    active_processes = []
-    log("All processes stopped")
-
-def launch_async(path, description):
-    global active_processes
-    if not path.exists():
-        log(f"Error: Script not found {path}")
-        return None
-    log(f"Launching Async: {description}")
-    try:
-        kw = {}
-        if sys.platform == "win32":
-            kw['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        p = subprocess.Popen([sys.executable, str(path)], **kw)
-        active_processes.append(p)
-        return p
-    except Exception as e:
-        log(f"Failed to launch {description}: {e}")
-        return None
-
-def run_sync(path, description):
-    global active_processes
-    if not path.exists():
-        log(f"Error: Script not found {path}")
-        return False
-    log(f"Running Sync: {description}")
-    try:
-        kw = {}
-        if sys.platform == "win32":
-            kw['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
-        p = subprocess.Popen([sys.executable, str(path)], **kw)
-        active_processes.append(p)
-        p.wait()
-        exit_code = p.returncode
-        if p in active_processes: active_processes.remove(p)
-        if exit_code == 0:
-            log(f"Finished: {description}")
-            return True
-        else:
-            log(f"Failed: {description} (Code {exit_code})")
-            return False
-    except KeyboardInterrupt:
-        raise
-    except Exception as e:
-        log(f"Exception: {e}")
-        return False
+def is_skip_day():
+    return datetime.now().weekday() in DAYS_TO_SKIP
 
 def check_is_new_month():
     log_path = script_dir / DATE_LOG_FILE
@@ -129,7 +55,6 @@ def check_is_new_month():
             if not last_run_str: return True
             last_run_date = datetime.strptime(last_run_str, "%Y-%m-%d")
             if last_run_date.month != current_date.month or last_run_date.year != current_date.year:
-                log(f"Month changed detected")
                 return True
             return False
     except: return True
@@ -138,141 +63,107 @@ def update_date_log():
     try:
         with open(script_dir / DATE_LOG_FILE, 'w') as f:
             f.write(datetime.now().strftime("%Y-%m-%d"))
-        log("Updated date.log")
-    except Exception as e: log(f"Failed to update date.log: {e}")
+        print(f"[MASTER] Updated date.log")
+    except Exception as e: 
+        print(f"[MASTER] Failed to update date.log: {e}")
 
-def get_seconds_until_daily_start(start_time_str):
-    now = datetime.now()
-    h, m = map(int, start_time_str.split(":"))
-    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
-    if target <= now:
-        target = target + timedelta(days=1)
-    return (target - now).total_seconds(), target
-
-def is_skip_day():
-    return datetime.now().weekday() in DAYS_TO_SKIP
-
-# MAIN PIPELINE
-def run_pipeline(current_slot=None):
-    log(f"STARTING PIPELINE for round: {current_slot if current_slot else 'Manual'}")
-    if current_slot == "ROUND_1" and is_skip_day():
-        log(f"Today is skip day (Day {datetime.now().weekday()}). Skipping pipeline")
-        return False
-    start_time = time.time()
-    if ALWAYS_SELENIUM_WM: run_sync(SCRIPT_UPDATE_DRIVER, "Update GeckoDriver")
-    is_new_month = check_is_new_month()
-    if is_new_month: log("New Month (Will scrape full set)")
-    else: log("Same Month (Checking Resume Logs)")
-
-    # 1. list WealthMagik
-    run_sync(SCRIPT_LIST_WM, "WealthMagik Fund List")
-    bg_procs = []
-
-    # 2. Finnomena
-    p_fin = launch_async(SCRIPT_SCRAPE_FIN, "Finnomena Scraper")
-    if p_fin: bg_procs.append(p_fin)
-    time.sleep(5)
-
-    # 3. SEC Info
-    if is_new_month or RESUME_SEC.exists():
-        p_sec = launch_async(SCRIPT_SEC, "SEC Info")
-        if p_sec: bg_procs.append(p_sec)
-    else:
-        log("Skipping SEC Info (Resume file not found - Assuming Done)")
-    time.sleep(5)
-
-    # 4. Wealthmagik
+@flow(name="Execute Scraping Round", log_prints=True)
+def perform_scraping_round(round_name, is_new_month):
+    logger = get_run_logger()
+    logger.info(f"STARTING: {round_name}")
     if ALWAYS_SELENIUM_WM:
-        target_holding = SCRIPT_WM_HOLDING_SEL
-        target_alloc   = SCRIPT_WM_ALLOC_SEL
-        target_bid_offer = SCRIPT_WM_BID_OFFER_SEL
-        engine_name    = "Selenium"
-    else:
-        target_holding = SCRIPT_WM_HOLDING_REQ
-        target_alloc   = SCRIPT_WM_ALLOC_REQ
-        target_bid_offer = SCRIPT_WM_BID_OFFER_REQ
-        engine_name    = "Requests"
+        update_geckodriver()
+    list_wm() 
+    background_tasks = []
+    task_fin = finnomena_scraper.submit()
+    background_tasks.append(task_fin)
+    time.sleep(6)
 
-    if current_slot == "ROUND_1":
-        log(f"ROUND 1 {engine_name} engine")
-    elif current_slot == "ROUND_2":
-        log(f"ROUND 2 {engine_name} engine")
+    if is_new_month or RESUME_SEC.exists():
+        task_sec = sec_scrape.submit()
+        background_tasks.append(task_sec)
     else:
-        log(f"MANUAL {engine_name} engine")
+        logger.info("Skipping SEC Info (Resume not found)")
+
+    if ALWAYS_SELENIUM_WM:
+        #task_holding_func = holding_wm_sel
+        #task_alloc_func   = allo_wm_sel
+        #task_bid_func     = bid_offer_wm_sel
+        print("No longer support selenium but you can still use but maybe it not work property with prefect")
+        print("Wealthmagik will not work right now change mode")
+        eng = "Selenium"
+    else:
+        task_holding_func = holding_wm_req
+        task_alloc_func   = allo_wm_req
+        task_bid_func     = bid_offer_wm_req
+        eng = "Requests"
+    
+    logger.info(f"WM Mode: {MODE_FOR_WEALTHMAGIK} | Engine: {eng}")
 
     if MODE_FOR_WEALTHMAGIK == 1:
-        run_sync(target_bid_offer, "WM Bid/Offer")
+        task_bid_func.submit().wait()
         if is_new_month or RESUME_WM_HOLDING.exists():
-            run_sync(target_holding, f"WM Holdings ({engine_name})")
+            task_holding_func.submit().wait()
+            clean_holding.submit().wait()
         if is_new_month or RESUME_WM_ALLOC.exists():
-            run_sync(target_alloc, f"WM Allocations ({engine_name})")
+            task_alloc_func.submit().wait()
 
     elif MODE_FOR_WEALTHMAGIK == 2:
-        run_sync(target_bid_offer, "WM Bid/Offer")
+        task_bid_func.submit().wait()
         if is_new_month or RESUME_WM_HOLDING.exists():
-            p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
-            if p_hold: bg_procs.append(p_hold) 
+            h_future = task_holding_func.submit()
+            c_future = clean_holding.submit(wait_for=[h_future])
+            background_tasks.append(c_future)
         if is_new_month or RESUME_WM_ALLOC.exists():
-            p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
-            if p_alloc: bg_procs.append(p_alloc)
+            background_tasks.append(task_alloc_func.submit())
 
     elif MODE_FOR_WEALTHMAGIK == 3:
-        p_bid = launch_async(target_bid_offer, "WM Bid/Offer")
-        if p_bid: bg_procs.append(p_bid)
+        background_tasks.append(task_bid_func.submit())
         if is_new_month or RESUME_WM_HOLDING.exists():
-            p_hold = launch_async(target_holding, f"WM Holdings ({engine_name})")
-            if p_hold: bg_procs.append(p_hold)
+            h_future = task_holding_func.submit()
+            c_future = clean_holding.submit(wait_for=[h_future])
+            background_tasks.append(c_future)
         if is_new_month or RESUME_WM_ALLOC.exists():
-            p_alloc = launch_async(target_alloc, f"WM Allocations ({engine_name})")
-            if p_alloc: bg_procs.append(p_alloc)
+            background_tasks.append(task_alloc_func.submit())
 
-    if bg_procs:
-        log(f"Waiting for ALL background processes ({len(bg_procs)}) to finish")
-        for p in bg_procs:
-            p.wait()
-            if p in active_processes: active_processes.remove(p)
-    
-    log("All scrapers finished")
-    run_sync(SCRIPT_MERGE, "Merging Data")
-    run_sync(SCRIPT_DB_LOADER, "Database Loader")
-    if current_slot == "ROUND_2":
-        log("Updating date.log to mark COMPLETED")
-        update_date_log()
-    else:
-        log(f"Finished {current_slot}. NOT updating date.log (Waiting for next round)")
-    
-    log(f"PIPELINE FINISHED in {time.time() - start_time:.2f} seconds")
-    return True
+    if background_tasks:
+        logger.info(f"Waiting for {len(background_tasks)} background tasks")
+        for t in background_tasks:
+            t.wait()
+    logger.info("All scraping tasks finished.")
+
+    merged_file()
+    db_loader()
 
 # MAIN
-def main():
-    log(f"Config Start Time={DAILY_START_TIME}, Retry Delay={HOURS_WAIT_FOR_ROUND_2} Hours")
-    try:
-        if RUN_ON_START:
-            run_pipeline(current_slot="MANUAL") 
-        if not AUTO_MODE:
-            log("AUTO_MODE is False Exiting")
-            return
-        while AUTO_MODE:
-            seconds_wait, next_dt = get_seconds_until_daily_start(DAILY_START_TIME)
-            log(f"[WAITING] Sleeping {seconds_wait/3600:.2f} hours until Daily Start at {next_dt.strftime('%H:%M:%S')}")
-            time.sleep(seconds_wait)
-            log("Starting ROUND 1 (Requests)")
-            did_run = run_pipeline(current_slot="ROUND_1")
-            if not did_run:
-                log("Skip day detected")
-                continue
-            log(f"[WAITING] Round 1 Finished waiting {HOURS_WAIT_FOR_ROUND_2} hours before Round 2")
-            time.sleep(HOURS_WAIT_FOR_ROUND_2 * 3600)
-            log("Starting ROUND 2 (Cleanup)")
-            run_pipeline(current_slot="ROUND_2")
-            log("Daily Cycle Completed Looping back to wait for tomorrow")
+@flow(name="Daily Wealth Cycle", log_prints=True)
+def daily_wealth_cycle():
+    print(f"Starting Daily Pipeline at {datetime.now()}")
+    if is_skip_day():
+        print(f"Today is Skip Day (Day {datetime.now().weekday()})")
+        return
 
-    except KeyboardInterrupt:
-        log("\nUSER INTERRUPT DETECTED")
-        kill_all_process()
-        log("Master Runner Exited Cleanly")
-        sys.exit(0)
+    is_new_month = check_is_new_month()
+    if is_new_month: print("New Month Detected: Full Scrape Mode")
+
+    perform_scraping_round("ROUND_1", is_new_month)
+    print(f"Round 1 Done Resting for {HOURS_WAIT_FOR_ROUND_2} hours")
+    time.sleep(HOURS_WAIT_FOR_ROUND_2 * 3600) 
+
+    print(f"ROUND 2 (Cleanup/Retry)")
+    perform_scraping_round("ROUND_2", is_new_month)
+    print("Updating logs.")
+    update_date_log()
+    print("Pipeline Finished")
 
 if __name__ == "__main__":
-    main()
+    print(f"Scheduled to run daily at {DAILY_START_TIME}. Waiting")
+    my_schedule = CronSchedule(
+        cron="0 1 * * *", 
+        timezone="Asia/Bangkok"
+    )
+    daily_wealth_cycle.serve(
+        name="funds-scraper",
+        schedule=my_schedule, 
+        tags=["funds_thai"]
+    )

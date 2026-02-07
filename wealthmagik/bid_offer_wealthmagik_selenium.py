@@ -14,6 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from prefect import task
 
 # CONFIG
 script_dir = Path(__file__).resolve().parent
@@ -29,10 +30,14 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
-CSV_LOCK = threading.Lock()
-LOG_LOCK = threading.Lock()
-COUNT_LOCK = threading.Lock()
-STOP_EVENT = threading.Event()
+_G_STORAGE = {}
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
 PROCESSED_COUNT = 0
 
@@ -44,7 +49,7 @@ def log(msg):
     if "error" in msg.lower() or "failed" in msg.lower():
         HAS_ERROR = True
     timestamp = time.strftime('%H:%M:%S')
-    with LOG_LOCK:
+    with get_obj("LOG_LOCK"):
         print(f"[{timestamp}] {msg}")
         LOG_BUFFER.append(f"[{timestamp}] {msg}")
 
@@ -81,7 +86,7 @@ def get_resume_state():
         return set()
 
 def append_resume_state(code):
-    with CSV_LOCK:
+    with get_obj("CSV_LOCK"):
         try:
             current_time = datetime.now().strftime("%H:%M:%S")
             with open(RESUME_FILE, 'a', encoding='utf-8') as f:
@@ -149,7 +154,7 @@ def scrape_bid_offer(driver, fund_code, url):
         "offer_price": ""
     }
     for attempt in range(1, MAX_RETRIES + 1):
-        if STOP_EVENT.is_set(): return None
+        if get_obj("STOP_EVENT").is_set(): return None
         try:
             if attempt > 1: pass
             driver.get(url)
@@ -178,19 +183,19 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
     try:
         driver = make_driver()
         for i, fund in enumerate(fund_list, 1):
-            if STOP_EVENT.is_set(): break
+            if get_obj("STOP_EVENT").is_set(): break
             code = unquote(fund.get("fund_code", "")).strip()
             url = fund.get("url", "")
             try:
                 data = scrape_bid_offer(driver, code, url)
-                if STOP_EVENT.is_set(): break
+                if get_obj("STOP_EVENT").is_set(): break
                 current_total_done = 0
                 if data is not None:
-                    with COUNT_LOCK:
+                    with get_obj("COUNT_LOCK"):
                         PROCESSED_COUNT += 1
                         current_total_done = finished_count_start + PROCESSED_COUNT
                     if data.get("nav_date"): 
-                        with CSV_LOCK:
+                        with get_obj("CSV_LOCK"):
                             with open(OUTPUT_FILENAME, 'a', newline="", encoding="utf-8-sig") as f_out:
                                 writer = csv.DictWriter(f_out, fieldnames=fieldnames)
                                 writer.writerow(data)
@@ -204,14 +209,14 @@ def process_batch(thread_id, fund_list, fieldnames, total_all_funds, finished_co
                 
             except Exception as e:
                 current_total_done = 0
-                with COUNT_LOCK:
+                with get_obj("COUNT_LOCK"):
                     if 'current_total_done' not in locals() or current_total_done == 0:
                          PROCESSED_COUNT += 1
                          current_total_done = finished_count_start + PROCESSED_COUNT
                 log(f"[{current_total_done}/{total_all_funds}] ERROR {code}: {e}")
 
     except Exception as e:
-        if not STOP_EVENT.is_set():
+        if not get_obj("STOP_EVENT").is_set():
              log(f"Thread-{thread_id} Crashed: {e}")
     finally:
         if driver:
@@ -221,7 +226,8 @@ def split_list(lst, n):
     k, m = divmod(len(lst), n)
     return [lst[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
 
-def main():
+@task(name="bid_offer_wm_sel", log_prints=True)
+def bid_offer_wm_sel():
     finished_funds = get_resume_state()
     funds = []
     try:
@@ -259,7 +265,7 @@ def main():
             except Exception as e: pass 
     except KeyboardInterrupt:
         log("Stopping Scraper")
-        STOP_EVENT.set()
+        get_obj("STOP_EVENT").set()
         executor.shutdown(wait=False, cancel_futures=True)
         global HAS_ERROR
         HAS_ERROR = True
@@ -268,4 +274,4 @@ def main():
         log("Done (bid_offer/WM)")
 
 if __name__ == "__main__":
-    main()
+    bid_offer_wm_sel()

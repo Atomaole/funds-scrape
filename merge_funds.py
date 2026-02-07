@@ -4,6 +4,7 @@ import glob
 import time
 import re
 from datetime import datetime
+from prefect import task
 
 # CONFIG
 script_dir = Path(__file__).resolve().parent
@@ -58,27 +59,6 @@ def merge_fee():
         output_path = MERGED_OUTPUT_DIR/"merged_fee.csv"
         df.to_csv(output_path, index=False, encoding="utf-8-sig")
         log(f"Saved merged_fee.csv ({len(df)} records)")
-
-def merge_holding(valid_codes):
-    log("Merging Holdings")
-    fn_df = safe_read_csv(FN_RAW_DIR/"finnomena_holdings.csv")
-    if not fn_df.empty:
-        fn_df['source'] = 'finnomena'
-        fn_df['holding_type'] = 'top5'
-    wm_df = safe_read_csv(WM_RAW_DIR/"wealthmagik_holdings.csv")
-    if not wm_df.empty:
-        wm_df['source'] = 'wealthmagik'
-        wm_df['holding_type'] = 'full'
-    merged_df = pd.concat([fn_df, wm_df], ignore_index=True)
-    if not merged_df.empty:
-        before_count = len(merged_df)
-        merged_df = merged_df[merged_df['fund_code'].astype(str).str.strip().isin(valid_codes)]
-        after_count = len(merged_df)
-        if before_count > after_count:
-            log(f"Filtered out {before_count - after_count} rows (funds not in finnomena list)")
-        output_path = MERGED_OUTPUT_DIR/"merged_holding.csv"
-        merged_df.to_csv(output_path, index=False, encoding="utf-8-sig")
-        log(f"Saved merged_holding.csv ({len(merged_df)} records)")
 
 def merge_allocations(valid_codes):
     log("Merging Allocations")
@@ -148,17 +128,17 @@ def merge_nav():
             print(f"Processed NAVs: {count}/{total_files}")
     log("NAV Merge Completed")
 
-def main():
+@task(name="merged_funds_file", log_prints=True)
+def merged_file():
     log("Starting Merge Process")
     valid_codes = get_valid_fund_codes()
     log(f"Master Fund List loaded: {len(valid_codes)} funds")
     merge_info()
     merge_fee()
     merge_codes()
-    merge_holding(valid_codes)
     merge_allocations(valid_codes)
     merge_nav()
     log("All Merge Tasks Done")
 
 if __name__ == "__main__":
-    main()
+    merged_file()

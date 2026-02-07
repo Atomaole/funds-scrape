@@ -3,6 +3,7 @@ import csv
 import requests
 from urllib.parse import quote, unquote
 import time, datetime
+from prefect import task
 
 JSON_URL = "https://www.wealthmagik.com/json-search/fundSearch.json"
 BASE_URL = "https://www.wealthmagik.com"
@@ -75,7 +76,8 @@ def scrape_with_requests():
         log(f"Error during scrape: {e}")
         return None
 
-def main():
+@task(name="list_wm", log_prints=True)
+def list_wm():
     final_fund_list = scrape_with_requests()
     if final_fund_list:
         final_fund_list.sort(key=lambda x: x[0])
@@ -89,4 +91,4 @@ def main():
         log("Failed to fetch data")
 
 if __name__ == "__main__":
-    main()
+    list_wm()
