@@ -30,13 +30,6 @@ RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
 _G_STORAGE = {}
-def get_obj(name):
-    if name not in _G_STORAGE:
-        if name == "STOP_EVENT":
-            _G_STORAGE[name] = threading.Event()
-        else:
-            _G_STORAGE[name] = threading.Lock()
-    return _G_STORAGE[name]
 NUM_WORKERS = 4
 PROCESSED_COUNT = 0
 
@@ -48,6 +41,14 @@ THAI_MONTH_MAP = {
     "ก.ย.": 9, "กันยายน": 9, "SEP": 9, "ต.ค.": 10, "ตุลาคม": 10, "OCT": 10,
     "พ.ย.": 11, "พฤศจิกายน": 11, "NOV": 11, "ธ.ค.": 12, "ธันวาคม": 12, "DEC": 12,
 }
+
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 
 def polite_sleep():
     time.sleep(random.uniform(1.0, 2.0))
