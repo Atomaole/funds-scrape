@@ -15,3 +15,12 @@ pdfplumber
 sqlalchemy
 pymysql
 cryptography
+alembic
+mysql-connector-python
+
+# --- API ---
+fastapi 
+uvicorn 
+
+# --- Workflow Automation ---
+prefect
