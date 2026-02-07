@@ -34,6 +34,13 @@ PDF_LOG_FILE = script_dir/"last_pdf_run.log"
 LOG_BUFFER = []
 HAS_ERROR = False
 _G_STORAGE = {}
+NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.finnomena.com/"
+}
+
 def get_obj(name):
     if name not in _G_STORAGE:
         if name == "STOP_EVENT":
@@ -41,12 +48,6 @@ def get_obj(name):
         else:
             _G_STORAGE[name] = threading.Lock()
     return _G_STORAGE[name]
-NUM_WORKERS = 3  # Number of threads. Don't set more than 3 to avoid ban
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://www.finnomena.com/"
-}
 
 def log(msg):
     global HAS_ERROR

@@ -25,13 +25,6 @@ RETRY_DELAY = 2
 LOG_BUFFER = []
 HAS_ERROR = False
 _G_STORAGE = {}
-def get_obj(name):
-    if name not in _G_STORAGE:
-        if name == "STOP_EVENT":
-            _G_STORAGE[name] = threading.Event()
-        else:
-            _G_STORAGE[name] = threading.Lock()
-    return _G_STORAGE[name]
 NUM_WORKERS = 3
 
 THAI_MONTH_MAP = {
@@ -74,6 +67,14 @@ def create_authenticated_session():
         "Upgrade-Insecure-Requests": "1"
     })
     return s
+
+def get_obj(name):
+    if name not in _G_STORAGE:
+        if name == "STOP_EVENT":
+            _G_STORAGE[name] = threading.Event()
+        else:
+            _G_STORAGE[name] = threading.Lock()
+    return _G_STORAGE[name]
 
 def polite_sleep():
     time.sleep(random.uniform(1, 3))

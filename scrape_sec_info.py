@@ -24,6 +24,8 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 LOG_BUFFER = []
 _G_STORAGE = {}
+PROCESSED_COUNT = 0
+
 def get_obj(name):
     if name not in _G_STORAGE:
         if name == "STOP_EVENT":
@@ -31,7 +33,6 @@ def get_obj(name):
         else:
             _G_STORAGE[name] = threading.Lock()
     return _G_STORAGE[name]
-PROCESSED_COUNT = 0
 
 def polite_sleep():
     time.sleep(random.uniform(1, 3))
