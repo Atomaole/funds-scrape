@@ -136,8 +136,8 @@ def perform_scraping_round(round_name, is_new_month):
     db_loader()
 
 # MAIN
-@flow(name="Daily Wealth Cycle", log_prints=True)
-def daily_wealth_cycle():
+@flow(name="Daily scraper", log_prints=True)
+def daily_scraper_cycle():
     print(f"Starting Daily Pipeline at {datetime.now()}")
     if is_skip_day():
         print(f"Today is Skip Day (Day {datetime.now().weekday()})")
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         cron="0 1 * * *", 
         timezone="Asia/Bangkok"
     )
-    daily_wealth_cycle.serve(
+    daily_scraper_cycle.serve(
         name="funds-scraper",
         schedule=my_schedule, 
         tags=["funds_thai"]
