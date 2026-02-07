@@ -87,8 +87,8 @@ CREATE TABLE funds_daily (
 CREATE TABLE funds_holding (
     fund_code VARCHAR(50),
     name VARCHAR(255),
-    source VARCHAR(20),
     type VARCHAR(50),
+    sector VARCHAR(50),
     percent DECIMAL(10,4),
     as_of_date DATE,
     source_url TEXT,

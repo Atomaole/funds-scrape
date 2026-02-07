@@ -5,6 +5,7 @@ import urllib.parse
 import numpy as np
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text, inspect
+from prefect import task
 
 # CONFIGURATION
 DB_USER = "root"
@@ -265,8 +266,8 @@ def sync_portfolio_table(engine, csv_name, table_name):
                 conn.execute(text(f"DELETE FROM {table_name} WHERE fund_code = :fund_code"), {"fund_code": fund})
                 fund_rows = df[df['fund_code'] == fund]
                 if fund_rows.empty: continue
-                cols = "fund_code, type, name, percent, as_of_date, source_url, source"
-                if use_holding_type: cols += ", holding_type"
+                cols = "fund_code, type, name, percent, as_of_date, source_url"
+                if use_holding_type: cols += ", holding_type, sector"
                 insert_sql = text(f"INSERT INTO {table_name} ({cols}) VALUES ({', '.join([':'+c.strip() for c in cols.split(',')])})")
                 params = []
                 for _, row in fund_rows.iterrows():
@@ -285,10 +286,10 @@ def sync_portfolio_table(engine, csv_name, table_name):
                         "percent": None if pd.isna(row.get("percent")) else float(str(row.get("percent")).replace(',', '')),
                         "as_of_date": norm(row.get("as_of_date"), is_date=True),
                         "source_url": row.get("source_url"),
-                        "source": row.get("source"),
                     }
                     if use_holding_type:
-                        row_data["holding_type"] = row.get("holding_type")
+                        row_data["holding_type"] = norm(row.get("holding_type"))
+                        row_data["sector"] = norm(row.get("sector"))
                     params.append(row_data)
                 if params:
                     conn.execute(insert_sql, params)
@@ -298,7 +299,8 @@ def sync_portfolio_table(engine, csv_name, table_name):
             log(f"Error syncing {table_name}: {e}")
 
 # MAIN
-def main():
+@task(name="database_loader", log_prints=True)
+def db_loader():
     log("Starting DB Loader Process")
     if not check_and_init_db():
         log("Aborting process due to DB initialization failure")
@@ -320,4 +322,4 @@ def main():
     log("DB Load Completed")
 
 if __name__ == "__main__":
-    main()
+    db_loader()
