@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime
 from prefect import task
+from difflib import SequenceMatcher
 
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_FILE = BASE_DIR / 'wealthmagik/raw_data/wealthmagik_holdings.csv' 
@@ -37,12 +38,20 @@ def get_obj(name):
             _G_STORAGE[name] = threading.Lock()
     return _G_STORAGE[name]
 
+def similarity(a, b):
+    return SequenceMatcher(None, str(a).lower(), str(b).lower()).ratio()
+
 def log(msg):
     with get_obj("LOG_LOCK"):
         timestamp = datetime.now().strftime('%H:%M:%S')
         full_msg = f"[{timestamp}] {msg}"
         print(full_msg)
         LOG_BUFFER.append(full_msg)
+
+def is_ticker_related(api_ticker, my_code):
+    t1 = str(api_ticker).upper().replace(" ", "")
+    t2 = str(my_code).upper().replace(" ", "")
+    return (t1 in t2) or (t2 in t1)
 
 def polite_sleep():
     time.sleep(random.uniform(0.8, 1.5))
@@ -119,7 +128,7 @@ def process_row_task(row, writer, finished_keys):
     else:
         res_type, res_sector = classify_initial(row['name'], h_code)
         if res_type == 'Check_System':
-            res_type, res_sector = check_stock_api(h_code)
+            res_type, res_sector = check_stock_api(h_code, row['name'])
         elif res_type == 'Other':
             save_to_other_db(h_code)
     with get_obj("CSV_LOCK"):
@@ -172,31 +181,51 @@ def classify_initial(name_full, code):
     
     return 'Check_System', ''
 
-def check_stock_api(code):
+def check_stock_api(code, hint_name):
     code_up = code.upper()
     if code_up in stock_db_cache: return stock_db_cache[code_up]
     if code_up in other_db_cache: return ('Other', '')
-    polite_sleep()
+    clean_hint = hint_name.split('(')[0].strip()
+    found_match = None
+    best_score = 0
+    def evaluate_candidates(candidates):
+        nonlocal found_match, best_score
+        for item in candidates:
+            api_ticker = item.get('title', '').upper()
+            api_desc = item.get('description', '')
+            name_score = similarity(clean_hint, api_desc)
+            ticker_related = is_ticker_related(api_ticker, code_up)
+            ticker_score = 1.0 if ticker_related else 0.0
+            final_score = name_score + (ticker_score * 0.5)
+            if (ticker_related and name_score > 0.3) or (name_score > 0.8):
+                if final_score > best_score:
+                    best_score = final_score
+                    found_match = item
     try:
-        params = {'q': code_up, 'size': 5}
-        resp = requests.get(SEARCH_API_URL, headers=HEADERS, params=params, timeout=5).json()
-        if 'data' not in resp or not resp['data']['result']: 
+        polite_sleep()
+        resp = requests.get(SEARCH_API_URL, headers=HEADERS, params={'q': code_up, 'size': 5}, timeout=5).json()
+        if 'data' in resp and resp['data']['result']:
+            evaluate_candidates(resp['data']['result'])
+        if not found_match and len(clean_hint) > 1:
+            polite_sleep()
+            resp_name = requests.get(SEARCH_API_URL, headers=HEADERS, params={'q': clean_hint, 'size': 10}, timeout=5).json()
+            if 'data' in resp_name and resp_name['data']['result']:
+                evaluate_candidates(resp_name['data']['result'])
+        if not found_match:
             save_to_other_db(code_up)
             return ('Other', '')
-        match = next((i for i in resp['data']['result'] if i.get('title', '').upper() == code_up), None)
-        if not match: 
-            save_to_other_db(code_up)
-            return ('Other', '')
+        match = found_match
         if match.get('type_en', '').lower() == 'fund': return ('Fund', '')
         country = match.get('meta', {}).get('country_iso', 'TH')
         final_type = f"Stock ({country})"
         ex = 'US' if country == 'US' else ('HK' if country == 'HK' else None)
-        q_res = requests.get(f"{QUOTE_API_URL}/{code_up}", headers=HEADERS, params={'exchange': ex} if ex else {}, timeout=5).json()
+        api_real_ticker = match.get('title', '')
+        q_res = requests.get(f"{QUOTE_API_URL}/{api_real_ticker}", headers=HEADERS, params={'exchange': ex} if ex else {}, timeout=5).json()
         sector = q_res.get('data', {}).get('sector', '') if q_res.get('status') else ''
         if sector == '-': sector = ''
         save_to_stock_db(code_up, final_type, sector)
         return (final_type, sector)
-    except:
+    except Exception as e:
         return ('Other', '')
 
 @task(name="clean_type_holding", log_prints=True)
