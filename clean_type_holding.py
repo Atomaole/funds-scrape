@@ -90,7 +90,8 @@ def load_databases():
         with open(DB_FILE, mode='r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                stock_db_cache[row['holding_code']] = (row['type'], row['sector'])
+                saved_symbol = row.get('symbol', row['holding_code']) 
+                stock_db_cache[row['holding_code']] = (row['type'], row['sector'], saved_symbol)
         log(f"load 'stock' from file: {len(stock_db_cache)}")
     if OTHER_DB_FILE.exists():
         with open(OTHER_DB_FILE, mode='r', encoding='utf-8-sig') as f:
@@ -109,31 +110,45 @@ def save_to_other_db(code):
             writer.writerow({'holding_code': code})
         other_db_cache.add(code)
 
-def save_to_stock_db(code, s_type, sector):
+def save_to_stock_db(code, s_type, sector, real_symbol):
     file_exists = DB_FILE.exists()
-    with open(DB_FILE, mode='a', encoding='utf-8-sig', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['holding_code', 'type', 'sector'])
-        if not file_exists: writer.writeheader()
-        writer.writerow({'holding_code': code, 'type': s_type, 'sector': sector})
-    stock_db_cache[code] = (s_type, sector)
+    mode = 'a'
+    with open(DB_FILE, mode=mode, encoding='utf-8-sig', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=['holding_code', 'type', 'sector', 'symbol'])
+        if not file_exists: 
+            writer.writeheader()
+        writer.writerow({
+            'holding_code': code, 
+            'type': s_type, 
+            'sector': sector,
+            'symbol': real_symbol
+        })
+    stock_db_cache[code] = (s_type, sector, real_symbol)
 
 def process_row_task(row, writer, finished_keys):
     unique_key = f"{row['fund_code']}_{row['name']}"
     if unique_key in finished_keys: return None
     h_code = extract_code(row['name'])
+    res_type, res_sector, res_symbol = 'Other', '', ''
     if h_code in other_db_cache:
-        res_type, res_sector = 'Other', ''
+        res_type, res_sector, res_symbol = 'Other', '', ''
     elif h_code in stock_db_cache:
-        res_type, res_sector = stock_db_cache[h_code]
+        res_type, res_sector, res_symbol = stock_db_cache[h_code]
+        if not str(res_type).startswith('Stock'):
+            res_symbol = ''
     else:
-        res_type, res_sector = classify_initial(row['name'], h_code)
-        if res_type == 'Check_System':
-            res_type, res_sector = check_stock_api(h_code, row['name'])
-        elif res_type == 'Other':
+        temp_type, temp_sector = classify_initial(row['name'], h_code)
+        if temp_type == 'Check_System':
+            res_type, res_sector, res_symbol = check_stock_api(h_code, row['name'])
+        elif temp_type == 'Other':
             save_to_other_db(h_code)
+            res_type, res_sector, res_symbol = 'Other', '', ''
+        else:
+            res_type, res_sector, res_symbol = temp_type, temp_sector, ''
     with get_obj("CSV_LOCK"):
         writer.writerow({
             'fund_code': row['fund_code'],
+            'symbol': res_symbol,
             'type': res_type,
             'sector': res_sector,
             'name': row['name'],
@@ -142,7 +157,7 @@ def process_row_task(row, writer, finished_keys):
             'source_url': row['source_url']
         })
         append_resume_state(unique_key)
-    return f"{h_code} -> {res_type}"
+    return f"{h_code} -> {res_symbol} ({res_type})"
 
 def extract_code(name):
     name = str(name).strip()
@@ -184,7 +199,7 @@ def classify_initial(name_full, code):
 def check_stock_api(code, hint_name):
     code_up = code.upper()
     if code_up in stock_db_cache: return stock_db_cache[code_up]
-    if code_up in other_db_cache: return ('Other', '')
+    if code_up in other_db_cache: return ('Other', '', '')
     clean_hint = hint_name.split('(')[0].strip()
     found_match = None
     best_score = 0
@@ -213,20 +228,21 @@ def check_stock_api(code, hint_name):
                 evaluate_candidates(resp_name['data']['result'])
         if not found_match:
             save_to_other_db(code_up)
-            return ('Other', '')
+            return ('Other', '', '')
         match = found_match
-        if match.get('type_en', '').lower() == 'fund': return ('Fund', '')
+        real_symbol = match.get('title', code_up).upper()
+        if match.get('type_en', '').lower() == 'fund': 
+            return ('Fund', '', '')
         country = match.get('meta', {}).get('country_iso', 'TH')
         final_type = f"Stock ({country})"
         ex = 'US' if country == 'US' else ('HK' if country == 'HK' else None)
-        api_real_ticker = match.get('title', '')
-        q_res = requests.get(f"{QUOTE_API_URL}/{api_real_ticker}", headers=HEADERS, params={'exchange': ex} if ex else {}, timeout=5).json()
+        q_res = requests.get(f"{QUOTE_API_URL}/{real_symbol}", headers=HEADERS, params={'exchange': ex} if ex else {}, timeout=5).json()
         sector = q_res.get('data', {}).get('sector', '') if q_res.get('status') else ''
         if sector == '-': sector = ''
-        save_to_stock_db(code_up, final_type, sector)
-        return (final_type, sector)
+        save_to_stock_db(code_up, final_type, sector, real_symbol) 
+        return (final_type, sector, real_symbol)
     except Exception as e:
-        return ('Other', '')
+        return ('Other', '', '')
 
 @task(name="clean_type_holding", log_prints=True)
 def clean_holding():
@@ -238,7 +254,7 @@ def clean_holding():
     finished_keys = get_resume_state()
     df = pd.read_csv(INPUT_FILE, low_memory=False)
     total_rows = len(df)
-    fieldnames = ['fund_code', 'type', 'sector', 'name', 'percent', 'as_of_date', 'source_url']
+    fieldnames = ['fund_code', 'symbol', 'type', 'sector', 'name', 'percent', 'as_of_date', 'source_url']
     file_mode = 'a' if OUTPUT_FILE.exists() and len(finished_keys) > 0 else 'w'
     try:
         with open(OUTPUT_FILE, mode=file_mode, encoding='utf-8-sig', newline='') as outfile:

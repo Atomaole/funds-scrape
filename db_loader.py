@@ -266,8 +266,10 @@ def sync_portfolio_table(engine, csv_name, table_name):
                 conn.execute(text(f"DELETE FROM {table_name} WHERE fund_code = :fund_code"), {"fund_code": fund})
                 fund_rows = df[df['fund_code'] == fund]
                 if fund_rows.empty: continue
-                cols = "fund_code, type, name, percent, as_of_date, source_url"
-                if use_holding_type: cols += ", holding_type, sector"
+                if use_holding_type:
+                    cols = "fund_code, symbol, name, type, sector, percent, as_of_date, source_url, holding_type"
+                else:
+                    cols = "fund_code, type, name, percent, as_of_date, source_url"
                 insert_sql = text(f"INSERT INTO {table_name} ({cols}) VALUES ({', '.join([':'+c.strip() for c in cols.split(',')])})")
                 params = []
                 for _, row in fund_rows.iterrows():
@@ -288,8 +290,9 @@ def sync_portfolio_table(engine, csv_name, table_name):
                         "source_url": row.get("source_url"),
                     }
                     if use_holding_type:
-                        row_data["holding_type"] = norm(row.get("holding_type"))
+                        row_data["symbol"] = norm(row.get("symbol"))
                         row_data["sector"] = norm(row.get("sector"))
+                        row_data["holding_type"] = norm(row.get("holding_type"))
                     params.append(row_data)
                 if params:
                     conn.execute(insert_sql, params)

@@ -86,6 +86,7 @@ CREATE TABLE funds_daily (
 );
 CREATE TABLE funds_holding (
     fund_code VARCHAR(50),
+    symbol VARCHAR(50),
     name VARCHAR(255),
     type VARCHAR(50),
     sector VARCHAR(50),

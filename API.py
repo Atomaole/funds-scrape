@@ -50,6 +50,7 @@ def search_funds_by_assets(req: MultiSearchRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     placeholders = ','.join(['%s'] * len(req.symbols))
+    num_symbols = len(req.symbols)
     query = f"""
         SELECT f.name_th, f.code, SUM(fh.holding_value_thb) as total_value, 
                MAX(fh.nav_thb) as nav, (SUM(fh.holding_value_thb)/MAX(fh.nav_thb)*100) as pct_nav
@@ -57,9 +58,12 @@ def search_funds_by_assets(req: MultiSearchRequest):
         JOIN funds f ON fh.fund_id = f.id
         JOIN stocks s ON fh.stock_id = s.id
         WHERE s.symbol IN ({placeholders})
-        GROUP BY f.id ORDER BY total_value DESC
+        GROUP BY f.id 
+        HAVING COUNT(DISTINCT s.symbol) = %s
+        ORDER BY total_value DESC
     """
-    cursor.execute(query, tuple(req.symbols))
+    params = tuple(req.symbols) + (num_symbols,)
+    cursor.execute(query, params)
     res = cursor.fetchall()
     conn.close()
     return res
