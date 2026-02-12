@@ -277,4 +277,4 @@ def holding_wm_req():
         log("Done (holding/WM)")
 
 if __name__ == "__main__":
-    holding_wm_req()
+    holding_wm_req.fn()

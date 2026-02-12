@@ -212,4 +212,4 @@ def bid_offer_wm_req():
         log("Done (bid_offer/WM)")
 
 if __name__ == "__main__":
-    bid_offer_wm_req()
+    bid_offer_wm_req.fn()

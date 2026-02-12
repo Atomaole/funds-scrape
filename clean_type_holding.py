@@ -284,4 +284,4 @@ def clean_holding():
         log(f"done (clean type holding)")
 
 if __name__ == "__main__":
-    clean_holding()
+    clean_holding.fn()

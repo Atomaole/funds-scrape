@@ -459,4 +459,4 @@ def finnomena_scraper():
         log("Done All tasks completed (finnomena)")
 
 if __name__ == "__main__":
-    finnomena_scraper()
+    finnomena_scraper.fn()

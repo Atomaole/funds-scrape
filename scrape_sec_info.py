@@ -239,4 +239,4 @@ def sec_scrape():
         log("Done (SEC)")
 
 if __name__ == "__main__":
-    sec_scrape()
+    sec_scrape.fn()

@@ -91,4 +91,4 @@ def list_wm():
         log("Failed to fetch data")
 
 if __name__ == "__main__":
-    list_wm()
+    list_wm.fn()

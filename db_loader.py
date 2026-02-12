@@ -325,4 +325,4 @@ def db_loader():
     log("DB Load Completed")
 
 if __name__ == "__main__":
-    db_loader()
+    db_loader.fn()

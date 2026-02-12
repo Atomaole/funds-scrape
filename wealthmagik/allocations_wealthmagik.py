@@ -281,4 +281,4 @@ def allo_wm_req():
         log("Done (allocations/WM)")
 
 if __name__ == "__main__":
-    allo_wm_req()
+    allo_wm_req.fn()
