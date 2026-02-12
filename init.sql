@@ -24,6 +24,7 @@ CREATE TABLE funds_master_info (
     inception_date DATE,
     currency VARCHAR(10) DEFAULT 'THB',
     country VARCHAR(50) DEFAULT 'Thailand',
+    isin VARCHAR(20),
     fund_status VARCHAR(20) DEFAULT 'active',
     source_url TEXT,
     scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

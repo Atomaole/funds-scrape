@@ -42,16 +42,6 @@ def get_valid_fund_codes():
         return set(df['fund_code'].astype(str).str.strip().tolist())
     return set()
 
-def merge_info():
-    log("Merging Info")
-    df = safe_read_csv(FN_RAW_DIR/"finnomena_info.csv")
-    if not df.empty:
-        output_path = MERGED_OUTPUT_DIR/"merged_info.csv"
-        df.to_csv(output_path, index=False, encoding="utf-8-sig")
-        log(f"Saved merged_info.csv ({len(df)} records)")
-    else:
-        log("Warning: No Info found.")
-
 def merge_fee():
     log("Merging Fee")
     df = safe_read_csv(FN_RAW_DIR/"finnomena_fees.csv")
@@ -133,7 +123,6 @@ def merged_file():
     log("Starting Merge Process")
     valid_codes = get_valid_fund_codes()
     log(f"Master Fund List loaded: {len(valid_codes)} funds")
-    merge_info()
     merge_fee()
     merge_codes()
     merge_allocations(valid_codes)
@@ -141,4 +130,4 @@ def merged_file():
     log("All Merge Tasks Done")
 
 if __name__ == "__main__":
-    merged_file()
+    merged_file.fn()

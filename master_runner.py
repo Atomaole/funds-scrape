@@ -16,6 +16,7 @@ from wealthmagik.holding_wealthmagik import holding_wm_req
 #from wealthmagik.bid_offer_wealthmagik_selenium import bid_offer_wm_sel
 #from wealthmagik.holding_wealthmagik_selenium import holding_wm_sel
 from wealthmagik.list_fund_wealthmagik import list_wm
+from set_isin import set_isin_process
 from db_loader import db_loader
 from clean_type_holding import clean_holding
 from merge_funds import merged_file
@@ -133,6 +134,7 @@ def perform_scraping_round(round_name, is_new_month):
     logger.info("All scraping tasks finished.")
 
     merged_file()
+    set_isin_process()
     db_loader()
 
 # MAIN

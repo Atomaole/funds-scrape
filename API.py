@@ -10,7 +10,8 @@ db_config = {
     'host': 'localhost',
     'database': 'funds_API',
     'user': 'fund_master',
-    'password': 'password' 
+    'password': 'password',
+    'charset': 'utf8mb4'
 }
 
 def get_db_connection():
@@ -49,11 +50,16 @@ def get_top_stocks(type: str = "FOREIGN"):
 def search_funds_by_assets(req: MultiSearchRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+    if not req.symbols:
+        return []
     placeholders = ','.join(['%s'] * len(req.symbols))
     num_symbols = len(req.symbols)
     query = f"""
-        SELECT f.name_th, f.code, SUM(fh.holding_value_thb) as total_value, 
-               MAX(fh.nav_thb) as nav, (SUM(fh.holding_value_thb)/MAX(fh.nav_thb)*100) as pct_nav
+        SELECT f.name_th, f.code, 
+               SUM(fh.holding_value_thb) as total_value, 
+               MAX(fh.nav_thb) as nav, 
+               (SUM(fh.holding_value_thb)/MAX(fh.nav_thb)*100) as pct_nav,
+               MAX(fh.investment_method) as investment_method
         FROM fund_holdings fh
         JOIN funds f ON fh.fund_id = f.id
         JOIN stocks s ON fh.stock_id = s.id
@@ -84,26 +90,53 @@ def get_stock_detail(symbol: str):
     conn.close()
     return {"summary": summary, "holders": holders}
 
-@app.get("/api/funds/{code}/holdings")
-def get_fund_holdings(code: str):
+@app.get("/api/funds/{code}")
+def get_fund_detail(code: str):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    query = """
-        SELECT s.symbol, s.full_name, s.stock_type, fh.percent_nav, fh.holding_value_thb
-        FROM fund_holdings fh JOIN funds f ON fh.fund_id = f.id
-        JOIN stocks s ON fh.stock_id = s.id WHERE f.code = %s ORDER BY fh.percent_nav DESC
-    """
-    cursor.execute(query, (code,))
-    res = cursor.fetchall()
+    cursor.execute("""
+        SELECT f.name_th, f.name_en, f.code, 
+               MAX(fh.nav_thb) as total_nav_thb
+        FROM funds f
+        LEFT JOIN fund_holdings fh ON f.id = fh.fund_id
+        WHERE f.code = %s
+        GROUP BY f.id
+    """, (code,))
+    fund_info = cursor.fetchone()
+    if not fund_info:
+        raise HTTPException(status_code=404, detail="Fund not found")
+    cursor.execute("""
+        SELECT s.symbol, s.full_name, s.stock_type, 
+               fh.percent_nav, fh.holding_value_thb, 
+               fh.investment_method
+        FROM fund_holdings fh 
+        JOIN funds f ON fh.fund_id = f.id
+        JOIN stocks s ON fh.stock_id = s.id 
+        WHERE f.code = %s 
+        ORDER BY fh.percent_nav DESC
+    """, (code,))
+    holdings = cursor.fetchall()
     conn.close()
-    return res
+    return {"fund_info": fund_info, "holdings": holdings}
 
 @app.get("/api/search/suggestions")
 def get_suggestions(q: str):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    query = "SELECT symbol, full_name FROM stocks WHERE symbol LIKE %s OR full_name LIKE %s LIMIT 5"
-    cursor.execute(query, (f"%{{q}}%", f"%{{q}}%"))
+    query = """
+        (SELECT symbol as id, full_name as name, 'STOCK' as type 
+         FROM stocks 
+         WHERE symbol LIKE %s OR full_name LIKE %s 
+         LIMIT 5)
+        UNION
+        (SELECT code as id, name_th as name, 'FUND' as type 
+         FROM funds 
+         WHERE code LIKE %s OR name_th LIKE %s 
+         LIMIT 5)
+    """
+    search_term = f"%{q}%"
+    cursor.execute(query, (search_term, search_term, search_term, search_term))
+    
     res = cursor.fetchall()
     conn.close()
     return res

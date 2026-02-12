@@ -7,6 +7,8 @@ beautifulsoup4
 # --- Data Processing ---
 pandas
 numpy
+openpyxl
+thefuzz
 
 # --- File Handling ---
 pdfplumber
