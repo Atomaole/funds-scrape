@@ -17,6 +17,7 @@ script_dir = Path(__file__).resolve().parent
 MERGED_DIR = script_dir/"merged_output"
 NAV_DIR = MERGED_DIR/"merged_nav_all"
 INIT_SQL_PATH = script_dir/"init.sql"
+PRE_FUNDS_SQL_PATH = script_dir/"pre-funds.sql"
 LOOKBACK_DAYS = 7
 
 encoded_password = urllib.parse.quote_plus(DB_PASS)
@@ -106,7 +107,6 @@ def check_and_init_db():
                 db_engine = create_engine(DB_URL)
                 insp = inspect(db_engine)
                 if 'funds_master_info' not in insp.get_table_names():
-                    log("Tables missing! Re-running init.sql inside DB...")
                     with open(INIT_SQL_PATH, 'r', encoding='utf-8') as f:
                         sql_script = f.read()
                     with db_engine.connect() as conn:
@@ -116,6 +116,25 @@ def check_and_init_db():
                                     conn.execute(text(statement))
                                 except: pass
                     log("Tables created.")
+
+            log("Checking 'thai_funds_pre' for Views")
+            existing_pre_dbs = conn.execute(text("SHOW DATABASES LIKE 'thai_funds_pre'")).fetchall()
+            if not existing_pre_dbs:
+                log("Database Initializing Views")
+                if PRE_FUNDS_SQL_PATH.exists():
+                    with open(PRE_FUNDS_SQL_PATH, 'r', encoding='utf-8') as f:
+                        sql_script = f.read()
+                    for statement in sql_script.split(';'):
+                        if statement.strip():
+                            try:
+                                conn.execute(text(statement))
+                            except Exception as e:
+                                log(f"Warning executing View SQL: {e}")
+                    log("Successfully")
+                else:
+                    log(f"Warning: {PRE_FUNDS_SQL_PATH} not found")
+            else:
+                log("Database 'thai_funds_pre' already exists")
     except Exception as e:
         log(f"Initialization Failed: {e}")
         return False
