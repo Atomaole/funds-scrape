@@ -28,6 +28,7 @@ OUTPUT_MASTER    = FN_RAW_DATA_DIR/"finnomena_info.csv"
 OUTPUT_ALLOCATIONS = FN_RAW_DATA_DIR/"finnomena_allocations.csv"
 OUTPUT_FEES      = FN_RAW_DATA_DIR/"finnomena_fees.csv"
 OUTPUT_CODES     = FN_RAW_DATA_DIR/"finnomena_codes.csv"
+OUTPUT_PERFORMANCE = FN_RAW_DATA_DIR/"finnomena_performance.csv"
 WM_LIST_FILE = WM_RAW_DATA_DIR/"wealthmagik_fund_list.csv"
 RESUME_FILE = script_dir/"scrape_finnomena_resume.log"
 PDF_LOG_FILE = script_dir/"last_pdf_run.log"
@@ -355,6 +356,25 @@ def process_fund_task(fund, writers, existing_codes_map, is_monthly_run, stop_ev
         else:
             with get_obj("CSV_LOCK"): writers['codes'].writerows(cached_rows)
     except Exception as e: log(f"Error Codes {code}: {e}")
+
+    # 6. performance
+    try:
+        if stop_event.is_set(): return None
+        res = safe_api_get(f"https://www.finnomena.com/fn3/api/fund/v2/public/funds/{fund_id}/performance")
+        perf_data = res.get("data", {}) if res else {}
+        ret_1y = perf_data.get("total_return_1y", "")
+        ret_3y = perf_data.get("total_return_3y", "")
+        perf_row = {
+            "fund_code": code,
+            "total_return_1y": ret_1y,
+            "total_return_3y": ret_3y,
+            "source_url": f"https://www.finnomena.com/fund/{fund_id}"
+        }
+        with get_obj("CSV_LOCK"):
+            writers['performance'].writerow(perf_row)
+    except Exception as e: 
+        log(f"Error Performance {code}: {e}")
+
     with get_obj("CSV_LOCK"):
         for w in writers.values():
             pass
@@ -406,11 +426,13 @@ def finnomena_scraper():
     f_fees = open(OUTPUT_FEES, mode, newline="", encoding="utf-8-sig")
     f_allocations = open(OUTPUT_ALLOCATIONS, mode, newline="", encoding="utf-8-sig")
     f_codes = open(OUTPUT_CODES, mode, newline="", encoding="utf-8-sig")
+    f_performance = open(OUTPUT_PERFORMANCE, mode, newline="", encoding="utf-8-sig")
     writers = {
         'master': csv.DictWriter(f_master, fieldnames=["fund_code", "full_name_th", "full_name_en", "amc", "category", "risk_level", "is_dividend", "inception_date", "source_url"]),
         'fees': csv.DictWriter(f_fees, fieldnames=["fund_code", "source_url", "front_end_max", "front_end_actual", "back_end_max", "back_end_actual", "management_max", "management_actual", "ter_max", "ter_actual", "switching_in_max", "switching_in_actual", "switching_out_max", "switching_out_actual", "min_initial_buy", "min_next_buy"]),
         'allocations': csv.DictWriter(f_allocations, fieldnames=["fund_code", "type", "name", "percent", "as_of_date", "source_url"]),
-        'codes': csv.DictWriter(f_codes, fieldnames=["fund_code", "type", "code", "factsheet_url"])
+        'codes': csv.DictWriter(f_codes, fieldnames=["fund_code", "type", "code", "factsheet_url"]),
+        'performance': csv.DictWriter(f_performance, fieldnames=["fund_code", "total_return_1y", "total_return_3y", "source_url"])
     }
     if write_header:
         for w in writers.values(): w.writeheader()
@@ -424,7 +446,7 @@ def finnomena_scraper():
         futures = []
         for fund in pending_funds:
             if get_obj("STOP_EVENT").is_set(): break
-            futures.append(executor.submit(process_fund_task, fund, writers, existing_codes_map, IS_MONTHLY_RUN))
+            futures.append(executor.submit(process_fund_task, fund, writers, existing_codes_map, IS_MONTHLY_RUN, get_obj("STOP_EVENT")))
         count = 0
         for future in as_completed(futures):
             if get_obj("STOP_EVENT").is_set(): break
@@ -436,7 +458,7 @@ def finnomena_scraper():
                     log(f"[{completed}/{total}] {result_code} (finnomena)")
                     if count % 10 == 0:
                         with get_obj("CSV_LOCK"):
-                            f_master.flush(); f_fees.flush(); f_allocations.flush(); f_codes.flush()
+                            f_master.flush(); f_fees.flush(); f_allocations.flush(); f_codes.flush(); f_performance.flush()
             except Exception as e:
                 log(f"Task Failed: {e}")
 
@@ -448,7 +470,7 @@ def finnomena_scraper():
     except Exception as e:
         log(f"Critical Error: {e}")
     finally:
-        f_master.close(); f_fees.close(); f_allocations.close(); f_codes.close()
+        f_master.close(); f_fees.close(); f_allocations.close(); f_codes.close(); f_performance.close()
         try: executor.shutdown(wait=True) 
         except: pass
         if not HAS_ERROR: 

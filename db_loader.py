@@ -339,6 +339,7 @@ def db_loader():
     sync_generic_table(engine, "merged_codes.csv", "funds_codes", "fund_code")
     sync_portfolio_table(engine, "merged_holding.csv", "funds_holding")
     sync_portfolio_table(engine, "merged_allocations.csv", "funds_allocations")
+    sync_generic_table(engine, "merged_performance.csv", "funds_performance", "fund_code")
     sync_daily_nav(engine)
     save_log_if_error()
     log("DB Load Completed")

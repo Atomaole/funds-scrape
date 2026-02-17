@@ -50,6 +50,14 @@ def merge_fee():
         df.to_csv(output_path, index=False, encoding="utf-8-sig")
         log(f"Saved merged_fee.csv ({len(df)} records)")
 
+def merge_performance():
+    log("Merging Performance")
+    df = safe_read_csv(FN_RAW_DIR/"finnomena_performance.csv")
+    if not df.empty:
+        output_path = MERGED_OUTPUT_DIR/"merged_performance.csv"
+        df.to_csv(output_path, index=False, encoding="utf-8-sig")
+        log(f"Saved merged_performance.csv ({len(df)} records)")
+
 def merge_allocations(valid_codes):
     log("Merging Allocations")
     fn_df = safe_read_csv(FN_RAW_DIR/"finnomena_allocations.csv")
@@ -58,6 +66,42 @@ def merge_allocations(valid_codes):
     if not wm_df.empty: wm_df['source'] = 'wealthmagik'
     merged_df = pd.concat([fn_df, wm_df], ignore_index=True)
     if not merged_df.empty:
+        sector_mapping = {
+            "บริการด้านการเงิน": "Financial Services",
+            "อุตสาหกรรม": "Industrials",
+            "บริการด้านการสื่อสาร": "Communication Services",
+            "พลังงาน": "Energy",
+            "อรรถประโยชน์": "Utilities",
+            "สาธารณูปโภคพื้นฐาน": "Utilities",
+            "อสังหาริมทรัพย์": "Real Estate",
+            "การแพทย์": "Healthcare",
+            "สินค้าฟุ่มเฟือย/ตามวัฏจักร": "Consumer Cyclical",
+            "สินค้าอุปโภคบริโภคคงทน": "Consumer Cyclical",
+            "วัสดุทั่วไป": "Basic Materials",
+            "เทคโนโลยี": "Technology",
+            "สินค้าจำเป็น": "Consumer Defensive",
+            "สินค้าอุปโภคบริโภคที่จำเป็น": "Consumer Defensive"
+        }
+        asset_mapping = {
+            "พันธบัตรรัฐบาล": "Government Bond",
+            "เงินฝากธนาคาร P/N และ B/E": "Cash & Equivalents",
+            "เงินฝากธนาคาร": "Cash",
+            "สินทรัพย์อื่นๆ/หนี้สินอื่นๆ": "Others",
+            "สินทรัพย์อื่นๆ": "Others",
+            "หนี้สินอื่นๆ": "Others",
+            "หุ้น": "Equity",
+            "หุ้นสามัญ": "Equity",
+            "หน่วยลงทุน": "Unit Trust",
+            "ตราสารอนุพันธ์": "Derivatives",
+            "หุ้นกู้": "Corporate Bond",
+            "ทองคำแท่ง": "Gold",
+            "ใบสำคัญแสดงสิทธิ": "Warrant",
+            "ใบสำคัญแสดงสิทธิอนุพันธ์": "Derivative Warrants"
+        }
+        if 'name' in merged_df.columns:
+            merged_df['name'] = merged_df['name'].replace(asset_mapping)
+        if 'name' in merged_df.columns:
+            merged_df['name'] = merged_df['name'].replace(sector_mapping)
         before_count = len(merged_df)
         merged_df = merged_df[merged_df['fund_code'].astype(str).str.strip().isin(valid_codes)]
         after_count = len(merged_df)
@@ -126,6 +170,7 @@ def merged_file():
     merge_fee()
     merge_codes()
     merge_allocations(valid_codes)
+    merge_performance()
     merge_nav()
     log("All Merge Tasks Done")
 

@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS funds_codes;
 DROP TABLE IF EXISTS funds_fee;
 DROP TABLE IF EXISTS funds_statistics;
 DROP TABLE IF EXISTS funds_master_info;
+DROP TABLE IF EXISTS funds_performance;
 
 CREATE TABLE funds_master_info (
     fund_code VARCHAR(50) PRIMARY KEY,
@@ -105,6 +106,14 @@ CREATE TABLE funds_allocations (
     source VARCHAR(20),
     percent DECIMAL(10,4),
     as_of_date DATE,
+    source_url TEXT,
+    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (fund_code) REFERENCES funds_master_info(fund_code) ON DELETE CASCADE
+);
+CREATE TABLE funds_performance (
+    fund_code VARCHAR(50) PRIMARY KEY,
+    total_return_1y DECIMAL(10,4),
+    total_return_3y DECIMAL(10,4),
     source_url TEXT,
     scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (fund_code) REFERENCES funds_master_info(fund_code) ON DELETE CASCADE
