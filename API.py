@@ -95,7 +95,7 @@ def get_fund_detail(code: str):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT f.name_th, f.name_en, f.code, f.return_1y,
+        SELECT f.id, f.name_th, f.name_en, f.code, f.return_1y,
                MAX(fh.nav_thb) as total_nav_thb
         FROM funds f
         LEFT JOIN fund_holdings fh ON f.id = fh.fund_id
@@ -105,6 +105,7 @@ def get_fund_detail(code: str):
     fund_info = cursor.fetchone()
     if not fund_info:
         raise HTTPException(status_code=404, detail="Fund not found")
+    fund_id = fund_info['id']
     cursor.execute("""
         SELECT s.symbol, s.full_name, s.stock_type, 
                fh.percent_nav, fh.holding_value_thb, 
@@ -116,8 +117,29 @@ def get_fund_detail(code: str):
         ORDER BY fh.percent_nav DESC
     """, (code,))
     holdings = cursor.fetchall()
+    cursor.execute("""
+        SELECT sector_name as name, percentage as value
+        FROM fund_sector_breakdown
+        WHERE fund_id = %s
+        ORDER BY percentage DESC
+    """, (fund_id,))
+    sector_allocation = cursor.fetchall()
+    cursor.execute("""
+        SELECT country_name as name, percentage as value
+        FROM fund_country_breakdown
+        WHERE fund_id = %s
+        ORDER BY percentage DESC
+    """, (fund_id,))
+    country_allocation = cursor.fetchall()
     conn.close()
-    return {"fund_info": fund_info, "holdings": holdings}
+    return {
+        "fund_info": fund_info, 
+        "holdings": holdings,
+        "charts": {
+            "sector_allocation": sector_allocation,
+            "country_allocation": country_allocation
+        }
+    }
 
 @app.get("/api/search/suggestions")
 def get_suggestions(q: str):

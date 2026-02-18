@@ -48,3 +48,21 @@ CREATE TABLE fund_holdings (
     FOREIGN KEY (fund_id) REFERENCES funds(id),
     FOREIGN KEY (stock_id) REFERENCES stocks(id)
 );
+CREATE TABLE fund_sector_breakdown (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fund_id INT NOT NULL,
+    sector_name VARCHAR(100) NOT NULL,
+    percentage DECIMAL(5, 2) DEFAULT 0.00,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (fund_id) REFERENCES funds(id) ON DELETE CASCADE
+);
+CREATE TABLE fund_country_breakdown (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fund_id INT NOT NULL,
+    country_name VARCHAR(100) NOT NULL,
+    percentage DECIMAL(5, 2) DEFAULT 0.00,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (fund_id) REFERENCES funds(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_stock_symbol ON stocks(symbol);
+CREATE INDEX idx_fund_code ON funds(code);
