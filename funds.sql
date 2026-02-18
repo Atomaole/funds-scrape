@@ -11,13 +11,18 @@ CREATE TABLE stocks (
     full_name VARCHAR(255),                    -- Full legal name of the entity
     sector VARCHAR(100),                       -- Industry or business sector classification
     stock_type ENUM('TH', 'FOREIGN', 'GOLD') DEFAULT 'FOREIGN', -- Asset classification for visualization markers
-    percent_change DECIMAL(5, 2) DEFAULT 0.00  -- Percentage price change
+    percent_change DECIMAL(5, 2) DEFAULT 0.00,  -- Percentage price change
+    country VARCHAR(100) DEFAULT 'USA'
 );
 CREATE TABLE funds (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name_th VARCHAR(255) NOT NULL,             -- Fund name in Thai
     name_en VARCHAR(255),                      -- Fund name in English
-    code VARCHAR(50)                           -- Unique fund identifier/code
+    amc VARCHAR(100),                          -- Asset Management Company
+    category VARCHAR(100),                     -- Fund investment category
+    code VARCHAR(50),                          -- Unique fund identifier/code
+    risk_level INT,                            -- Risk level of the fund
+    return_1y DECIMAL(5, 2) DEFAULT 0.00       -- 1-Year historical return percentage (For Avg Return)
 );
 CREATE TABLE stock_aggregates (
     id INT AUTO_INCREMENT PRIMARY KEY,

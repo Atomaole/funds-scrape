@@ -34,7 +34,7 @@ def get_top_stocks(type: str = "FOREIGN"):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     query = """
-        SELECT s.symbol, s.full_name, s.stock_type, sa.total_thai_fund_value 
+        SELECT s.symbol, s.full_name, s.stock_type, s.country, sa.total_thai_fund_value 
         FROM stocks s
         JOIN stock_aggregates sa ON s.id = sa.stock_id
         WHERE s.stock_type = %s
@@ -55,7 +55,7 @@ def search_funds_by_assets(req: MultiSearchRequest):
     placeholders = ','.join(['%s'] * len(req.symbols))
     num_symbols = len(req.symbols)
     query = f"""
-        SELECT f.name_th, f.code, 
+        SELECT f.name_th, f.code, f.return_1y,
                SUM(fh.holding_value_thb) as total_value, 
                MAX(fh.nav_thb) as nav, 
                (SUM(fh.holding_value_thb)/MAX(fh.nav_thb)*100) as pct_nav,
@@ -95,7 +95,7 @@ def get_fund_detail(code: str):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT f.name_th, f.name_en, f.code, 
+        SELECT f.name_th, f.name_en, f.code, f.return_1y,
                MAX(fh.nav_thb) as total_nav_thb
         FROM funds f
         LEFT JOIN fund_holdings fh ON f.id = fh.fund_id
@@ -140,3 +140,57 @@ def get_suggestions(q: str):
     res = cursor.fetchall()
     conn.close()
     return res
+
+@app.get("/api/dashboard/stats")
+def get_dashboard_stats(type: str = "FOREIGN"):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    summary_query = """
+        SELECT 
+            SUM(fh.holding_value_thb) as total_value,
+            AVG(f.return_1y) as avg_return
+        FROM fund_holdings fh
+        JOIN funds f ON fh.fund_id = f.id
+        JOIN stocks s ON fh.stock_id = s.id
+        WHERE s.stock_type = %s
+    """
+    cursor.execute(summary_query, (type,))
+    summary = cursor.fetchone()
+    sector_query = """
+        SELECT s.sector as name, SUM(fh.holding_value_thb) as value
+        FROM fund_holdings fh
+        JOIN stocks s ON fh.stock_id = s.id
+        WHERE s.stock_type = %s
+        GROUP BY s.sector
+        ORDER BY value DESC
+    """
+    cursor.execute(sector_query, (type,))
+    sectors = cursor.fetchall()
+    country_query = """
+        SELECT s.country as name, SUM(fh.holding_value_thb) as value
+        FROM fund_holdings fh
+        JOIN stocks s ON fh.stock_id = s.id
+        WHERE s.stock_type = %s
+        GROUP BY s.country
+        ORDER BY value DESC
+    """
+    cursor.execute(country_query, (type,))
+    countries = cursor.fetchall()
+    conn.close()
+    total_val = summary['total_value'] if summary and summary['total_value'] else 1
+    top_sector = sectors[0] if sectors else {"name": "N/A", "value": 0}
+    top_sector_pct = (top_sector['value'] / total_val) * 100
+    top_country = countries[0] if countries else {"name": "N/A", "value": 0}
+    top_country_pct = (top_country['value'] / total_val) * 100
+    return {
+        "cards": {
+            "total_value": summary['total_value'] if summary else 0,
+            "avg_return": round(summary['avg_return'], 2) if summary and summary['avg_return'] else 0,
+            "top_sector": {"name": top_sector['name'], "percent": round(top_sector_pct, 1)},
+            "top_country": {"name": top_country['name'], "percent": round(top_country_pct, 1)}
+        },
+        "charts": {
+            "sector_allocation": sectors,
+            "country_allocation": countries
+        }
+    }
