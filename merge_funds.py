@@ -98,10 +98,80 @@ def merge_allocations(valid_codes):
             "ใบสำคัญแสดงสิทธิ": "Warrant",
             "ใบสำคัญแสดงสิทธิอนุพันธ์": "Derivative Warrants"
         }
+        country_mapping = {
+            "สหรัฐอเมริกา": "United States (Country)",
+            "USA": "United States (Country)",
+            "United States": "United States (Country)",
+            "แคนาดา": "Canada (Country)", "Canada": "Canada (Country)",
+            "เม็กซิโก": "Mexico (Country)", "Mexico": "Mexico (Country)",
+            "บราซิล": "Brazil (Country)", "Brazil": "Brazil (Country)",
+            "ชิลี": "Chile (Country)", "Chile": "Chile (Country)",
+            "โคลอมเบีย": "Colombia (Country)",
+            "เปรู": "Peru (Country)", "Peru": "Peru (Country)",
+            "สาธารณรัฐประชาชนจีน": "China (Country)", "จีน": "China (Country)", "China": "China (Country)",
+            "ญี่ปุ่น": "Japan (Country)", "Japan": "Japan (Country)",
+            "ไต้หวัน": "Taiwan (Country)", "Taiwan": "Taiwan (Country)",
+            "เกาหลีใต้": "South Korea (Country)", "South Korea": "South Korea (Country)", "Korea": "South Korea (Country)",
+            "ฮ่องกง": "Hong Kong (Country)", "Hong Kong": "Hong Kong (Country)",
+            "อินเดีย": "India (Country)", "India": "India (Country)",
+            "ไทย": "Thailand (Country)", "Thailand": "Thailand (Country)",
+            "เวียดนาม": "Vietnam (Country)", "Vietnam": "Vietnam (Country)",
+            "อินโดนีเซีย": "Indonesia (Country)", "INDONESIA": "Indonesia (Country)", "Indonesia": "Indonesia (Country)",
+            "สิงคโปร์": "Singapore (Country)", "Singapore": "Singapore (Country)",
+            "มาเลเซีย": "Malaysia (Country)", "Malaysia": "Malaysia (Country)",
+            "ฟิลิปปินส์": "Philippines (Country)", "Philippines": "Philippines (Country)",
+            "ศรีลังกา": "Sri Lanka (Country)", "Sri Lanka": "Sri Lanka (Country)",
+            "มาเก๊า": "Macau (Country)", "Macau": "Macau (Country)",
+            "สหราชอาณาจักร": "United Kingdom (Country)", "United Kingdom": "United Kingdom (Country)", "Britain": "United Kingdom (Country)",
+            "เยอรมนี": "Germany (Country)", "Germany": "Germany (Country)",
+            "ฝรั่งเศส": "France (Country)", "France": "France (Country)",
+            "สวิตเซอร์แลนด์": "Switzerland (Country)", "Switzerland": "Switzerland (Country)",
+            "เนเธอร์แลนด์": "Netherlands (Country)", "Netherlands": "Netherlands (Country)",
+            "ไอร์แลนด์": "Ireland (Country)", "Ireland": "Ireland (Country)",
+            "สเปน": "Spain (Country)", "Spain": "Spain (Country)",
+            "อิตาลี": "Italy (Country)", "Italy": "Italy (Country)",
+            "สวีเดน": "Sweden (Country)", "Sweden": "Sweden (Country)",
+            "เดนมาร์ก": "Denmark (Country)", "Denmark": "Denmark (Country)",
+            "ฟินแลนด์": "Finland (Country)", "Finland": "Finland (Country)",
+            "เบลเยียม": "Belgium (Country)", "Belgium": "Belgium (Country)",
+            "ออสเตรีย": "Austria (Country)", "Austria": "Austria (Country)",
+            "โปรตุเกส": "Portugal (Country)", "Portugal": "Portugal (Country)",
+            "กรีซ": "Greece (Country)", "Greece": "Greece (Country)",
+            "ตุรกี": "Turkey (Country)", "Turkey": "Turkey (Country)",
+            "โรมาเนีย": "Romania (Country)", "Romania": "Romania (Country)",
+            "ลิกเตนสไตน์": "Liechtenstein (Country)", "Liechtenstein": "Liechtenstein (Country)",
+            "ลักเซมเบิร์ก": "Luxembourg (Country)", "Luxembourg": "Luxembourg (Country)",
+            "สาธารณรัฐเช็ก": "Czech Republic (Country)", "CZECH REPUBLIC": "Czech Republic (Country)",
+            "ซาอุดีอาระเบีย": "Saudi Arabia (Country)", "Saudi Arabia": "Saudi Arabia (Country)",
+            "สหรัฐอาหรับเอมิเรดส์": "United Arab Emirates (Country)", "United Arab Emirates": "United Arab Emirates (Country)",
+            "กาตาร์": "Qatar (Country)", "Qatar": "Qatar (Country)",
+            "อิสราเอล": "Israel (Country)", "Israel": "Israel (Country)",
+            "แอฟริกาใต้": "South Africa (Country)", "South Africa": "South Africa (Country)",
+            "ออสเตรเลีย": "Australia (Country)", "Australia": "Australia (Country)",
+            "หมู่เกาะเคย์แมน": "Cayman Islands (Country)", "Cayman Islands": "Cayman Islands (Country)",
+            "เบอร์มิวดา": "Bermuda (Country)", "Bermuda": "Bermuda (Country)",
+            "ยุโรป": "Europe (Region)", "Europe": "Europe (Region)",
+            "Europe ex UK": "Europe ex UK (Region)",
+            "Europe & Middle East ex UK": "Europe & Middle East ex UK (Region)",
+            "Continental Europe": "Continental Europe (Region)",
+            "Economic and Monetary Union": "Eurozone (Region)",
+            "Asia ex Japan": "Asia ex Japan (Region)",
+            "Pacific ex Japan": "Pacific ex Japan (Region)",
+            "Pacific Basin": "Pacific Basin (Region)",
+            "Indian Sub-Continent": "Indian Sub-Continent (Region)",
+            "North America": "North America (Region)",
+            "Latin America": "Latin America (Region)",
+            "Emerging Markets": "Emerging Markets (Region)",
+            "Middle East/Developed": "Middle East/Developed (Region)",
+            "อื่นๆ": "Others (Other)", "Others": "Others (Other)", "Other": "Others (Other)",
+            "Unclassified": "Unclassified (Other)"
+        }
         if 'name' in merged_df.columns:
             merged_df['name'] = merged_df['name'].replace(asset_mapping)
-        if 'name' in merged_df.columns:
             merged_df['name'] = merged_df['name'].replace(sector_mapping)
+            country_mask = merged_df['type'] == 'country_alloc'
+            merged_df.loc[country_mask, 'name'] = merged_df.loc[country_mask, 'name'].str.strip()
+            merged_df.loc[country_mask, 'name'] = merged_df.loc[country_mask, 'name'].replace(country_mapping)
         before_count = len(merged_df)
         merged_df = merged_df[merged_df['fund_code'].astype(str).str.strip().isin(valid_codes)]
         after_count = len(merged_df)
