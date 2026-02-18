@@ -4,7 +4,8 @@ os.environ["PREFECT_API_URL"] = "http://127.0.0.1:4200/api"
 import time
 from pathlib import Path
 from datetime import datetime
-from prefect import task, flow, get_run_logger
+from prefect import task, flow, get_run_logger, pause_flow_run
+from prefect.exceptions import FlowPauseTimeout
 from prefect.client.schemas.schedules import CronSchedule
 
 # File Path (Prefect)
@@ -149,8 +150,19 @@ def daily_scraper_cycle():
     if is_new_month: print("New Month Detected: Full Scrape Mode")
 
     perform_scraping_round("ROUND_1", is_new_month)
-    print(f"Round 1 Done Resting for {HOURS_WAIT_FOR_ROUND_2} hours")
-    time.sleep(HOURS_WAIT_FOR_ROUND_2 * 3600) 
+    now = datetime.now()
+    target_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    if now < target_time:
+        wait_seconds = (target_time - now).total_seconds()
+        print(f"Round 1 Done Pausing until 09:00 AM ({wait_seconds/3600:.2f} hours)")
+        print("Go to Prefect UI if you want to resume now")
+        try:
+            pause_flow_run(timeout_seconds=wait_seconds)
+            print("Resumed manually")
+        except FlowPauseTimeout:
+            print("Auto-resuming")
+    else:
+        print("Round 1 Done Starting Round 2 immediately")
 
     print(f"ROUND 2 (Cleanup/Retry)")
     perform_scraping_round("ROUND_2", is_new_month)
