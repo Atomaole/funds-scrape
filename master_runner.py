@@ -151,10 +151,10 @@ def daily_scraper_cycle():
 
     perform_scraping_round("ROUND_1", is_new_month)
     now = datetime.now()
-    target_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    target_time = now.replace(hour=7, minute=0, second=0, microsecond=0)
     if now < target_time:
         wait_seconds = (target_time - now).total_seconds()
-        print(f"Round 1 Done Pausing until 09:00 AM ({wait_seconds/3600:.2f} hours)")
+        print(f"Round 1 Done Pausing until 07:00 AM ({wait_seconds/3600:.2f} hours)")
         print("Go to Prefect UI if you want to resume now")
         try:
             pause_flow_run(timeout_seconds=wait_seconds)
