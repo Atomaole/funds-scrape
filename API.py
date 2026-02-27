@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Optional, List
 import mysql.connector
 from mysql.connector import Error
-from typing import List
-from pydantic import BaseModel
 
-app = FastAPI()
+app = FastAPI(title="Funds Master API", description="API สำหรับระบบแกะรอยกองทุนทะลวงไส้")
 
 db_config = {
     'host': 'localhost',
@@ -22,123 +22,40 @@ def get_db_connection():
         print(f"Error connecting to MySQL: {e}")
         return None
 
-class MultiSearchRequest(BaseModel):
-    symbols: List[str]
+class ThaiFundFilter(BaseModel):
+    category: Optional[str] = None
+    amc: Optional[str] = None
+    risk_level: Optional[int] = None
+    stock_symbol: Optional[str] = None
+
+class FeederFundFilter(BaseModel):
+    amc: Optional[str] = None
+    stock_symbol: Optional[str] = None
 
 @app.get("/")
 def health_check():
-    return {"status": "online", "message": "Fund API is ready"}
+    return {"status": "online", "message": "API"}
 
-@app.get("/api/stocks/top")
-def get_top_stocks(type: str = "FOREIGN"):
+@app.get("/api/filters")
+def get_filters():
     conn = get_db_connection()
+    if not conn: raise HTTPException(500, "Database connection failed")
     cursor = conn.cursor(dictionary=True)
-    query = """
-        SELECT s.symbol, s.full_name, s.stock_type, s.country, sa.total_thai_fund_value 
-        FROM stocks s
-        JOIN stock_aggregates sa ON s.id = sa.stock_id
-        WHERE s.stock_type = %s
-        ORDER BY sa.total_thai_fund_value DESC
-        LIMIT 10
-    """
-    cursor.execute(query, (type,))
-    result = cursor.fetchall()
-    conn.close()
-    return result
-
-@app.post("/api/search/funds")
-def search_funds_by_assets(req: MultiSearchRequest):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    if not req.symbols:
-        return []
-    placeholders = ','.join(['%s'] * len(req.symbols))
-    num_symbols = len(req.symbols)
-    query = f"""
-        SELECT f.name_th, f.code, f.return_1y,
-               SUM(fh.holding_value_thb) as total_value, 
-               MAX(fh.nav_thb) as nav, 
-               (SUM(fh.holding_value_thb)/MAX(fh.nav_thb)*100) as pct_nav,
-               MAX(fh.investment_method) as investment_method
-        FROM fund_holdings fh
-        JOIN funds f ON fh.fund_id = f.id
-        JOIN stocks s ON fh.stock_id = s.id
-        WHERE s.symbol IN ({placeholders})
-        GROUP BY f.id 
-        HAVING COUNT(DISTINCT s.symbol) = %s
-        ORDER BY total_value DESC
-    """
-    params = tuple(req.symbols) + (num_symbols,)
-    cursor.execute(query, params)
-    res = cursor.fetchall()
-    conn.close()
-    return res
-
-@app.get("/api/stocks/{symbol}")
-def get_stock_detail(symbol: str):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT s.*, sa.* FROM stocks s JOIN stock_aggregates sa ON s.id = sa.stock_id WHERE s.symbol = %s", (symbol,))
-    summary = cursor.fetchone()
-    if not summary: raise HTTPException(404, "Stock not found")
-    cursor.execute("""
-        SELECT f.name_th, f.code, fh.investment_method, fh.holding_value_thb, fh.percent_nav, fh.ranking
-        FROM fund_holdings fh JOIN funds f ON fh.fund_id = f.id
-        JOIN stocks s ON fh.stock_id = s.id WHERE UPPER(s.symbol) = UPPER(%s) ORDER BY fh.ranking ASC
-    """, (symbol,))
-    holders = cursor.fetchall()
-    conn.close()
-    return {"summary": summary, "holders": holders}
-
-@app.get("/api/funds/{code}")
-def get_fund_detail(code: str):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT f.id, f.name_th, f.name_en, f.code, f.return_1y,
-               MAX(fh.nav_thb) as total_nav_thb
-        FROM funds f
-        LEFT JOIN fund_holdings fh ON f.id = fh.fund_id
-        WHERE f.code = %s
-        GROUP BY f.id
-    """, (code,))
-    fund_info = cursor.fetchone()
-    if not fund_info:
-        raise HTTPException(status_code=404, detail="Fund not found")
-    fund_id = fund_info['id']
-    cursor.execute("""
-        SELECT s.symbol, s.full_name, s.stock_type, 
-               fh.percent_nav, fh.holding_value_thb, 
-               fh.investment_method
-        FROM fund_holdings fh 
-        JOIN funds f ON fh.fund_id = f.id
-        JOIN stocks s ON fh.stock_id = s.id 
-        WHERE f.code = %s 
-        ORDER BY fh.percent_nav DESC
-    """, (code,))
-    holdings = cursor.fetchall()
-    cursor.execute("""
-        SELECT sector_name as name, percentage as value
-        FROM fund_sector_breakdown
-        WHERE fund_id = %s
-        ORDER BY percentage DESC
-    """, (fund_id,))
-    sector_allocation = cursor.fetchall()
-    cursor.execute("""
-        SELECT country_name as name, percentage as value
-        FROM fund_country_breakdown
-        WHERE fund_id = %s
-        ORDER BY percentage DESC
-    """, (fund_id,))
-    country_allocation = cursor.fetchall()
+    
+    cursor.execute("SELECT DISTINCT amc FROM funds WHERE amc IS NOT NULL ORDER BY amc")
+    amcs = [row['amc'] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT category FROM funds WHERE category IS NOT NULL ORDER BY category")
+    categories = [row['category'] for row in cursor.fetchall()]
+    
+    cursor.execute("SELECT DISTINCT risk_level FROM funds WHERE risk_level IS NOT NULL ORDER BY risk_level")
+    risk_levels = [row['risk_level'] for row in cursor.fetchall()]
+    
     conn.close()
     return {
-        "fund_info": fund_info, 
-        "holdings": holdings,
-        "charts": {
-            "sector_allocation": sector_allocation,
-            "country_allocation": country_allocation
-        }
+        "amc": amcs,
+        "category": categories,
+        "risk_level": risk_levels
     }
 
 @app.get("/api/search/suggestions")
@@ -146,73 +63,155 @@ def get_suggestions(q: str):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     query = """
-        (SELECT symbol as id, full_name as name, 'STOCK' as type 
-         FROM stocks 
-         WHERE symbol LIKE %s OR full_name LIKE %s 
-         LIMIT 5)
-        UNION
-        (SELECT code as id, name_th as name, 'FUND' as type 
-         FROM funds 
-         WHERE code LIKE %s OR name_th LIKE %s 
-         LIMIT 5)
+        SELECT symbol, full_name, stock_type 
+        FROM stocks 
+        WHERE symbol LIKE %s OR full_name LIKE %s 
+        LIMIT 10
     """
     search_term = f"%{q}%"
-    cursor.execute(query, (search_term, search_term, search_term, search_term))
-    
+    cursor.execute(query, (search_term, search_term))
     res = cursor.fetchall()
     conn.close()
     return res
 
-@app.get("/api/dashboard/stats")
-def get_dashboard_stats(type: str = "FOREIGN"):
+@app.post("/api/dashboard/thai-funds")
+def get_thai_funds_dashboard(filters: ThaiFundFilter):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    summary_query = """
-        SELECT 
-            SUM(fh.holding_value_thb) as total_value,
-            AVG(f.return_1y) as avg_return
-        FROM fund_holdings fh
-        JOIN funds f ON fh.fund_id = f.id
-        JOIN stocks s ON fh.stock_id = s.id
-        WHERE s.stock_type = %s
+    where_clauses = ["1=1"]
+    params = []
+    
+    if filters.category:
+        where_clauses.append("f.category = %s")
+        params.append(filters.category)
+    if filters.amc:
+        where_clauses.append("f.amc = %s")
+        params.append(filters.amc)
+    if filters.risk_level:
+        where_clauses.append("f.risk_level = %s")
+        params.append(filters.risk_level)
+    if filters.stock_symbol:
+        where_clauses.append("s.symbol = %s")
+        params.append(filters.stock_symbol)
+    where_sql = " AND ".join(where_clauses)
+    count_query = f"""
+        SELECT COUNT(DISTINCT f.id) as total_funds
+        FROM funds f
+        JOIN fund_direct_holdings fdh ON f.id = fdh.fund_id
+        JOIN stocks s ON fdh.stock_id = s.id
+        WHERE {where_sql}
     """
-    cursor.execute(summary_query, (type,))
-    summary = cursor.fetchone()
-    sector_query = """
-        SELECT s.sector as name, SUM(fh.holding_value_thb) as value
-        FROM fund_holdings fh
-        JOIN stocks s ON fh.stock_id = s.id
-        WHERE s.stock_type = %s
-        GROUP BY s.sector
-        ORDER BY value DESC
+    cursor.execute(count_query, tuple(params))
+    total_funds = cursor.fetchone()['total_funds']
+    donut_query = f"""
+        SELECT s.symbol, SUM(fdh.holding_value_thb) as total_value
+        FROM funds f
+        JOIN fund_direct_holdings fdh ON f.id = fdh.fund_id
+        JOIN stocks s ON fdh.stock_id = s.id
+        WHERE {where_sql}
+        GROUP BY s.symbol
+        ORDER BY total_value DESC
+        LIMIT 5
     """
-    cursor.execute(sector_query, (type,))
-    sectors = cursor.fetchall()
-    country_query = """
-        SELECT s.country as name, SUM(fh.holding_value_thb) as value
-        FROM fund_holdings fh
-        JOIN stocks s ON fh.stock_id = s.id
-        WHERE s.stock_type = %s
-        GROUP BY s.country
-        ORDER BY value DESC
+    cursor.execute(donut_query, tuple(params))
+    top_holdings = cursor.fetchall()
+    table_query = f"""
+        SELECT f.code as symbol, f.name_th, fdh.percent_nav as weight, 
+               fdh.holding_value_thb as value_thb, fdh.nav_thb
+        FROM funds f
+        JOIN fund_direct_holdings fdh ON f.id = fdh.fund_id
+        JOIN stocks s ON fdh.stock_id = s.id
+        WHERE {where_sql}
+        ORDER BY fdh.holding_value_thb DESC
+        LIMIT 100
     """
-    cursor.execute(country_query, (type,))
-    countries = cursor.fetchall()
+    cursor.execute(table_query, tuple(params))
+    funds_table = cursor.fetchall()
+    
     conn.close()
-    total_val = summary['total_value'] if summary and summary['total_value'] else 1
-    top_sector = sectors[0] if sectors else {"name": "N/A", "value": 0}
-    top_sector_pct = (top_sector['value'] / total_val) * 100
-    top_country = countries[0] if countries else {"name": "N/A", "value": 0}
-    top_country_pct = (top_country['value'] / total_val) * 100
+    
     return {
-        "cards": {
-            "total_value": summary['total_value'] if summary else 0,
-            "avg_return": round(summary['avg_return'], 2) if summary and summary['avg_return'] else 0,
-            "top_sector": {"name": top_sector['name'], "percent": round(top_sector_pct, 1)},
-            "top_country": {"name": top_country['name'], "percent": round(top_country_pct, 1)}
-        },
+        "kpi": {"total_funds": total_funds},
+        "charts": {"top_holdings": top_holdings},
+        "table": funds_table
+    }
+@app.post("/api/dashboard/feeder-funds")
+def get_feeder_funds_dashboard(filters: FeederFundFilter):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    where_clauses = ["1=1"]
+    params = []
+    if filters.amc:
+        where_clauses.append("f.amc = %s")
+        params.append(filters.amc)
+    if filters.stock_symbol:
+        where_clauses.append("s.symbol LIKE %s")
+        params.append(f"%{filters.stock_symbol}%")
+    where_sql = " AND ".join(where_clauses)
+    count_query = f"""
+        SELECT COUNT(DISTINCT f.id) as total_funds
+        FROM funds f
+        JOIN fund_master_holdings fmh ON f.id = fmh.fund_id
+        JOIN master_funds mf ON fmh.master_fund_id = mf.id
+        JOIN master_fund_holdings mfh ON mf.id = mfh.master_fund_id
+        JOIN stocks s ON mfh.stock_id = s.id
+        WHERE {where_sql}
+    """
+    cursor.execute(count_query, tuple(params))
+    total_funds = cursor.fetchone()['total_funds']
+    bar_query = f"""
+        SELECT f.code as fund_code, 
+               MAX((fmh.percent_nav * mfh.percent_weight) / 100) as effective_weight
+        FROM funds f
+        JOIN fund_master_holdings fmh ON f.id = fmh.fund_id
+        JOIN master_funds mf ON fmh.master_fund_id = mf.id
+        JOIN master_fund_holdings mfh ON mf.id = mfh.master_fund_id
+        JOIN stocks s ON mfh.stock_id = s.id
+        WHERE {where_sql}
+        GROUP BY f.id
+        ORDER BY effective_weight DESC
+        LIMIT 10
+    """
+    cursor.execute(bar_query, tuple(params))
+    weight_bar_chart = cursor.fetchall()
+    donut_query = f"""
+        SELECT s.symbol, SUM((fmh.holding_value_thb * mfh.percent_weight) / 100) as est_value_thb
+        FROM funds f
+        JOIN fund_master_holdings fmh ON f.id = fmh.fund_id
+        JOIN master_funds mf ON fmh.master_fund_id = mf.id
+        JOIN master_fund_holdings mfh ON mf.id = mfh.master_fund_id
+        JOIN stocks s ON mfh.stock_id = s.id
+        WHERE {where_sql}
+        GROUP BY s.symbol
+        ORDER BY est_value_thb DESC
+        LIMIT 10
+    """
+    cursor.execute(donut_query, tuple(params))
+    asset_donut_chart = cursor.fetchall()
+    table_query = f"""
+        SELECT mf.name_en as feeder_fund_name, 
+               SUM(fmh.holding_value_thb) as total_thai_value_thb,
+               COUNT(DISTINCT f.id) as thai_funds_count
+        FROM funds f
+        JOIN fund_master_holdings fmh ON f.id = fmh.fund_id
+        JOIN master_funds mf ON fmh.master_fund_id = mf.id
+        JOIN master_fund_holdings mfh ON mf.id = mfh.master_fund_id
+        JOIN stocks s ON mfh.stock_id = s.id
+        WHERE {where_sql}
+        GROUP BY mf.id
+        ORDER BY total_thai_value_thb DESC
+        LIMIT 100
+    """
+    cursor.execute(table_query, tuple(params))
+    feeder_table = cursor.fetchall()
+    
+    conn.close()
+    
+    return {
+        "kpi": {"total_funds": total_funds},
         "charts": {
-            "sector_allocation": sectors,
-            "country_allocation": countries
-        }
+            "weight_bar_chart": weight_bar_chart,
+            "asset_donut_chart": asset_donut_chart
+        },
+        "table": feeder_table
     }
