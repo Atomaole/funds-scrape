@@ -1,0 +1,2110 @@
+﻿holding_code,type,sector,symbol
+KBANK SI_1AM-DAILY,Stock (TH),Financial Services,KBANK
+UOB_SI_1AM-DAILY,Stock (US),Financial Services,UOVEF
+ADVANC,Stock (TH),Communication Services,ADVANC
+UOB_SI_1AM-DAILY,Stock (US),Financial Services,UOVEF
+AOT,Stock (TH),Industrials,AOT-R
+AMATA,Stock (TH),Real Estate,AMATA
+BCP,Stock (TH),Energy,BCP
+BBL,Stock (TH),Financial Services,BBL
+BA,Stock (TH),Industrials,BA
+BDMS,Stock (TH),Healthcare,BDMS
+CBG,Stock (TH),Consumer Defensive,CBG
+BCH,Stock (TH),Healthcare,BCH
+BEM,Stock (TH),Industrials,BEM
+CPN,Stock (TH),Real Estate,CPN
+CRC,Stock (TH),Consumer Cyclical,CRC
+CENTEL,Stock (TH),Consumer Cyclical,CENTEL
+CPF,Stock (TH),Consumer Defensive,CPF
+CPALL,Stock (TH),Consumer Defensive,CPALL
+CPAXT,Stock (TH),Consumer Defensive,CPAXT
+COM7,Stock (TH),Consumer Cyclical,COM7-R
+DELTA,Stock (TH),Industrials,DELTA
+EGCO,Stock (TH),Utilities,EGCO
+GULF,Stock (TH),Utilities,GULF
+GPSC,Stock (TH),Utilities,GPSC-R
+HMPRO,Stock (TH),Consumer Cyclical,HMPRO
+KBANK,Stock (TH),Financial Services,KBANK
+IVL,Stock (TH),Basic Materials,IVL-R
+KTB,Stock (TH),Financial Services,KTB
+MINT,Stock (TH),Consumer Cyclical,MINT
+MTC,Stock (TH),Financial Services,MTC
+PR9,Stock (TH),Healthcare,PR9
+PTTEP,Stock (TH),Energy,PTTEP
+OR,Stock (TH),Energy,OR
+PTT,Stock (TH),Energy,PTT
+PTTGC,Stock (TH),Basic Materials,PTTGC
+RATCH,Stock (TH),Utilities,RATCH
+SCB,Stock (TH),Financial Services,SCB
+SIRI,Stock (TH),Real Estate,SIRI-R
+GLOBAL,Stock (TH),Consumer Cyclical,GLOBAL
+SCGP,Stock (TH),Consumer Cyclical,SCGP
+SAWAD,Stock (TH),Financial Services,SAWAD-R
+THAI,Stock (TH),Industrials,THAI
+SPALI,Stock (TH),Real Estate,SPALI
+SPRC,Stock (TH),Energy,SPRC-R
+SCC,Stock (TH),Industrials,SCC
+TU,Stock (TH),Consumer Defensive,TU-R
+TIDLOR,Stock (TH),Financial Services,TIDLOR
+TTB,Stock (TH),Financial Services,TTB
+WHA,Stock (TH),Real Estate,WHA
+TRUE,Stock (TH),Communication Services,TRUE
+TRUE,Stock (TH),Communication Services,TRUE
+BAM,Stock (TH),Financial Services,BAM
+TRUE,Stock (TH),Communication Services,TRUE
+ITC,Stock (TH),Consumer Defensive,ITC
+JMT,Stock (TH),Financial Services,JMT
+KCE,Stock (TH),Technology,KCE
+LH,Stock (TH),Real Estate,LH
+KKP,Stock (TH),Financial Services,KKP
+MEGA,Stock (TH),Healthcare,MEGA
+M,Stock (TH),Consumer Cyclical,M
+QH,Stock (TH),Real Estate,QH
+PRM,Stock (TH),Energy,PRM
+RCL,Stock (TH),Industrials,RCL
+TOP,Stock (TH),Energy,TOP
+TCAP,Stock (TH),Financial Services,TCAP
+TASCO,Stock (TH),Basic Materials,TASCO
+TISCO,Stock (TH),Financial Services,TISCO
+WHAUP,Stock (TH),Utilities,WHAUP
+USD JP_1GLOBALBOND,Stock (US),Financial Services,JPM
+EUR_1GLOBALBOND,Stock (TH),Financial Services,SCB-R
+USD SCB_1GLOBAL,Stock (TH),Financial Services,SCB-R
+COIN US EQUITY,Stock (US),Financial Services,COIN
+MSFT US EQUITY,Stock (US),Technology,MSFT
+CLKBANK,Stock (TH),Financial Services,KBANK
+TSLA US EQUITY,Stock (US),Consumer Cyclical,TSLA
+BSRC,Stock (TH),Energy,BSRC
+BE8,Stock (TH),Technology,BE8
+USD FCD_1US-OPP,Stock (TH),Financial Services,SCB-R
+CK,Stock (TH),Industrials,CK
+HANA,Stock (TH),Technology,HANA
+ILM,Stock (TH),Consumer Cyclical,ILM
+BH,Stock (TH),Healthcare,BH
+STA,Stock (TH),Basic Materials,STA
+ICHI,Stock (TH),Consumer Defensive,ICHI
+MOSHI,Stock (TH),Consumer Cyclical,MOSHI
+OSP,Stock (TH),Consumer Defensive,OSP
+SCGD,Stock (TH),Basic Materials,SCGD
+ERW,Stock (TH),Consumer Cyclical,ERW
+CREDIT,Stock (TH),Financial Services,CREDIT
+CREDIT,Stock (TH),Financial Services,CREDIT
+ABPACII SP,Stock (HK),Energy,0645
+ABPACII SP,Stock (HK),Energy,0645
+ABPACII SP,Stock (HK),Energy,0645
+BGRIM,Stock (TH),Utilities,BGRIM
+HTC,Stock (TH),Consumer Defensive,HTC
+HUMAN,Stock (TH),Technology,HUMAN
+NEO,Stock (TH),Consumer Defensive,NEO
+TURBO,Stock (TH),Financial Services,TURBO
+RBF,Stock (TH),Consumer Defensive,RBF
+SIS,Stock (TH),Technology,SIS
+SISB,Stock (TH),Consumer Defensive,SISB
+THCOM,Stock (TH),Technology,THCOM
+TOG,Stock (TH),Healthcare,TOG
+AEONTS,Stock (US),Healthcare,AEON
+AEONTS,Stock (US),Healthcare,AEON
+STANLY,Stock (TH),Consumer Cyclical,STANLY
+STANLY,Stock (TH),Consumer Cyclical,STANLY
+TLI,Stock (TH),,TLI-R
+AFMOAT-H_BAY_WH,Stock (TH),Financial Services,BAY
+AFMOATHRMF_BAY_WH,Stock (TH),Financial Services,BAY
+AFMOAT-H_BAY_WH,Stock (TH),Financial Services,BAY
+AWC,Stock (TH),Consumer Cyclical,AWC
+BJC,Stock (TH),Industrials,BJC-R
+BTS,Stock (TH),Industrials,BTS
+CCET,Stock (TH),Technology,CCET
+CHG,Stock (TH),Healthcare,CHG
+CGD,Stock (TH),Real Estate,CGD
+CGH,Stock (TH),Financial Services,CGH
+DOHOME,Stock (TH),Consumer Cyclical,DOHOME
+KTC,Stock (TH),Financial Services,KTC-R
+PSP,Stock (TH),Basic Materials,PSP
+TFB,Stock (US),Financial Services,KPCUF
+UOBT,Stock (US),Financial Services,UOVEF
+VGI,Stock (TH),Industrials,VGI
+CNDXLN,Stock (US),Financial Services,BLK
+SDIALN,Stock (US),Financial Services,BLK
+CBU0LN,Stock (US),Financial Services,BLK
+DTLALN,Stock (US),Financial Services,BLK
+MASTER,Stock (TH),Healthcare,MASTER
+IDTLLN,Stock (US),Financial Services,BLK
+TKC,Stock (TH),Industrials,TKC
+MAIN2-ASP,Stock (TH),Financial Services,ASP
+UOBT-ASP,Stock (US),Financial Services,UOVEF
+INGINAA,Stock (US),Financial Services,ING
+INGLTWP,Stock (US),Financial Services,ING
+INGIJEA,Stock (US),Financial Services,ING
+MCHI US,Stock (US),Financial Services,BLK
+AWEMFUA LX,Stock (US),Financial Services,AXAHF
+MAIN2-ASP-AAA,Stock (US),Financial Services,KPCUF
+AWEMFUA LX,Stock (US),Financial Services,AXAHF
+GOOG US,Stock (US),Communication Services,GOOG
+MAIN2-ASP-AAA,Stock (US),Financial Services,KPCUF
+AMZN US,Stock (US),Consumer Cyclical,AMZN
+AVGO US,Stock (US),Technology,AVGO
+ASML NA,Stock (US),Technology,ASML
+GEV US,Stock (US),Industrials,GEV
+IREN US,Stock (US),Financial Services,IREN
+MSFT US,Stock (US),Technology,MSFT
+MAIN2-ASP-AIEQ,Stock (US),Financial Services,KPCUF
+MPWR US,Stock (US),Technology,MPWR
+NVDA US,Stock (US),Technology,NVDA
+ORCL US,Stock (US),Technology,ORCL
+PLTR US,Stock (US),Technology,PLTR
+TSM US,Stock (US),Technology,TSM
+UOBT-ASP-APR-UI,Stock (US),Technology,UI
+MAIN A/C -AIEQRMF,Stock (US),Financial Services,C
+MAIN-APR-UI,Stock (TH),Financial Services,TTB
+MAIN2-ASP-ASIAN,Stock (TH),Financial Services,ASP
+MAIN2-ASP-BRIC,Stock (US),Financial Services,KPCUF
+MAIN-CHINABOND,Stock (US),Financial Services,MAIN
+MAIN-CHINABOND,Stock (US),Financial Services,MAIN
+UOBT-ASP-CHINABOND,Stock (US),Financial Services,UOVEF
+UOBT-ASP-CHINABOND,Stock (US),Financial Services,UOVEF
+COST US,Stock (US),Consumer Defensive,COST
+KAMART,Stock (TH),Consumer Defensive,KAMART
+MAIN2-ASP-CHINA,Stock (US),Financial Services,KPCUF
+NSL,Stock (TH),Consumer Defensive,NSL
+MAIN A/C-DEQ THAIE,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-DGOV,Stock (US),Financial Services,KPCUF
+MAIN A/C-DEQ THAIE,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-DGOV,Stock (US),Financial Services,KPCUF
+CIFR US,Stock (US),Financial Services,CIFR
+CRCL US,Stock (US),Financial Services,CRCL
+COIN US,Stock (US),Financial Services,COIN
+HOOD US,Stock (US),Financial Services,HOOD
+MAIN-DIGIBLOC,Stock (US),Financial Services,MAIN
+HOOD US,Stock (US),Financial Services,HOOD
+MAIN-DIGIBLOCRMF,Stock (US),Financial Services,MAIN
+FCD-USD-DIGIBSSF,Stock (TH),Financial Services,TTB
+FCD-USD-DIGIBRMF,Stock (TH),Financial Services,TTB
+SPOT US,Stock (US),Communication Services,SPOT
+PANW US,Stock (US),Technology,PANW
+MAIN2-ASP-DISRUPT,Stock (US),Financial Services,KPCUF
+UBER US,Stock (US),Technology,UBER
+UBER US,Stock (US),Technology,UBER
+MAINA/C-DISRUPTRMF,Stock (US),Financial Services,KPCUF
+MAIN A/C - ASPERF,Stock (US),Financial Services,KPCUF
+CKP,Stock (TH),Utilities,CKP
+AXAEDIC LX,Stock (US),Financial Services,AXAHF
+MAIN2-ASP-EUPROP,Stock (US),Financial Services,KPCUF
+BGWPEBA ID,Stock (US),Consumer Cyclical,ID
+ATAT US,Stock (US),Consumer Cyclical,ATAT
+MAIN A/C-ASP-EUG,Stock (TH),Financial Services,TTB
+MAIN A/C-EVOSSF,Stock (US),Financial Services,KPCUF
+MAIN2-EUROPEQUALI,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-EVOCHINA,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-EVORMF,Stock (US),Financial Services,KPCUF
+AWEMFUA LX-FF,Stock (US),Financial Services,AXAHF
+MAIN2-ASP-FFPLUS,Stock (US),Financial Services,KPCUF
+AWEMFUA LX-FF,Stock (US),Financial Services,AXAHF
+MAIN2-ASP-FFPLUS,Stock (US),Financial Services,KPCUF
+BBCA IJ,Stock (US),Financial Services,PBCRY
+BRIS IJ,Stock (TH),Real Estate,BRI
+BMRI IJ,Stock (US),Financial Services,PPERF
+BBRI IJ,Stock (US),Financial Services,BKRKF
+BDO PM,Stock (US),Financial Services,BDOUF
+CNVRG PM,Stock (US),Consumer Defensive,PM
+FRT VN,Stock (US),Real Estate,FRT
+HDB VN,Stock (US),Financial Services,HDB
+JFC PM,Stock (US),Consumer Cyclical,JBFCY
+MWG VN,Stock (US),Industrials,MWG
+MAIN2-ASP-FLEXPLUS,Stock (US),Financial Services,KPCUF
+MAIN A/C-ASP-GFEQ,Stock (TH),Financial Services,TTB
+MAIN A/C - ASPFRF,Stock (US),Financial Services,KPCUF
+MAINA/C-ASP-GCC-UI,Stock (TH),Financial Services,TTB
+MAIN2-ASP-GOLD,Stock (US),Financial Services,KPCUF
+ABBV US,Stock (US),Healthcare,ABBV
+MAIN2-ASP-HSI,Stock (US),Financial Services,KPCUF
+BSX US,Stock (US),Healthcare,BSX
+LLY US,Stock (US),Healthcare,LLY
+NVO US,Stock (US),Healthcare,NVO
+MAIN2-ASP-IHEALTH,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-INDIA,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-INDIA,Stock (US),Financial Services,KPCUF
+SHABJPY LX,Stock (US),Financial Services,LX
+MAIN A/C-JPSMALL,Stock (US),Financial Services,MAIN
+MAIN A/C-ASP-JHC,Stock (TH),Financial Services,TTB
+MAIN A/C-INDIARMF,Stock (US),Financial Services,KPCUF
+STECON,Stock (TH),Industrials,STECON
+MAIN2-LEGACY-UI,Stock (US),Financial Services,KPCUF
+MAIN A/C-MIX THAIE,Stock (US),Financial Services,KPCUF
+AAPL US,Stock (US),Technology,AAPL
+META US,Stock (US),Communication Services,META
+MAIN A/C-MAG7-AI,Stock (US),Financial Services,MAIN
+MAIN2-ASP-NGF,Stock (US),Financial Services,KPCUF
+FCD-JPY-NGF,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-OIL,Stock (US),Financial Services,KPCUF
+ADVICE,Stock (TH),Technology,ADVICE
+MAIN A/C - ASPMRF,Stock (US),Financial Services,KPCUF
+MONO,Stock (TH),Communication Services,MONO
+PSL,Stock (TH),Industrials,PSL
+MAIN A/C-POWERRMF,Stock (US),Financial Services,MAIN
+MAIN A/C-ASP-PHF,Stock (TH),Financial Services,TTB
+MAIN A/C-ASP-POWER,Stock (TH),Financial Services,TTB
+LZGIEIA ID,Stock (US),Consumer Cyclical,ID
+MAIN A/C - PROPIN,Stock (US),Financial Services,KPCUF
+CLAR SP,Stock (US),Real Estate,ACDSF
+WELL US,Stock (US),Real Estate,WELL
+WELL US,Stock (US),Real Estate,WELL
+CLAR SP,Stock (US),Real Estate,ACDSF
+MAIN A/C-SDAILY,Stock (US),Financial Services,KPCUF
+SJWD,Stock (TH),Industrials,SJWD
+MAIN2-ASP-SME,Stock (US),Financial Services,KPCUF
+KLINIQ,Stock (TH),Consumer Cyclical,KLINIQ
+KLINIQ,Stock (TH),Consumer Cyclical,KLINIQ
+MAIN-SMERMF,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-MSSF,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-MSSF,Stock (US),Financial Services,KPCUF
+MAIN2-ASP-LTF,Stock (US),Financial Services,KPCUF
+RACE IM,Stock (US),Consumer Cyclical,RACE
+MAIN2-ASP-LTF,Stock (US),Financial Services,KPCUF
+CS FP,Stock (US),Financial Services,AXAHF
+JPM US,Stock (US),Financial Services,JPM
+MAIN-TOPBRANDRMF,Stock (US),Financial Services,KPCUF
+RMS FP,Stock (US),Consumer Cyclical,HESAY
+PM US,Stock (US),Consumer Defensive,PM
+V US,Stock (US),Financial Services,V
+MAIN2-ASP-THEQ,Stock (US),Financial Services,KPCUF
+MAIN A/C-TOPBRAND,Stock (US),Financial Services,KPCUF
+XPEV US,Stock (US),Consumer Cyclical,XPEV
+RHM GY,Stock (US),Industrials,RNMBF
+MAIN A/C-USSMALL,Stock (US),Financial Services,MAIN
+MAIN2-ASP-VIET,Stock (TH),Communication Services,AS
+MAIN-THAIESG,Stock (US),Financial Services,KPCUF
+MSN VN,Stock (US),Technology,MSN
+STB VN,Stock (US),Real Estate,STBV
+MAIN-VIETEQ-AI,Stock (US),Financial Services,KPCUF
+MAIN A/C -VIETRMF,Stock (US),Financial Services,C
+VPB VN,Stock (US),Financial Services,PB
+MAIN A/C-ASP-X,Stock (TH),Financial Services,ASP
+MELI US,Stock (US),Consumer Cyclical,MELI
+VPB VN,Stock (US),Financial Services,PB
+ABBV US-GI,Stock (US),Healthcare,ABBV
+JPM US-GI,Stock (US),Financial Services,JPM
+CS FP-GI,Stock (US),Financial Services,AXAHF
+PM US-GI,Stock (US),Consumer Defensive,PM
+RTX US-GI,Stock (US),Industrials,RTX
+V US-GI,Stock (US),Financial Services,V
+MAIN2-ASPGIPLUS,Stock (US),Financial Services,KPCUF
+FRCB MK,Stock (US),Financial Services,FRCB
+DBS SP,Stock (US),Industrials,SP
+MAIN2-ASPGIPLUS,Stock (US),Financial Services,KPCUF
+GRAB US,Stock (US),Technology,GRAB
+CLAS SP,Stock (US),Industrials,SP
+GRAB US,Stock (US),Technology,GRAB
+BTG,Stock (TH),Consumer Defensive,BTG
+AMATAV,Stock (TH),Real Estate,AMATA
+FPT,Stock (TH),Real Estate,FPT
+GFPT,Stock (TH),Consumer Defensive,GFPT
+MBK,Stock (TH),Industrials,MBK
+MC,Stock (TH),Consumer Cyclical,MC
+SABINA,Stock (TH),Consumer Cyclical,SABINA
+SAPPE,Stock (TH),Consumer Defensive,SAPPE
+SC,Stock (TH),Real Estate,SC
+TNR,Stock (TH),Consumer Defensive,TNR
+TVO,Stock (TH),Consumer Defensive,TVO
+TWPC,Stock (TH),Consumer Defensive,TWPC
+PLAT,Stock (TH),Real Estate,PLAT
+TOA,Stock (TH),Basic Materials,TOA-R
+TCOM US,Stock (US),Consumer Cyclical,TCOM
+BABA US,Stock (US),Consumer Cyclical,BABA
+PIMGBAI ID,Stock (US),Consumer Cyclical,ID
+PIMINIA ID,Stock (US),Consumer Cyclical,ID
+PIMGBAI ID,Stock (US),Consumer Cyclical,ID
+PIMINIA ID,Stock (US),Consumer Cyclical,ID
+BLA,Stock (TH),Financial Services,BLA
+DRT,Stock (TH),Industrials,DRT
+MGC,Stock (TH),Consumer Cyclical,MGC
+PCSGH,Stock (TH),Consumer Cyclical,PCSGH
+PLANB,Stock (TH),Communication Services,PLANB-R
+SKR,Stock (TH),Healthcare,SKR
+TPBI,Stock (TH),Consumer Cyclical,TPBI
+NOW US,Stock (US),Technology,NOW
+NOW US,Stock (US),Technology,NOW
+T US,Stock (US),Communication Services,T
+T US,Stock (US),Communication Services,T
+TTW,Stock (TH),Utilities,TTW
+BGC,Stock (TH),Consumer Cyclical,BGC
+AIT,Stock (TH),Technology,AIT
+SAT,Stock (TH),Consumer Cyclical,SAT
+III,Stock (TH),Industrials,III
+SYMC,Stock (TH),Communication Services,SYMC
+SUN SP,Stock (US),Energy,SUN
+SUN SP,Stock (US),Energy,SUN
+LJSEYIA ID,Stock (US),Consumer Cyclical,ID
+BCPG,Stock (TH),Utilities,BCPG
+THANI,Stock (TH),Financial Services,THANI
+BCPG,Stock (TH),Utilities,BCPG
+THANI,Stock (TH),Financial Services,THANI
+SKY,Stock (TH),Technology,SKY
+CMG VN,Stock (US),Consumer Cyclical,CMG
+SPY US,Stock (US),,SPYU
+REE VN,Stock (US),Consumer Cyclical,REE
+REE VN,Stock (US),Consumer Cyclical,REE
+VRE VN,Stock (US),Real Estate,VRE
+VRE VN,Stock (US),Real Estate,VRE
+RJH,Stock (TH),Healthcare,RJH
+SAUCE,Stock (TH),Consumer Defensive,SAUCE
+RJH,Stock (TH),Healthcare,RJH
+BCAP-MFIX,Stock (US),Financial Services,BCAP
+BCAP-MFIX,Stock (US),Financial Services,BCAP
+BCAP-MFIX,Stock (US),Financial Services,BCAP
+BANPU,Stock (TH),Energy,BANPU
+BPP,Stock (TH),Utilities,BPP
+PTG,Stock (TH),Consumer Cyclical,PTG-R
+TFG,Stock (TH),Consumer Defensive,TFG
+BCAP-MONEY,Stock (US),Financial Services,BCAP
+ACE,Stock (TH),Utilities,ACE
+AAV,Stock (TH),Industrials,AAV
+AAI,Stock (TH),Consumer Defensive,AAI
+BLAND,Stock (TH),Real Estate,BLAND
+BAY,Stock (TH),Financial Services,BAY
+AURA,Stock (TH),Consumer Cyclical,AURA
+TIPH,Stock (TH),Financial Services,TIPH
+DMT,Stock (TH),Industrials,DMT
+BKIH,Stock (TH),Financial Services,BKIH
+GUNKUL,Stock (TH),Utilities,GUNKUL
+DCC,Stock (TH),Industrials,DCC
+IRPC,Stock (TH),Energy,IRPC
+JAS,Stock (TH),Communication Services,JAS
+EA,Stock (TH),Utilities,EA-R
+JTS,Stock (TH),Communication Services,JTS
+KGI,Stock (TH),Financial Services,KGI
+JMART,Stock (TH),Consumer Cyclical,JMART
+MTI,Stock (TH),Financial Services,MTI
+NER,Stock (TH),Basic Materials,NER
+LHFG,Stock (TH),Financial Services,LHFG
+PCE,Stock (TH),Consumer Defensive,PCE
+PTL,Stock (US),Consumer Cyclical,PTLO
+PSH,Stock (TH),Real Estate,PSH
+RAM,Stock (TH),Healthcare,RAM
+RABBIT,Stock (TH),Industrials,RABBIT
+ROJNA,Stock (TH),Utilities,ROJNA
+SAV,Stock (TH),Industrials,SAV
+SAK,Stock (TH),Financial Services,SAK
+SCCC,Stock (TH),Basic Materials,SCCC
+SGP,Stock (TH),Energy,SGP
+STGT,Stock (TH),Basic Materials,STGT-R
+SNNP,Stock (TH),Consumer Defensive,SNNP
+SVI,Stock (TH),Technology,SVI
+TKN,Stock (TH),Consumer Defensive,TKN
+COCOCO,Stock (TH),Consumer Defensive,COCOCO
+TFMAMA,Stock (TH),Consumer Defensive,TFMAMA
+LANNA,Stock (TH),Energy,LANNA
+THG,Stock (TH),Healthcare,THG
+TTA,Stock (TH),Industrials,TTA
+TPIPP,Stock (TH),Utilities,TPIPP
+TPIPL,Stock (TH),Basic Materials,TPIPL
+UVAN,Stock (TH),Consumer Defensive,UVAN
+TQM,Stock (TH),Financial Services,TQM
+TQM,Stock (TH),Financial Services,TQM
+VIBHA,Stock (TH),Healthcare,VIBHA
+VIBHA,Stock (TH),Healthcare,VIBHA
+BBIK,Stock (TH),Industrials,BBIK
+PLUS,Stock (TH),Consumer Defensive,PLUS
+WPH,Stock (TH),Healthcare,WPH
+DITTO,Stock (TH),Technology,DITTO-R
+EPG,Stock (TH),Basic Materials,EPG
+MAJOR,Stock (TH),Communication Services,MAJOR
+ORI,Stock (TH),Real Estate,ORI-R
+PM,Stock (TH),Consumer Defensive,PM
+SHR,Stock (TH),Consumer Cyclical,SHR
+SSP,Stock (TH),Utilities,SSP
+KCG,Stock (TH),Consumer Defensive,KCG
+BKA,Stock (TH),,BKA
+BKA,Stock (TH),,BKA
+SPA,Stock (TH),Consumer Cyclical,SPA
+AH,Stock (TH),Consumer Cyclical,AH
+MALEE,Stock (TH),Consumer Defensive,MALEE
+NCAP,Stock (TH),Financial Services,NCAP
+SGC,Stock (TH),Financial Services,SGC
+KFAFIX,Stock (US),Financial Services,ASST
+KFSMART,Stock (US),Financial Services,ASST
+KFAFIX,Stock (US),Financial Services,ASST
+S/A - TTB,Stock (TH),Financial Services,TTB
+KFSMART,Stock (US),Financial Services,ASST
+S/A - UOBT,Stock (US),Financial Services,UOVEF
+USD WE-AQUA,Stock (US),Industrials,AQUA
+S/A - UOBT,Stock (US),Financial Services,UOVEF
+S/A - UOBT,Stock (US),Financial Services,UOVEF
+DNCAHIU LX,Stock (US),Financial Services,LX
+BHARAT C/A BAY,Stock (TH),Financial Services,BAY
+WE-BOND6M C/A BAY,Stock (TH),Financial Services,BAY
+BOND3M C/A BAY,Stock (TH),Financial Services,BAY
+WE-CYBER C/A BAY,Stock (TH),Financial Services,BAY
+CHINATECH C/A BAY,Stock (TH),Financial Services,BAY
+CYBERSECURE C/A BA,Stock (US),Financial Services,BKAYY
+DAPP C/A BAY,Stock (TH),Financial Services,BAY
+DEFEN C/A BAY,Stock (TH),Financial Services,BAY
+SAN SM,Stock (US),Financial Services,SAN
+CEMR GR,Stock (US),Financial Services,BLK
+CEMS GR,Stock (US),Financial Services,BLK
+SX5EEX GR,Stock (US),Financial Services,BLK
+SX7PEX GR,Stock (US),Financial Services,BLK
+EUR WE-EUROPE,Stock (US),Real Estate,O
+SAF FP,Stock (TH),Basic Materials,SAF
+IBE SM,Stock (US),Utilities,IBDRY
+UCG IM,Stock (US),Financial Services,UNCFF
+ASML US,Stock (US),Technology,ASML
+AMD US,Stock (US),Technology,AMD
+WE-EVOSEMI C/A BAY,Stock (TH),Financial Services,BAY
+LRCX US,Stock (US),Technology,LRCX
+SOXX US,Stock (US),Financial Services,BLK
+PEFXSTU ID,Stock (US),Consumer Cyclical,ID
+PEFXSTU ID,Stock (US),Consumer Cyclical,ID
+WE-GEDUCAT C/A BAY,Stock (TH),Financial Services,BAY
+PLAY NA,Stock (US),Financial Services,BLK
+GBP FCD WE-GEQUITY,Stock (US),Financial Services,KPCPF
+USD FCD GEQUITY,Stock (US),Financial Services,KPCPF
+USD FCD GLOBALEQRM,Stock (US),Financial Services,KPCPF
+IHF US,Stock (US),Financial Services,BLK
+IHI US,Stock (US),Financial Services,BLK
+USD FCD WE-GIHEALT,Stock (US),Financial Services,KPCPF
+WE-GOLDRMF C/A BAY,Stock (TH),Financial Services,BAY
+WE-GOLD C/A BAY,Stock (TH),Financial Services,BAY
+POLGTIU ID,Stock (US),Consumer Cyclical,ID
+WE-GSECURE C/A BAY,Stock (TH),Financial Services,BAY
+WE-MONEY-R C/A BAY,Stock (TH),Financial Services,BAY
+KOREAEQ C/A BAY,Stock (TH),Financial Services,BAY
+WE-MONYRMF C/A BAY,Stock (TH),Financial Services,BAY
+WE-PLAY C/A BAY,Stock (TH),Financial Services,BAY
+WE-OSHOP C/A BAY,Stock (TH),Financial Services,BAY
+MA US,Stock (US),Financial Services,MA
+RARE C/A BA,Stock (US),Financial Services,BKAYY
+TAIWANEQ C/A BAY,Stock (TH),Financial Services,BAY
+EWT US,Stock (US),Financial Services,BLK
+USEQG C/A BAY,Stock (TH),Financial Services,BAY
+USTBILL C/A BAY,Stock (TH),Financial Services,BAY
+SGOV US,Stock (US),Financial Services,BLK
+KIMVGIU LX,Stock (US),Real Estate,KIM
+REET US,Stock (US),Financial Services,BLK
+WE-XPROP C/A BAY,Stock (TH),Financial Services,BAY
+FEHT SP,Stock (US),Financial Services,DBSDF
+FEHT SP,Stock (US),Financial Services,DBSDF
+WGG C/A BA,Stock (US),Financial Services,BKAYY
+EWY US,Stock (US),Financial Services,BLK
+DCAF C/A BAY,Stock (TH),Financial Services,BAY
+DCAF C/A BAY,Stock (TH),Financial Services,BAY
+INGEHYC,Stock (US),Financial Services,ING
+SAKBANKT,Stock (TH),Financial Services,KBANK
+SAKBUSDT,Stock (US),Financial Services,KPCPF
+SAKBANKT,Stock (TH),Financial Services,KBANK
+SAKBUSDT,Stock (US),Financial Services,KPCPF
+KBANK - S/A,Stock (TH),Financial Services,KBANK
+SAKBANK,Stock (TH),Financial Services,KBANK
+BANK DEP FCD-USD-ALPHAB,Stock (US),Financial Services,KPCPF
+BAY - C/A,Stock (TH),Financial Services,BAY
+BAY - S/A,Stock (TH),Financial Services,BAY
+SAKBUSD,Stock (US),Financial Services,KPCPF
+TMAN,Stock (TH),Healthcare,TMAN
+BAY - S/A,Stock (TH),Financial Services,BAY
+TAN,Stock (TH),Consumer Cyclical,TAN
+TEGH,Stock (TH),Basic Materials,TEGH
+TISCOB - C/A,Stock (TH),Financial Services,TISCO
+UOBT - S/A,Stock (US),Financial Services,UOVEF
+SAKBCNYT,Stock (US),Financial Services,KPCPF
+SAKBHKDT,Stock (US),Financial Services,KPCPF
+SABBLT,Stock (TH),Financial Services,BBL
+FIFUSDT,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-CONBON,Stock (US),Financial Services,KPCPF
+AU,Stock (TH),Consumer Cyclical,AU
+ASK,Stock (TH),Financial Services,ASK
+MTRE,Stock (TH),Real Estate,PROUD
+EKH,Stock (TH),Healthcare,EKH
+KKP-W6,Stock (TH),Financial Services,KKP
+UTP,Stock (TH),Basic Materials,UTP
+SAKBEURT,Stock (US),Financial Services,KPCPF
+MAGURO,Stock (TH),Consumer Cyclical,MAGURO
+SAKBEUR,Stock (US),Financial Services,KPCPF
+FIFJPYT,Stock (US),Financial Services,KPCUF
+BANK DEP FCD-USD-ESGDVA,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-ESGDIV,Stock (US),Financial Services,KPCPF
+MERNEDU,Stock (US),Financial Services,BLK
+BANK DEP FCD-USD-TNEWEN,Stock (US),Financial Services,KPCPF
+FTNRACU,Stock (US),Financial Services,FT
+BANK DEP FCD-USD-TGEQ,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-TGB,Stock (US),Basic Materials,TGB
+BANK DEP FCD-USD-GEQRMF,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-TVALUE,Stock (US),Financial Services,KPCPF
+FIFEURT,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-INCOME,Stock (US),Financial Services,KPCPF
+SASCBT,Stock (TH),Financial Services,SCB-R
+SAKBJPYT,Stock (US),Financial Services,KPCPF
+SASCBT,Stock (TH),Financial Services,SCB-R
+NYT,Stock (TH),Industrials,NYT
+SAKBJPY,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-ESLOVE,Stock (US),Financial Services,KPCPF
+VRANDA,Stock (TH),Real Estate,VRANDA
+VRANDA,Stock (TH),Real Estate,VRANDA
+VRANDA,Stock (TH),Real Estate,VRANDA
+SAMART,Stock (TH),Technology,SAMART
+SAKBSGDT,Stock (US),Financial Services,KPCPF
+SAKBHKD,Stock (US),Financial Services,KPCPF
+SAKBSGD,Stock (US),Financial Services,KPCPF
+BANK DEP FCD-USD-TPMIUM,Stock (US),Financial Services,KPCPF
+FORTH,Stock (TH),Industrials,FORTH
+FSMART,Stock (TH),Communication Services,FSMART
+SEAFCO,Stock (TH),Industrials,SEAFCO
+NETBAY,Stock (TH),Technology,NETBAY
+PYLON,Stock (TH),Industrials,PYLON
+NETBAY,Stock (TH),Technology,NETBAY
+PYLON,Stock (TH),Industrials,PYLON
+BANK DEP FCD-USD,Stock (US),Financial Services,KPCPF
+SARSBT,Stock (US),Financial Services,UOVEF
+BANK DEP FCD-USD-USTECH,Stock (US),Financial Services,KPCPF
+CLBAY,Stock (TH),Financial Services,BAY
+CLBAY,Stock (TH),Financial Services,BAY
+CLBAY,Stock (TH),Financial Services,BAY
+ALUCON,Stock (TH),Basic Materials,ALUCON
+FM,Stock (TH),Consumer Defensive,FM
+FM,Stock (TH),Consumer Defensive,FM
+FM,Stock (TH),Consumer Defensive,FM
+BLC,Stock (TH),Consumer Defensive,BLC
+EURO,Stock (TH),Consumer Cyclical,EURO
+EEMSUS,Stock (US),Consumer Cyclical,EM
+NKT,Stock (TH),Healthcare,NKT
+NKT,Stock (TH),Healthcare,NKT
+NKT,Stock (TH),Healthcare,NKT
+XLEF,Stock (US),Energy,XLEFF
+DBSF,Stock (US),Financial Services,DBSDF
+BBCAF,Stock (US),Financial Services,PBCRY
+OCBCF,Stock (US),Financial Services,OVCHY
+IHHMK,Stock (US),Consumer Defensive,IH
+SGXSP,Stock (US),Financial Services,SPXCY
+UOBF,Stock (US),Financial Services,UOVEF
+STEF,Stock (US),Industrials,SGGKF
+WELLUS,Stock (US),Real Estate,WELL
+WELLUS,Stock (US),Real Estate,WELL
+CURKBK,Stock (US),Financial Services,KPCUF
+CURKBK,Stock (US),Financial Services,KPCUF
+SAVTTB,Stock (TH),Financial Services,TTB
+SAVTTB,Stock (TH),Financial Services,TTB
+SAVTTB1,Stock (TH),Financial Services,TTB
+SAVTTB1,Stock (TH),Financial Services,TTB
+SAVBBL2,Stock (TH),Financial Services,BBL
+SAVBBL2,Stock (TH),Financial Services,BBL
+SAVBBL2,Stock (TH),Financial Services,BBL
+K-CBOND,Stock (TH),Industrials,K
+K-FIXED,Stock (TH),Industrials,K
+K-SFPLUS,Stock (TH),Industrials,K
+K-FIXED,Stock (TH),Industrials,K
+SAVSCB5,Stock (TH),Financial Services,SCB
+SAVSCB5,Stock (TH),Financial Services,SCB
+SAVSCB5,Stock (TH),Financial Services,SCB
+K-AHY,Stock (TH),Industrials,K
+FCDBONYUS,Stock (US),Financial Services,BK
+K-CHINA,Stock (TH),Industrials,K
+K-FIXEDPLUS,Stock (TH),Industrials,K
+K-GHEALTH,Stock (TH),Industrials,K
+K-GDBOND,Stock (TH),Industrials,K
+K-GINFRA,Stock (TH),Industrials,K
+K-INDIA,Stock (TH),Industrials,K
+K-GSELECT,Stock (TH),Industrials,K
+CIMBT,Stock (TH),Financial Services,CIMBT
+ERAWAN,Stock (TH),Consumer Cyclical,ERW
+FCDJPMGBUSD,Stock (US),Financial Services,JPM
+SAVKBANK2.I,Stock (US),Financial Services,KPCUF
+SAVKTB.I,Stock (TH),Financial Services,KTB
+SAVSCB4,Stock (TH),Financial Services,SCB
+FCDJPMHKD,Stock (US),Financial Services,JPM
+FCDBONYCF,Stock (US),Financial Services,BK
+FCDBONYXEU,Stock (US),Financial Services,BK
+BAFS,Stock (TH),Industrials,BAFS
+SAVSCB,Stock (TH),Financial Services,SCB
+EASTW,Stock (TH),Utilities,EASTW
+BBGI,Stock (TH),Utilities,BBGI
+SPCG,Stock (TH),Utilities,SPCG
+SUPER,Stock (TH),Utilities,SUPER
+K-SF,Stock (US),Financial Services,SF
+FCDKEUSMXE,Stock (US),Financial Services,BK
+K-ASIAX,Stock (TH),Industrials,K
+FCDBOFAUSD,Stock (US),Financial Services,BAC
+K-EUX,Stock (TH),Industrials,K
+K-GOLD,Stock (TH),Industrials,K
+K-JPX,Stock (TH),Industrials,K
+K-GPROP,Stock (TH),Industrials,K
+K-USXNDQ,Stock (TH),Industrials,K
+K-WORLDX,Stock (TH),Industrials,K
+K-EQUITY,Stock (TH),Industrials,K
+K-WORLDX,Stock (TH),Industrials,K
+SAVKBANK1.I,Stock (US),Financial Services,KPCUF
+FCDJPMUSD,Stock (US),Financial Services,JPM
+FCDJPMXEU,Stock (US),Financial Services,JPM
+FCDSCBTCN,Stock (US),Financial Services,SCBFF
+FCDSCBTCN,Stock (US),Financial Services,SCBFF
+SAVBBL,Stock (TH),Financial Services,BBL
+SAVBBL,Stock (TH),Financial Services,BBL
+SAVBBL,Stock (TH),Financial Services,BBL
+FCDCITIJPY,Stock (US),Financial Services,C
+FCDJPMGBXEU,Stock (US),Financial Services,JPM
+FCDJPMGBXEU,Stock (US),Financial Services,JPM
+FCDJPMGBXEU,Stock (US),Financial Services,JPM
+ILINK,Stock (TH),Technology,ILINK
+INSET,Stock (TH),Technology,INSET
+MFEC,Stock (TH),Technology,MFEC
+ITEL,Stock (TH),Communication Services,ITEL
+SAMTEL,Stock (TH),Communication Services,SAMTEL
+SAFE,Stock (TH),Healthcare,SAFE
+SAFE,Stock (TH),Healthcare,SAFE
+SAVKBK.I,Stock (US),Financial Services,KPCUF
+FCDJPMGBHKD,Stock (US),Financial Services,JPM
+FCDJPMGBCNY,Stock (US),Financial Services,JPM
+FCDJPMGBCNY,Stock (US),Financial Services,JPM
+FLT SP,Stock (US),Technology,FLT
+FLT SP,Stock (US),Technology,FLT
+FCDJPMAUD,Stock (US),Financial Services,JPM
+FCDJPMGBAUD,Stock (US),Financial Services,JPM
+FCDJPMGBSGD,Stock (US),Financial Services,JPM
+SAVKBANK.I,Stock (US),Financial Services,KPCUF
+FCDSCBKRW,Stock (US),Financial Services,SCBFF
+SAVKBANK.I,Stock (US),Financial Services,KPCUF
+FCDSCBKRW,Stock (US),Financial Services,SCBFF
+ACB VN,Stock (US),Healthcare,ACB
+K-VIETNAM,Stock (TH),Industrials,K
+K-VIETNAM,Stock (TH),Industrials,K
+KF-ACHINA-BBL-SAV,Stock (TH),Financial Services,BBL
+FCDBONYHK,Stock (US),Financial Services,BK
+FCDBONYHK,Stock (US),Financial Services,BK
+KF-ACHINA-TISCO-SA,Stock (TH),Financial Services,TISCO
+KF-ACHINA-BBL-USD,Stock (TH),Financial Services,BBL
+UBCAPA2,Stock (US),Financial Services,ASST
+UBCAPA2,Stock (US),Financial Services,ASST
+KF-ACHINA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-ACHINARMF-BBL-S,Stock (TH),Financial Services,BBL
+KF-ACHINARMF-BBL-U,Stock (TH),Financial Services,BBL
+KF-ACHINA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-ACHINASSF-BBL-S,Stock (TH),Financial Services,BBL
+KF-ACHINASSF-BBL-U,Stock (TH),Financial Services,BBL
+KF-ACHINARMF-UOB-S,Stock (US),Financial Services,UOVEF
+KF-AINCOME-BBL-SAV,Stock (TH),Financial Services,BBL
+KF-AINCOME-TISCOB-,Stock (TH),Financial Services,TISCO
+KF-AINCOME-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-AINCOME-TISCOB-,Stock (TH),Financial Services,TISCO
+KF-BIC-BBL-SAV,Stock (TH),Financial Services,BBL
+KF-AINCOME-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-CINCOME-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-CINCOME-UOB-SAV,Stock (US),Financial Services,UOVEF
+KF-CINCOME-UOB-SAV,Stock (US),Financial Services,UOVEF
+KF-CINCOME-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-CSINCOME-SCBT-S,Stock (US),Financial Services,SCBFF
+WORK,Stock (TH),Communication Services,WORK
+KF-CSINCOME-UOBT-S,Stock (US),Financial Services,UOVEF
+KF-EM-SCBT-SAV,Stock (US),Consumer Cyclical,EM
+KF-EMXCN-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-EUROPE-SCBT-EUR,Stock (US),Financial Services,SCBFF
+KF-EUROPE-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-EUROPE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-GCHINAD-BBL-SAV,Stock (TH),Financial Services,BBL
+KF-EMXCN-INDXRMF-S,Stock (US),Financial Services,SCBFF
+KF-GCHINAD-BBL-USD,Stock (TH),Financial Services,BBL
+KF-GCHINARMF-BBL-S,Stock (TH),Financial Services,BBL
+KF-GCHINAD-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-GCHINARMF-UOBT,Stock (US),Financial Services,UOVEF
+KF-GOLD-TISCOB-SAV,Stock (US),Financial Services,GOLD
+KF-GOLD-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-GOLD-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-HEUROPE-SCBT-EU,Stock (US),Financial Services,SCBFF
+KF-HEUROPE-TISCO-S,Stock (TH),Financial Services,TISCO
+KF-HEUROPE-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-HEUROPE-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-HEUROPE-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-HEUROPE-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-HJAPAND-TISCO-S,Stock (TH),Financial Services,TISCO
+KF-HJAPAND-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-HJAPAND-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-HGOLD-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KF-HGOLD-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-HGOLD-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-HSMUS-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-HSMUS-SCBT-USD,Stock (US),Financial Services,SCBFF
+KF-HSHAR-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KF-HSHARE-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-HSHARE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-JPSCAPD-SCBT-JP,Stock (US),Financial Services,SCBFF
+KF-JPSCAPD-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-INCOME-TISCO-SA,Stock (TH),Financial Services,TISCO
+KF-JPSCAPD-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-INCOME-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-INCOME-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-MINCOME-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-MINCOME-TISCOB-,Stock (TH),Financial Services,TISCO
+KF-MINCOME-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-MINCOME-UOBT-SA,Stock (US),Financial Services,UOVEF
+OIN,Stock (US),Consumer Cyclical,OI
+KF-MINCOME-TISCOB-,Stock (TH),Financial Services,TISCO
+KF-ORTFLEX-BBL-SAV,Stock (TH),Financial Services,BBL
+DBO,Stock (US),Financial Services,DBOEY
+KF-ORTFLEX-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-OIL-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-OIL-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KF-OIL-UOB-SAV,Stock (US),Financial Services,UOVEF
+KF-SINCOME-FX-SCBT,Stock (US),Financial Services,SCBFF
+KF-SINC-FX-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-SINCOME-TISCO-S,Stock (TH),Financial Services,TISCO
+KF-SINCOME-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-SINCOME-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-SINC-FXRMF-SC-S,Stock (US),Financial Services,SCBFF
+KFSINCORMF-TISCO-S,Stock (TH),Financial Services,TISCO
+KF-SINCOMRMF-BBL-S,Stock (TH),Financial Services,BBL
+KF-SINCORMF-UOBT-S,Stock (US),Financial Services,UOVEF
+KF-SINCM-USD-KKP-T,Stock (TH),Financial Services,KKP
+KF-SINCM-USD-KKP-U,Stock (TH),Financial Services,KKP
+KF-US-PLUS-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-SMCAPD-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KF-US-PLUS-SCBT-SA,Stock (US),Financial Services,SCBFF
+KF-W-INDX-BBL-SAV,Stock (TH),Financial Services,BBL
+KF-W-INDX-BBL-USD,Stock (TH),Financial Services,BBL
+KF-W-INDXRMF-SC-SA,Stock (US),Financial Services,SCBFF
+KF-W-INDX-BBL-USD,Stock (TH),Financial Services,BBL
+KF1MAX-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MAX-BBL-SAV,Stock (TH),Financial Services,BBL
+K-CHANGE,Stock (TH),Industrials,K
+K-CHANGE,Stock (TH),Industrials,K
+KF1MAXRMF-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MEAN-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MAXSSF-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MEAN-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MILD-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MEANRMF-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MEANSSF-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MILDSSF-BBL-SAV,Stock (TH),Financial Services,BBL
+KF1MILDRMF-BBL-SAV,Stock (TH),Financial Services,BBL
+BEYOND,Stock (TH),Consumer Cyclical,BEYOND
+TFG-W4,Stock (TH),Consumer Defensive,TFG
+KFAEQ-THA-SCBT-EQ1,Stock (US),Financial Services,SCBFF
+KFAEQ-THA-UOBT-EQ1,Stock (US),Financial Services,UOVEF
+KFAEQ-THA-SCBT-EQ1,Stock (US),Financial Services,SCBFF
+KFAEQ-THA-UOBT-EQ1,Stock (US),Financial Services,UOVEF
+KFAFIX-SCB-FI,Stock (TH),Financial Services,SCB
+KFAFIX-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFAFIX-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFAFIX-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFAFIXRMF-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFAFIX-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFAFIX-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFCLIMA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFAHYBON-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFAFIXRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFCMEGA-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFCMEGA-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFCMEGA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFCORE-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFCMEGA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFCORE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFCYBER-BBL-SAV,Stock (TH),Financial Services,BBL
+KFCYBER-BBL-SAV,Stock (TH),Financial Services,BBL
+KFCYBER-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFDIVERSE-BBL-SAV,Stock (TH),Financial Services,BBL
+KFCYBER-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFDIVERSE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFDIVERSE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFDIVSSF-TISCO_EQ1,Stock (TH),Financial Services,TISCO
+KFDIVSSF-TISCO_EQ2,Stock (TH),Financial Services,TISCO
+KFDIVSSF-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KFDIVRMF-TISCO_EQ1,Stock (TH),Financial Services,TISCO
+KFDIVSSF-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KFDIVRMF-TISCO_EQ2,Stock (TH),Financial Services,TISCO
+KFDIVRMF-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KFDIVRMF-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KFDNM-D-SCB-SAV,Stock (TH),Financial Services,SCB
+KFDNM-D-UOBT-SAV,Stock (US),Utilities,D
+KFDYNAMIC-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFDNM-D-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFLTFDNM-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFDYNAMIC-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFLTFDNM-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFDNMRMF-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFENFIX-SCB-FI,Stock (TH),Financial Services,SCB
+KFENFIX-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFDNMRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFEQRMF-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFENFIX-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFEQRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFESG-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFESG-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFEURORMF-SCBT-EUR,Stock (US),Financial Services,SCBFF
+KFEURORMF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFLTFAST-D-SCB-SAV,Stock (TH),Financial Services,SCB
+KFLTFAST-D-TISCO-S,Stock (TH),Financial Services,TISCO
+KFFIN-D-SCB-SAV,Stock (TH),Financial Services,SCB
+KFFIN-D-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFLTFAST-D-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFFIN-D-UOBT-SAV,Stock (US),Utilities,D
+KFFLEX-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFLTFAST-D-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFFLEX-D-SCB-EQ,Stock (TH),Financial Services,SCB
+KFFLEX-D-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFFLEX-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFFLEX-D-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFFLEX2RM-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFFLEX2RMF-UOBT_EQ,Stock (US),Financial Services,UOVEF
+KFFVPE-UI-BBL-SAV,Stock (TH),Financial Services,BBL
+KFFUTUREG-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGBRAND-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFGBRAND-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGBRAND-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGBRAND-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGBRAND-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGBRANSSF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFGBRANSSF-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFGBRANRMF-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFGBTHAIESG-BBL-SA,Stock (TH),Financial Services,BBL
+KFGBRANRMF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFGDA-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGDIV-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGDB-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGDIV-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGG-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGG-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGG-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGG-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGGRMF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGGRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGGSSF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGGSSF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGLOBALRMF-SC-SAV,Stock (US),Financial Services,SCBFF
+KFGLOBAL-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGLOBAL-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGLOBFX-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGLOBFX-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGLOBFXRMF-SC-SAV,Stock (US),Financial Services,SCBFF
+KFGOLDRMF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGOOD-SCB-FI,Stock (TH),Financial Services,SCB
+KFGOLDRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGOOD-TISCO-FI,Stock (TH),Financial Services,TISCO
+KFGOOD-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFGOOD-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFGOODRMF-SCB-FI,Stock (TH),Financial Services,SCB
+KFGOOD-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGOODRMF-TISCO-FI,Stock (TH),Financial Services,TISCO
+KFGOODRMF-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFGOODRMF-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFGPE-UI-BBL-SAV,Stock (TH),Financial Services,BBL
+KFGOODRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGOVRMF-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFGPE-UI-UOBT-SAV,Stock (US),Technology,UI
+KFGPROP-BBL-SAV,Stock (TH),Financial Services,BBL
+KFGOVRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGPROP-BBL-USD,Stock (TH),Financial Services,BBL
+KFGPROP-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KFGPROP-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGPROP-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KFGPROP-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGROWTH-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFGROWTH-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KFGROWTH-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KFGTECH-SCBT-USD,Stock (US),Financial Services,SCBFF
+KFGTECH-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFGTECH-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGTECH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFGTECH-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFGTECH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHAPPY-SCB-FI,Stock (TH),Financial Services,SCB
+KFGTECHRMF-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFGTECHRMF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFHAPPY-TISCO-FI,Stock (TH),Financial Services,TISCO
+KFHAPPY-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFHAPPY-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFHAPPY-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHAPPYRMF-TISCO-F,Stock (TH),Financial Services,TISCO
+KFHAPPYRMF-SCB-FI,Stock (TH),Financial Services,SCB
+KFHAPPYRMF-UOBT-FI,Stock (US),Financial Services,UOVEF
+KFHAPPYRMF-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFHASIA-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFHASIA-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFHASIA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHASIA-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFHASIA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHCARERMF-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFHCARERMF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KF-HEALTHD-SCBT-US,Stock (US),Financial Services,SCBFF
+KFHEALTH-TISCOB-SA,Stock (TH),Financial Services,TISCO
+KFHEALTH-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFHEALTH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHHCARE-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFHEALTH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHHCARE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHHCARE-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHTECH-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFHTECH-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFHTECH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFHTECH-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFINDIA-BBL-SAV,Stock (TH),Financial Services,BBL
+KFHTECH-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFINDIARMF-BBL-SAV,Stock (TH),Financial Services,BBL
+KFINDIA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFINDIARMF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFINFRA-BBL-SAV,Stock (TH),Financial Services,BBL
+KFINFRA-BBL-USD,Stock (TH),Financial Services,BBL
+KFINFRA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFINFRA-BBL-USD,Stock (TH),Financial Services,BBL
+KFINNO-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFINFRA-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFINNO-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFINNO-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFJAPANRMF-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFJPSCAP-TISCOB-S,Stock (TH),Financial Services,TISCO
+KFJPSCAP-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFJPSCAP-SCBT-JPY,Stock (US),Financial Services,SCBFF
+KFJPINDX-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFJPSCAP-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFJPINDX-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFLTGOVRMF-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFJPINDX-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFLTGOVRM-TISCO-SV,Stock (TH),Financial Services,TISCO
+KFLTPC-UI-UOBT-SAV,Stock (US),Technology,UI
+KFMTFI-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFMTFI-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFMTFI-D-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFMTFI-D-UOBR-SAV,Stock (US),Utilities,D
+KFMX2TM-SCB-FI,Stock (TH),Financial Services,SCB
+KFMTFIRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFMTFIRMF-TISCO-SV,Stock (TH),Financial Services,TISCO
+KFMXPLS2TM-SCB-FI,Stock (TH),Financial Services,SCB
+KFMX2TM-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFMX2TM-UOBT-FI,Stock (US),Financial Services,UOVEF
+KFNDQ-BBL-SAV,Stock (TH),Financial Services,BBL
+KFMXPLS2TM-UOBT-FI,Stock (US),Financial Services,UOVEF
+KFMXPLS2TM-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFNDQRMF-BBL-SAV,Stock (TH),Financial Services,BBL
+KFNDQ-BBL-USD,Stock (TH),Financial Services,BBL
+KFNDQ-BBL-USD,Stock (TH),Financial Services,BBL
+KFNDQRMF-BBL-USD,Stock (TH),Financial Services,BBL
+KFPCD-UI-UOBT-SAV,Stock (US),Technology,UI
+KFPCD-UI-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFPREFER-BBL-SAV,Stock (TH),Financial Services,BBL
+KFPREFER-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFPREFER-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFSDIV-TISCO_EQ1,Stock (TH),Financial Services,TISCO
+KFSDIV-TISCO_EQ2,Stock (TH),Financial Services,TISCO
+KFSDIV-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KFSDIV-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KF-LTFDIV-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KF-LTFDIV-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KF-LTFDIV-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KF-LTFDIV-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KFSEQ-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KF-LTFEQ-SCB-SAV,Stock (TH),Financial Services,SCB
+KF-LTFEQ-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFSEQ-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KF-LTFEQ-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KF-LTFEQ-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFSEQ-D-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFSEQ-D-UOBR-SAV,Stock (US),Utilities,D
+KFSMART-SCB-FI,Stock (TH),Financial Services,SCB
+KFSMART-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFSMART-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFSMART-TISCOB-SAV,Stock (TH),Financial Services,TISCO
+KFSMART-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFSPLUS-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFSMUL-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFSPLUS-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFSPLUS-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFSTARRMF-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFSUPER-SCB-FI,Stock (TH),Financial Services,SCB
+KFSUPERRMF-SCB-FI,Stock (TH),Financial Services,SCB
+KFSUPER-TISCO-EQ,Stock (TH),Financial Services,TISCO
+KFSUPER-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFSUPERRMF-TISCO-F,Stock (TH),Financial Services,TISCO
+KFTHAICG-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFSUPERRMF-UOBT-EQ,Stock (US),Financial Services,UOVEF
+KFTHAICG-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFTHAIESG-BBL-EQ2,Stock (TH),Financial Services,BBL
+KFTHAIESG-BBL-EQ1,Stock (TH),Financial Services,BBL
+KFTHAIESG-UOBT-EQ1,Stock (US),Financial Services,UOVEF
+KFTHAIESG-UOBT-EQ1,Stock (US),Financial Services,UOVEF
+KFTHAIESG-UOBT-SBL,Stock (US),Financial Services,UOVEF
+KFLTFTSM-D-SCB-SAV,Stock (TH),Financial Services,SCB
+KFTHAIESG-UOBT-SBL,Stock (US),Financial Services,UOVEF
+KFLTFTSM-D-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFTHAISM-TISCO-SA,Stock (TH),Financial Services,TISCO
+ZEN,Stock (TH),Consumer Cyclical,ZEN
+KFTRB-TISCO-SAV,Stock (TH),Financial Services,TISCO
+ZEN,Stock (TH),Consumer Cyclical,ZEN
+KFTHAISM-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFTSRMF-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFTRB-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFTSRMF-UOBR-SAV,Stock (US),Financial Services,UOVEF
+KFTRB-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFTSTAR-BBL-SAV,Stock (TH),Financial Services,BBL
+KFTSTAR-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFTSTAR-TISCO-SA,Stock (TH),Financial Services,TISCO
+KFTSTAR-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFTSTAR-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFLTFSTARD-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFLTFSTARD-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFUS-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFUS-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFUS-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFUS-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFUS-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFUSINDFX-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFUSINDFXR-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFUSINDFX-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFUSINDX-SCBT-SA,Stock (US),Financial Services,SCBFF
+KFUSINDX-UOBT-SA,Stock (US),Financial Services,UOVEF
+KFUSINDX-SCBT-US,Stock (US),Financial Services,SCBFF
+KFUSINDX-SCBT-US,Stock (US),Financial Services,SCBFF
+KFUSSSF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFUSRMF-SCBT-SAV,Stock (US),Financial Services,SCBFF
+KFVALUE-TISCO_EQ1,Stock (TH),Financial Services,TISCO
+KFVALUE-TISCO_EQ2,Stock (TH),Financial Services,TISCO
+KFVALUE-UOBT_EQ1,Stock (US),Financial Services,UOVEF
+KFVIET-BBL-SAV,Stock (TH),Financial Services,BBL
+KFVIET-TISCO-SAV,Stock (TH),Financial Services,TISCO
+KFVALUE-UOBT_EQ2,Stock (US),Financial Services,UOVEF
+KFYENJAI-BBL-SBL-K,Stock (TH),Financial Services,BBL
+KFVIET-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFVIET-UOBT-SAV,Stock (US),Financial Services,UOVEF
+KFYENJAI-TISCO-FI,Stock (TH),Financial Services,TISCO
+JPY KKP ACT FIXED,Stock (TH),Financial Services,KKP
+KFYENJAI-UOB-SBL-K,Stock (US),Financial Services,UOVEF
+KFYENJAI-UOBT-FI,Stock (US),Financial Services,UOVEF
+USD COREPATH EX F,Stock (US),Consumer Cyclical,F
+USD COREPATH EX F,Stock (US),Consumer Cyclical,F
+USD COREPATH LI F,Stock (US),Financial Services,BKAYY
+USD COREPATH LI F,Stock (US),Financial Services,BKAYY
+USD COREPATH ULT F,Stock (US),Consumer Cyclical,F
+USD COREPATH ULT F,Stock (US),Consumer Cyclical,F
+USD COREPATH ULT F,Stock (US),Consumer Cyclical,F
+USD EMXCH-H,Stock (US),Financial Services,KPCPF
+USD EMXCH-H,Stock (US),Financial Services,KPCPF
+USD EMXCH-UH,Stock (US),Financial Services,KPCPF
+USD G-THEME-H KBAN,Stock (US),Technology,G
+USD EMXCH-UH,Stock (US),Financial Services,KPCPF
+USD GC-UI KBANK,Stock (TH),Financial Services,KBANK
+USD G-THEME-H KBAN,Stock (US),Technology,G
+USD GC-UI KBANK,Stock (TH),Financial Services,KBANK
+USD GHC KBANK,Stock (TH),Financial Services,KBANK
+USD GIMPACT-H KBAN,Stock (US),Financial Services,KPCPF
+USD GHC KBANK,Stock (TH),Financial Services,KBANK
+USD GINFRAEQ-H KBA,Stock (US),Financial Services,KPCPF
+USD GIMPACT-H KBAN,Stock (US),Financial Services,KPCPF
+USD GINFRAEQ-H KBA,Stock (US),Financial Services,KPCPF
+USD GNP-H KBANK,Stock (TH),Financial Services,KBANK
+USD GNP KBANK,Stock (TH),Financial Services,KBANK
+USD GNP RMF-UH KBA,Stock (US),Financial Services,KPCPF
+USD GNP RMF-H KBAN,Stock (US),Financial Services,KPCPF
+USD GVALUE-H,Stock (US),Financial Services,KPCPF
+USD GVALUE-H,Stock (US),Financial Services,KPCPF
+USD GVALUE-H,Stock (US),Financial Services,KPCPF
+USD GVALUE-UH,Stock (US),Financial Services,KPCPF
+USD GVALUE-UH,Stock (US),Financial Services,KPCPF
+USD GVALUE-UH,Stock (US),Financial Services,KPCPF
+USD INCOME-H KBANK,Stock (TH),Financial Services,KBANK
+USD INCOME-H KBANK,Stock (TH),Financial Services,KBANK
+USD INDIA-H KBANK,Stock (TH),Financial Services,KBANK
+USD INDIA-H KBANK,Stock (TH),Financial Services,KBANK
+USD INDIA-UH KBANK,Stock (TH),Financial Services,KBANK
+USD INDIA-UH KBANK,Stock (TH),Financial Services,KBANK
+USD-SA-PROP,Stock (US),Financial Services,SCBFF
+USD-SA-PROP RMF,Stock (US),Financial Services,SCBFF
+JPY_S-PLUS,Stock (US),Financial Services,BKKPF
+USD SIB-H KBANK,Stock (TH),Financial Services,KBANK
+JPY_S-PLUS,Stock (US),Financial Services,BKKPF
+JPY_S-PLUS,Stock (US),Financial Services,BKKPF
+USD SIB-UH KBANK,Stock (TH),Financial Services,KBANK
+USD SIB-UH KBANK,Stock (TH),Financial Services,KBANK
+SPECIAL C/A - TISCO,Stock (TH),Financial Services,TISCO
+MWG VM,Stock (US),Industrials,MWG
+ACB VM,Stock (US),Healthcare,ACB
+CTG VM,Stock (US),Technology,CTG
+BLKCHD2,Stock (US),Financial Services,BLK
+BLKCHD2,Stock (US),Financial Services,BLK
+BLKCHD2,Stock (US),Financial Services,BLK
+ABHSBCS1,Stock (US),Financial Services,HSBC
+VGREMELX,Stock (US),,VTEL
+ABHSBCS1,Stock (US),Financial Services,HSBC
+EQTSICLX,Stock (US),Energy,EQT
+JGLSUAID,Stock (US),,JANU
+JGLSUAID,Stock (US),,JANU
+JGLSUAID,Stock (US),,JANU
+AIGF,Stock (US),Financial Services,ALIZF
+AIGF,Stock (US),Financial Services,ALIZF
+ARGM,Stock (US),Financial Services,ALIZF
+AAPL,Stock (US),Technology,AAPL
+AMZNUS,Stock (US),Consumer Cyclical,AMZN
+METAUS,Stock (US),Communication Services,META
+NVDAUS,Stock (US),Technology,NVDA
+PANWUS,Stock (US),Technology,PANW
+TSLAUS,Stock (US),Consumer Cyclical,TSLA
+UNH,Stock (US),Real Estate,UNHRF
+TSLAUS,Stock (US),Consumer Cyclical,TSLA
+UNH,Stock (US),Real Estate,UNHRF
+CLARSP,Stock (US),Consumer Cyclical,CLAR
+FLT,Stock (US),Financial Services,FLTLF
+MLT,Stock (US),,MLTAF
+MLT,Stock (US),,MLTAF
+FLT,Stock (US),Financial Services,FLTLF
+AMA,Stock (TH),Industrials,AMA
+ALGAATLX,Stock (US),Financial Services,ALIZF
+TRP,Stock (TH),Healthcare,TRP
+BOL,Stock (TH),Industrials,BOL
+HL,Stock (TH),Healthcare,HL
+CPANEL,Stock (TH),Basic Materials,CPANEL
+MEB,Stock (TH),Technology,MEB
+JUBILE,Stock (TH),Consumer Cyclical,JUBILE
+SECURE,Stock (TH),Technology,SECURE
+PACO,Stock (TH),Consumer Cyclical,PACO
+PRI,Stock (TH),Real Estate,PRIN
+SPVI,Stock (TH),Technology,SPVI
+SFT,Stock (US),,SFTX
+TNH,Stock (TH),Healthcare,TNH
+TNP,Stock (TH),Consumer Defensive,TNP
+AUCT,Stock (TH),Consumer Cyclical,AUCT
+KT-AASIA,Stock (US),Communication Services,KT
+KT-ASHARES,Stock (US),Communication Services,KT
+KT-CHINA,Stock (US),Communication Services,KT
+KT-GEQ,Stock (US),Communication Services,KT
+KT-GOLDUH,Stock (US),Communication Services,KT
+KT-GREEN,Stock (US),Communication Services,KT
+KT-HEALTHCARE,Stock (US),Communication Services,KT
+KT-NASDAQ,Stock (US),Communication Services,KT
+KT-SAGA,Stock (US),Communication Services,KT
+KT-USSM,Stock (US),Communication Services,KT
+KT-ST,Stock (US),Communication Services,KT
+KT-WQUALITY,Stock (US),Communication Services,KT
+KT-ST,Stock (US),Communication Services,KT
+KT-WQUALITY,Stock (US),Communication Services,KT
+CHIQ US,Stock (TH),Industrials,CHO
+SA-USD-LHBLUESKY,Stock (TH),Financial Services,KTB-R
+SA-EUR-LHBLUESKY,Stock (TH),Financial Services,KTB-R
+SA-EUR-LHBLUESKY,Stock (TH),Financial Services,KTB-R
+SA-DUMMY-LHCYBER,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-LHCYBER,Stock (TH),Financial Services,SCB-R
+AXFDICU LX,Stock (US),Financial Services,LX
+SA-DUMMY-LHCYBER,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-LHDIGITAL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-LHDIGITAL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-LHDIGITAL,Stock (TH),Financial Services,SCB-R
+SA-FCDUSD-LHESPORT,Stock (TH),Financial Services,SCB-R
+SA-FCDUSD-LHESPORT,Stock (TH),Financial Services,SCB-R
+SA-FCDUSD-LHESPORT,Stock (TH),Financial Services,SCB-R
+SA-USD-LHGBLOCK,Stock (TH),Financial Services,KTB-R
+SA-USD-LHGBLOCK,Stock (TH),Financial Services,KTB-R
+SA-USD-LHGBLOCK,Stock (TH),Financial Services,KTB-R
+SA-DUMMY-USD-LHGEQ,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-USD-LHGEQ,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-USD-LHGEQ,Stock (TH),Financial Services,SCB-R
+SA-USD-LHGIGO,Stock (TH),Financial Services,KTB-R
+SA-USD-LHGIGO,Stock (TH),Financial Services,KTB-R
+SA-LGT-LHGINCOME,Stock (TH),Financial Services,SCB-R
+SA-LGT-LHGINCOME,Stock (TH),Financial Services,SCB-R
+SA-LGT-LHGINCOME,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-LHGINRMF,Stock (TH),Financial Services,SCB-R
+SA-FCD-LHGLIFE-E2,Stock (US),Financial Services,KPCPF
+SA-FCD-LHGLIFE-E2,Stock (US),Financial Services,KPCPF
+SA-FCD-LHGLIFE-E2,Stock (US),Financial Services,KPCPF
+DDD US,Stock (US),Technology,DDD
+APP US,Stock (US),Communication Services,APP
+BE US,Stock (US),Industrials,BE
+CLS US,Stock (US),Technology,CLS
+NET US,Stock (US),Technology,NET
+GALD SW,Stock (US),Healthcare,GALDY
+CYBR US,Stock (US),Technology,CYBR
+GE US,Stock (US),Industrials,GE
+IONQ US,Stock (US),Technology,IONQ
+GS US,Stock (US),Financial Services,GS
+KTOS US,Stock (US),Industrials,KTOS
+SA-CHF-LHGSELECT,Stock (TH),Financial Services,KTB-R
+SA-DUMMY-LHGSELECT,Stock (TH),Financial Services,KTB-R
+SA-EUR-LHGSELECT,Stock (TH),Financial Services,KTB-R
+OKLO US,Stock (US),Utilities,OKLO
+SA-HKD-LHGSELECT,Stock (TH),Financial Services,KTB-R
+ONDS US,Stock (US),Technology,ONDS
+PL US,Stock (US),Industrials,PL
+RBLX US,Stock (US),Communication Services,RBLX
+SOFI US,Stock (US),Financial Services,SOFI
+STX US,Stock (US),Technology,STX
+TEM US,Stock (US),Healthcare,TEM
+STX US,Stock (US),Technology,STX
+TEM US,Stock (US),Healthcare,TEM
+SA-KTB-LHMM,Stock (TH),Financial Services,KTB
+SA-KTB-LHMM,Stock (TH),Financial Services,KTB
+INET,Stock (TH),Technology,INET
+INET,Stock (TH),Technology,INET
+CA-BAY LHMMRMF,Stock (TH),Financial Services,BAY
+SA-USD-LHQTUM,Stock (TH),Financial Services,KTB-R
+SA-USD-LHQTUM,Stock (TH),Financial Services,KTB-R
+INV_UOB_LHSTPLUS,Stock (US),Financial Services,UOVEF
+INV_UOB_LHSTPLUS,Stock (US),Financial Services,UOVEF
+SA-USD-LHUS,Stock (TH),Financial Services,KTB-R
+SA-USD-LHUS,Stock (TH),Financial Services,KTB-R
+SA-USD-LHUS,Stock (TH),Financial Services,KTB-R
+SA-FCD-LHUSFIN,Stock (US),Financial Services,KPCPF
+SA-FCD-LHUSFIN,Stock (US),Financial Services,KPCPF
+SA-FCD-LHUSFIN,Stock (US),Financial Services,KPCPF
+SA-DUMMY-HKD_LHVN,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-VND,Stock (TH),Financial Services,SCB-R
+SA-USD-LHVN,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-VND,Stock (TH),Financial Services,SCB-R
+SA-USD-LHVN,Stock (TH),Financial Services,SCB-R
+CENT SP,Stock (US),Consumer Defensive,CENT
+SA-DUMMY-EUR-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-HKD-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-AUD-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-SGD-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-SGD-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-USD-LHWPL,Stock (TH),Financial Services,SCB-R
+GHB,Stock (US),Healthcare,GHBWF
+SA-DUMMY-USD-LHWPL,Stock (TH),Financial Services,SCB-R
+SA-DUMMY-USD-LHWPL,Stock (TH),Financial Services,SCB-R
+3988F,Stock (HK),Financial Services,3988
+MSUAFEZ,Stock (US),Financial Services,MS
+MSUAFEZ,Stock (US),Financial Services,MS
+941F,Stock (HK),Other,941
+939F,Stock (US),Financial Services,CICHY
+939F,Stock (US),Financial Services,CICHY
+GOOGL US,Stock (US),Communication Services,GOOGL
+939F,Stock (US),Financial Services,CICHY
+CSCO US,Stock (US),Technology,CSCO
+QCOM US,Stock (US),Technology,QCOM
+QCOM US,Stock (US),Technology,QCOM
+CSCO US,Stock (US),Technology,CSCO
+ITX SM,Stock (TH),Financial Services,SM
+ABI BB,Stock (US),Consumer Defensive,BUDFF
+MC FP,Stock (US),Financial Services,MC
+SAN FP,Stock (US),Financial Services,SAN
+SAP GR,Stock (US),Technology,SAPGF
+SU FP,Stock (US),Energy,SU
+SU FP,Stock (US),Energy,SU
+SIE GR,Stock (US),Industrials,SIEGY
+SIE GR,Stock (US),Industrials,SIEGY
+SIE GR,Stock (US),Industrials,SIEGY
+ABT US,Stock (US),Healthcare,ABT
+AMGN US,Stock (US),Healthcare,AMGN
+AZN US,Stock (US),Healthcare,AZN
+ISRG US,Stock (US),Healthcare,ISRG
+MRK US,Stock (US),Healthcare,MRK
+JNJ US,Stock (US),Healthcare,JNJ
+JNJ US,Stock (US),Healthcare,JNJ
+TMO US,Stock (US),Healthcare,TMO
+TMO US,Stock (US),Healthcare,TMO
+HSBC US,Stock (US),Financial Services,HSBC
+KO US,Stock (US),Consumer Defensive,KO
+BAC US,Stock (US),Financial Services,BAC
+BAC US,Stock (US),Financial Services,BAC
+PG US,Stock (US),Consumer Defensive,PG
+PG US,Stock (US),Consumer Defensive,PG
+CHCAU,Stock (US),Real Estate,CTOUF
+CHCAU,Stock (US),Real Estate,CTOUF
+CHCAU,Stock (US),Real Estate,CTOUF
+HKD_ONE-ALLCHINA,Stock (TH),Financial Services,SCB-R
+USD_JP ALLCHINA,Stock (US),Financial Services,JPM
+USD_JP ALLCHINA,Stock (US),Financial Services,JPM
+JPY JP_APACPROP,Stock (US),Financial Services,JPM
+USD_ONE-APACESG,Stock (US),Financial Services,JPM
+FORGRTI LX EQUITY,Stock (US),Financial Services,BNPQF
+SGD JP_APACPROP,Stock (US),Financial Services,JPM
+USD JP_APACPROP,Stock (US),Financial Services,JPM
+JPY_DBK_COMRETURN,Stock (US),Financial Services,DB
+UOB_SI_DELIGHT,Stock (US),Financial Services,UOVEF
+UOB_SI_DELIGHT,Stock (US),Financial Services,UOVEF
+BAY CA_ONE-DI,Stock (TH),Financial Services,BAY
+UOB SI_ONE-DI,Stock (US),Financial Services,UOVEF
+BGDIBUA ID EQUITY,Stock (US),,IDEQ
+USD_JP_ONE-DISC,Stock (US),Financial Services,JPM
+BGDIBUA ID EQUITY,Stock (US),,IDEQ
+ABT US EQUITY,Stock (US),Healthcare,ABT
+USD_JP_ONE-DISCRMF,Stock (US),Financial Services,JPM
+GOOGL US EQUITY,Stock (US),Communication Services,GOOGL
+AEM CN EQUITY,Stock (US),Basic Materials,AEM
+AMT US EQUITY,Stock (US),Real Estate,AMT
+MO US EQUITY,Stock (US),Consumer Defensive,MO
+APH US EQUITY,Stock (US),Technology,APH
+BKNG US EQUITY,Stock (US),Consumer Cyclical,BKNG
+ASML NA EQUITY,Stock (US),Technology,ASML
+APP US EQUITY,Stock (US),Communication Services,APP
+AVGO US EQUITY,Stock (US),Technology,AVGO
+CNQ CN EQUITY,Stock (US),Energy,CNQ
+CAT US EQUITY,Stock (US),Industrials,CAT
+BATS LN EQUITY,Stock (US),Consumer Defensive,BTAFF
+KO US EQUITY,Stock (US),Consumer Defensive,KO
+COP US EQUITY,Stock (US),Energy,COP
+CEG US EQUITY,Stock (US),Utilities,CEG
+DUK US EQUITY,Stock (US),Utilities,DUK
+LLY US EQUITY,Stock (US),Healthcare,LLY
+XOM US EQUITY,Stock (US),Energy,XOM
+EOG US EQUITY,Stock (US),Energy,EOG
+HWM US EQUITY,Stock (US),Industrials,HWM
+RACE IM EQUITY,Stock (US),Consumer Cyclical,RACE
+RMS FP EQUITY,Stock (US),Consumer Cyclical,HESAY
+MA US EQUITY,Stock (US),Financial Services,MA
+MCD US EQUITY,Stock (US),Consumer Cyclical,MCD
+LIN US EQUITY,Stock (US),Basic Materials,LIN
+MRK US EQUITY,Stock (US),Healthcare,MRK
+MCO US EQUITY,Stock (US),Financial Services,MCO
+META US EQUITY,Stock (US),Communication Services,META
+NEM US EQUITY,Stock (US),Basic Materials,NEM
+NEE US EQUITY,Stock (US),Utilities,NEE
+PM US EQUITY,Stock (US),Consumer Defensive,PM
+NOVOB DC EQUITY,Stock (US),Healthcare,NVO
+PG US EQUITY,Stock (US),Consumer Defensive,PG
+PSA US EQUITY,Stock (US),Real Estate,PSA
+PLD US EQUITY,Stock (US),Real Estate,PLD
+REL LN EQUITY,Stock (US),Industrials,RLXXF
+RCL US EQUITY,Stock (US),Consumer Cyclical,RCL
+RIO LN EQUITY,Stock (US),Basic Materials,RIO
+SPGI US EQUITY,Stock (US),Financial Services,SPGI
+SPG US EQUITY,Stock (US),Real Estate,SPG
+SRE US EQUITY,Stock (US),Utilities,SRE
+UNP US EQUITY,Stock (US),Industrials,UNP
+VICI US EQUITY,Stock (US),Real Estate,VICI
+SO US EQUITY,Stock (US),Utilities,SO
+WMB US EQUITY,Stock (US),Energy,WMB
+EUR_DEU_EUROEQ,Stock (US),Financial Services,DB
+KBANK SI_ONE-FAR,Stock (TH),Financial Services,KBANK
+WPM CN EQUITY,Stock (US),Basic Materials,WPM
+UOB_SI_ONE-FAR,Stock (US),Financial Services,UOVEF
+BAY CA_ONE-FAS,Stock (TH),Financial Services,BAY
+USD_ONE-FFI,Stock (US),Financial Services,JPM
+KBANK SI_ONE-FIXED,Stock (TH),Financial Services,KBANK
+UOB SI_ONE-FIXED,Stock (US),Financial Services,UOVEF
+KBANK SI_ONE-FIXED,Stock (TH),Financial Services,KBANK
+UOB SI_ONE-FIXED,Stock (US),Financial Services,UOVEF
+DASH US EQUITY,Stock (US),Consumer Cyclical,DASH
+ADYEN NA EQUITY,Stock (US),Technology,ADYYF
+EUR JP_ONE-GECOM,Stock (US),Financial Services,JPM
+USD JP_ONE-GECOM,Stock (US),Financial Services,JPM
+MELI US EQUITY,Stock (US),Consumer Cyclical,MELI
+PYPL US EQUITY,Stock (US),Financial Services,PYPL
+PDD US EQUITY,Stock (US),Consumer Cyclical,PDD
+SHOP US EQUITY,Stock (US),Technology,SHOP
+GSEMEIA LX EQUITY,Stock (US),Financial Services,GS
+GSINDAI LX EQUITY,Stock (US),Financial Services,GS
+USD_JP 1AM-GEM,Stock (US),Financial Services,JPM
+USD_JP_GLOBFIN,Stock (US),Financial Services,JPM
+USD_JP_GLOBFIN,Stock (US),Financial Services,JPM
+USD_JP_GLOBFIN,Stock (US),Financial Services,JPM
+USD FCD_GLOBHY,Stock (US),Financial Services,KPCPF
+AMD US EQUITY,Stock (US),Technology,AMD
+USD FCD_GLOBHY,Stock (US),Financial Services,KPCPF
+HKD_ONE-GO2,Stock (US),Financial Services,JPM
+JD US EQUITY,Stock (US),Consumer Cyclical,JD
+USD_ONE-GO2,Stock (US),Financial Services,JPM
+TCOM US EQUITY,Stock (US),Consumer Cyclical,TCOM
+CRM US EQUITY,Stock (US),Technology,CRM
+USD_ONE-HOSPITAL,Stock (TH),Financial Services,SCB-R
+USD_JP_INDIAOPP,Stock (US),Financial Services,JPM
+USD_JP_INDIAOPP,Stock (US),Financial Services,JPM
+BAY CA_ONE-LS4-UI,Stock (TH),Financial Services,BAY
+USD_JP_INDIAOPP,Stock (US),Financial Services,JPM
+FNM54,Stock (US),Financial Services,BKAYY
+BAY CA_ONE-LS5-UI,Stock (TH),Financial Services,BAY
+USD_BAY_ONE-LS4-UI,Stock (TH),Financial Services,BAY
+BAY CA_ONE-LS6-UI,Stock (TH),Financial Services,BAY
+USD_BAY_ONE-LS5-UI,Stock (TH),Financial Services,BAY
+USD_BAY_ONE-LS6-UI,Stock (TH),Financial Services,BAY
+USD_JP_ONE-MEDTECH,Stock (US),Financial Services,JPM
+EUR_ONE-METAVERSE,Stock (US),Financial Services,JPM
+HKD_ONE-METAVERSE,Stock (US),Financial Services,JPM
+USD_ONE-METAVERSE,Stock (US),Financial Services,JPM
+JPY_ONE-METAVERSE,Stock (US),Financial Services,JPM
+RBLX US EQUITY,Stock (US),Communication Services,RBLX
+TMUS US EQUITY,Stock (US),Communication Services,TMUS
+ONEE,Stock (TH),Communication Services,ONEE
+SUSCO,Stock (TH),Energy,SUSCO
+BGWLBUA ID EQUITY,Stock (US),,IDEQ
+EUR_ONE-PREMIER,Stock (US),Financial Services,JPM
+JPY_ONE-PREMIER,Stock (US),Financial Services,JPM
+USD_ONE-PREMIER,Stock (US),Financial Services,JPM
+AMM MK EQUITY,Stock (US),Financial Services,AMMHF
+ASII IJ EQUITY,Stock (US),Consumer Defensive,ASII
+BMRI IJ EQUITY,Stock (US),Financial Services,PPERF
+BBNI IJ EQUITY,Stock (US),Financial Services,PBNNF
+CIMB MK EQUITY,Stock (US),Financial Services,CIMDF
+MYR_DBK_ONE-STOXX,Stock (US),Financial Services,DB
+USD_DBK_ONE-STOXX,Stock (US),Financial Services,DB
+PHP_DBK_ONE-STOXX,Stock (US),Financial Services,DB
+VND_DBK_ONE-STOXX,Stock (US),Financial Services,DB
+GENT MK EQUITY,Stock (US),Consumer Cyclical,GEBHY
+JCNC SP EQUITY,Stock (US),Industrials,JCYGY
+MAY MK EQUITY,Stock (US),Financial Services,MLYNF
+OCBC SP EQUITY,Stock (US),Financial Services,OVCHY
+PGAS IJ EQUITY,Stock (US),Utilities,PPAAY
+TEL PM EQUITY,Stock (US),Communication Services,PHTCF
+SIME MK EQUITY,Stock (US),Basic Materials,SIM
+PBK MK EQUITY,Stock (US),Financial Services,PBLOF
+SIA SP EQUITY,Stock (US),Industrials,SINGF
+TLKM IJ EQUITY,Stock (US),Communication Services,TLK
+THBEV SP EQUITY,Stock (US),Consumer Defensive,TBVPY
+UNTR IJ EQUITY,Stock (US),Basic Materials,PUTKY
+VPB VN EQUITY,Stock (US),Financial Services,PB
+WIL SP EQUITY,Stock (US),Consumer Defensive,WLMIY
+GBP_FCD_UGERMF,Stock (US),Financial Services,KPCPF
+USD_FCD_UGERMF,Stock (US),Financial Services,KPCPF
+GBP_FCD_ONE-UGG_2,Stock (US),Financial Services,KPCPF
+USD FCD_UGG,Stock (US),Financial Services,KPCPF
+GBP_FCD_ONE-UGG_2,Stock (US),Financial Services,KPCPF
+USD FCD_UGG,Stock (US),Financial Services,KPCPF
+GSJEPIJ LX EQUITY,Stock (US),Financial Services,GS
+EUR_ONE-ULTRA,Stock (TH),Financial Services,SCB-R
+USD_ONE-ULTRA,Stock (TH),Financial Services,SCB-R
+JPY_ONE-ULTRA,Stock (TH),Financial Services,SCB-R
+EUR_ONE-ULTRAPLUS,Stock (US),Financial Services,JPM
+JPY_ONE-ULTRAPLUS,Stock (US),Financial Services,JPM
+USD_ONE-ULTRAPLUS,Stock (US),Financial Services,JPM
+JPY_ONE-ULTRAPLUS,Stock (US),Financial Services,JPM
+EUR JP_ONE-VIETNAM,Stock (US),Financial Services,JPM
+USD_ONE-ULTRAPLUS,Stock (US),Financial Services,JPM
+USD_JP_VIETNAM,Stock (US),Financial Services,JPM
+VND_CBL_VIETNAM,Stock (TH),Financial Services,SCB-R
+EUR JP_VIETRMF,Stock (US),Financial Services,JPM
+USD_JP_VIETRMF,Stock (US),Financial Services,JPM
+SGD_FCD ONEPROP-SG,Stock (US),Financial Services,KPCPF
+VND_CBL_VIETRMF,Stock (TH),Financial Services,SCB-R
+CPASUSD MK,Stock (TH),Real Estate,MK
+KBANK-FCD-EUR-AARM,Stock (TH),Financial Services,KBANK
+KBANK-FCD-USD-AARM,Stock (TH),Financial Services,KBANK
+SA-SCBT-FCD-APDI,Stock (US),Financial Services,SCBFF
+PRINCIPAL GEF,Stock (TH),Healthcare,PRINC
+PRINCIPAL LTF,Stock (TH),Healthcare,PRINC
+KBANK-FCD-USD-BARM,Stock (TH),Financial Services,KBANK
+PRINCIPAL LTF,Stock (TH),Healthcare,PRINC
+SA-FA-SCBT-APDIRMF,Stock (US),Industrials,FA
+SA-SCBT-FCD-APDIRM,Stock (US),Financial Services,SCBFF
+SA-HKD-CHEQ,Stock (US),Financial Services,SCBFF
+SA-SCBT-FCD-CHEQ,Stock (US),Financial Services,SCBFF
+BBL-MYR-CII,Stock (TH),Financial Services,BBL
+CIMBCII MK,Stock (TH),Real Estate,MK
+SA-KBANK-JPY-DPLUS,Stock (TH),Financial Services,KBANK
+SA-FA-KBANK EQRMF,Stock (TH),Financial Services,KBANK
+DUMMY-HKD-CHTECH,Stock (US),Financial Services,KPCPF
+SA-INV-KTB-FIRMF,Stock (TH),Financial Services,KTB
+KASIKORNBANK PUBLIC COMPANY LIMITED (SA-KBANK-EUEQ(EUR)),Stock (TH),Financial Services,KBANK
+SAUOBT-BTLIF-EQRMF,Stock (US),Financial Services,UOVEF
+MORGBRZ LX,Stock (US),Financial Services,LX
+USD-KBANK-GCF_TAX,Stock (TH),Financial Services,KBANK
+USD-KBANK-GBRANDS,Stock (TH),Financial Services,KBANK
+USD-KBANK-GCF_TAX,Stock (TH),Financial Services,KBANK
+DUMMY-USD-GCLEAN,Stock (US),Financial Services,KPCPF
+DUMMY-EUR-GCLEAN,Stock (US),Financial Services,KPCPF
+GCLOUD-DUMMY-EUR,Stock (US),Financial Services,KPCPF
+EWW US,Stock (US),Financial Services,BLK
+JPY-KBANK-GEF-FCD,Stock (TH),Financial Services,KBANK
+GCLOUD-DUMMY-USD,Stock (US),Financial Services,KPCPF
+USD-KBANK-GEF-PFCD,Stock (TH),Financial Services,KBANK
+KASIKORNBANK PUBLIC COMPANY LIMITED (SA-KBANK-GEF(EURO)),Stock (TH),Financial Services,KBANK
+USD-KBANK-GFIX_TAX,Stock (TH),Financial Services,KBANK
+ACMHCII LX,Stock (US),Financial Services,LX
+SA-SCBT-FCD-GIF,Stock (US),Financial Services,SCBFF
+USD-KBANK-GINN-FCD,Stock (TH),Financial Services,KBANK
+XLY US,Stock (US),Basic Materials,X
+USD-KBANK-GMV_TAX,Stock (TH),Financial Services,KBANK
+DUMMY-EUR-GMV,Stock (US),Financial Services,KPCPF
+MSGOPPZ LX,Stock (US),Financial Services,LX
+USD-KBANK-GOPP_TAX,Stock (TH),Financial Services,KBANK
+USD-KBANK-GOPP_TAX,Stock (TH),Financial Services,KBANK
+KBANK-FCD-USD-GQE,Stock (TH),Financial Services,KBANK
+USD-KBANK-GOPP_TAX,Stock (TH),Financial Services,KBANK
+USD-KBANK-GSA_TAX,Stock (TH),Financial Services,KBANK
+CPRGST3 LX,Stock (US),Financial Services,ASST
+SA-SCBT-USD-GSCEQ,Stock (US),Financial Services,SCBFF
+BSAD2US LX,Stock (US),Financial Services,BLK
+SA-SCBT-JPY-JEQ,Stock (US),Financial Services,SCBFF
+SA-SCBT-EUR-IBALAN,Stock (US),Financial Services,SCBFF
+SA-SCBT-JPY-IBALAN,Stock (US),Financial Services,SCBFF
+SA-SCBT-USD-IBALAN,Stock (US),Financial Services,SCBFF
+SA-SCBT-JPY-IBALAN,Stock (US),Financial Services,SCBFF
+SA-SCBT-USD-IBALAN,Stock (US),Financial Services,SCBFF
+SA-SCBT-USD-KEQ,Stock (US),Financial Services,SCBFF
+SA-INV-KTB-PRMF,Stock (TH),Financial Services,KTB
+DUMMY-EUR-SIF,Stock (US),Financial Services,KPCPF
+DUMMY-JPY-SIF,Stock (US),Financial Services,KPCPF
+DUMMY-USD-USEQ,Stock (US),Financial Services,KPCPF
+PHR VN,Stock (US),Healthcare,PHR
+SA-VNEQ-VND,Stock (US),Financial Services,KPCPF
+VHC VN,Stock (US),Technology,VHC
+VHC VN,Stock (US),Technology,VHC
+SA-VNEQ-VND,Stock (US),Financial Services,KPCPF
+PRINCIPAL VNEQ,Stock (TH),Healthcare,PRINC
+SA-VND-VTOPP,Stock (US),Financial Services,KPCPF
+SA-SCBT-JPY-IDAILY,Stock (US),Financial Services,SCBFF
+SA-SCBT-JPY-IDAILY,Stock (US),Financial Services,SCBFF
+SA-SCBT-JPY-IDAILY,Stock (US),Financial Services,SCBFF
+DUMMY-SCBT-USD-IFI,Stock (US),Financial Services,SCBFF
+DUMMY-SCBT-USD-IFI,Stock (US),Financial Services,SCBFF
+DUMMY-SCBT-USD-IFI,Stock (US),Financial Services,SCBFF
+SA-SCBT-USD-IGOLD,Stock (US),Financial Services,SCBFF
+SA-SCBT-SGD-IPROP,Stock (US),Real Estate,SGD
+SA-SCBT-USD-IGOLD,Stock (US),Financial Services,SCBFF
+SA-USD-IPROP,Stock (US),Financial Services,SCBFF
+SA-USD-IPROP,Stock (US),Financial Services,SCBFF
+SA-USD-IPROP,Stock (US),Financial Services,SCBFF
+CNI AU,Stock (US),Industrials,CNI
+CHC AU,Stock (TH),Consumer Cyclical,AU
+INA AU,Stock (TH),Consumer Cyclical,AU
+GMG AU,Stock (US),Basic Materials,AU
+GPT AU,Stock (US),Real Estate,GPTGF
+MGR AU,Stock (US),Financials,MGR
+DUMMY-SGD-IPROPEN,Stock (US),Financial Services,KPCPF
+PGI-AUD-IPROPEN,Stock (US),Financial Services,KPCPF
+NXT AU,Stock (US),Technology,NXT
+QAL AU,Stock (TH),Consumer Cyclical,AU
+SCG AU,Stock (US),Real Estate,STGPF
+SGP AU,Stock (US),Real Estate,STKAF
+SCG AU,Stock (US),Real Estate,STGPF
+SGP AU,Stock (US),Real Estate,STKAF
+DUMMY-SGD-IPROPPLU,Stock (US),Financial Services,KPCPF
+DUMMY-SGD-IPROPRMF,Stock (US),Financial Services,SCBFF
+SA-USD-IPROPRMF,Stock (US),Financial Services,SCBFF
+SA-FASCBT-IPROPRMF,Stock (US),Financial Services,SCBFF
+SAUOBTPVDFP,Stock (US),Financial Services,UOVEF
+HST,Stock (US),Healthcare,HSTC
+SAUOBTPVDTMFP,Stock (US),Financial Services,UOVEF
+SAUOBTPVDTMFP,Stock (US),Financial Services,UOVEF
+SCBFIXED,Stock (TH),Financial Services,SCB
+SCBNDQ,Stock (TH),Financial Services,SCB
+SCBPIN,Stock (TH),Financial Services,SCB
+SCBTHAICG,Stock (TH),Financial Services,SCB
+SCBWORLD,Stock (TH),Financial Services,SCB
+SCBTHAICG,Stock (TH),Financial Services,SCB
+SCBWORLD,Stock (TH),Financial Services,SCB
+SAUOBTABS,Stock (US),Financial Services,UOVEF
+FCUSDKBAEMH,Stock (US),Financial Services,KPCUF
+FCUSDKBAEM,Stock (US),Financial Services,KPCUF
+FCUSDKBAEM,Stock (US),Financial Services,KPCUF
+FCUSDKBAO,Stock (US),Financial Services,KPCUF
+MSAIOPZLX,Stock (US),Financial Services,MS
+FCUSDKBAPLUS,Stock (US),Financial Services,KPCUF
+FCUSDKBAPLUS,Stock (US),Financial Services,KPCUF
+FCAUDKBAUD,Stock (US),Financial Services,KPCUF
+FCUSDKBAUD,Stock (US),Financial Services,KPCUF
+FCUSDKBAUTO,Stock (US),Financial Services,KPCUF
+ROBOUP,Stock (US),,BLUI
+ROBOUP,Stock (US),,BLUI
+ROBOUP,Stock (US),,BLUI
+FCHKDTTBAXJ,Stock (TH),Financial Services,TTB
+FCUSDTTBAXJ,Stock (TH),Financial Services,TTB
+FCUSDTTBAXJ,Stock (TH),Financial Services,TTB
+FCUSDTTBAXJ,Stock (TH),Financial Services,TTB
+ADBEUW,Stock (US),Technology,ADBE
+GOOGLUW,Stock (US),Communication Services,GOOGL
+AMZNUW,Stock (US),Consumer Cyclical,AMZN
+AAPLUW,Stock (US),Technology,AAPL
+BKNGUW,Stock (US),Consumer Cyclical,BKNG
+FCUSDBAYBLN,Stock (TH),Financial Services,BAY
+APPUS,Stock (US),Communication Services,APP
+AVGOUW,Stock (US),Technology,AVGO
+COFUS,Stock (US),Financial Services,COF
+CVNAUN,Stock (US),Consumer Cyclical,CVNA
+CRWVUS,Stock (US),Technology,CRWV
+CEGUW,Stock (US),Utilities,CEG
+ETNUN,Stock (US),Industrials,ETN
+LLYUN,Stock (US),Healthcare,LLY
+FLUTUN,Stock (US),Consumer Cyclical,FLUT
+KKRUS,Stock (US),Financial Services,KKR
+INTUUW,Stock (US),Technology,INTU
+GEVUN,Stock (US),Industrials,GEV
+LRCXUW,Stock (US),Technology,LRCX
+MSFTUW,Stock (US),Technology,MSFT
+NVDAUW,Stock (US),Technology,NVDA
+METAUW,Stock (US),Communication Services,META
+ORCLUN,Stock (US),Technology,ORCL
+SPOTUS,Stock (US),Communication Services,SPOT
+CRMUN,Stock (US),Technology,CRM
+PMUN,Stock (US),Consumer Defensive,PM
+UBERUN,Stock (US),Technology,UBER
+UNHUN,Stock (US),Healthcare,UNH
+VUN,Stock (US),Financial Services,V
+VSTUN,Stock (US),Utilities,VST
+VUN,Stock (US),Financial Services,V
+VSTUN,Stock (US),Utilities,VST
+FCUSDKBBLOC,Stock (US),Financial Services,KPCUF
+FCUSDKBBLOC,Stock (US),Financial Services,KPCUF
+FCUSDKBBLOC,Stock (US),Financial Services,KPCUF
+FCHKDKBCE,Stock (US),Financial Services,KPCUF
+FCHKDKBCE,Stock (US),Financial Services,KPCUF
+FCHKDKBCE,Stock (US),Financial Services,KPCUF
+FCHKDKBCEH,Stock (US),Financial Services,KPCUF
+FCHKDKBCEH,Stock (US),Financial Services,KPCUF
+FCHKDKBCEH,Stock (US),Financial Services,KPCUF
+FCCNHKBCHA,Stock (US),Financial Services,KPCUF
+FCCNHKBCHA,Stock (US),Financial Services,KPCUF
+FCCNHKBCHA,Stock (US),Financial Services,KPCUF
+FCUSDKBCHEQ,Stock (US),Financial Services,KPCUF
+FCUSDKBCHEQ,Stock (US),Financial Services,KPCUF
+FCCNHKBCIO,Stock (US),Financial Services,KPCUF
+FCEURKBCIO,Stock (US),Financial Services,KPCUF
+FCUSDKBCIO,Stock (US),Financial Services,KPCUF
+SCBABSAP,Stock (TH),Financial Services,SCB
+SCBEV,Stock (TH),Financial Services,SCB
+SCBCTECH,Stock (TH),Financial Services,SCB
+SCBGMCORE,Stock (TH),Financial Services,SCB
+SCBINC,Stock (TH),Financial Services,SCB
+SCBSFFPLUS,Stock (TH),Financial Services,SCB
+939HK,Stock (HK),Financial Services,0939
+175HK,Stock (HK),Consumer Cyclical,0175
+270HK,Stock (HK),Utilities,0270
+902HK,Stock (US),Utilities,HUNGF
+FCHKDKBCHTG2,Stock (US),Financial Services,KPCUF
+FCCNHKBCHTG2,Stock (US),Financial Services,KPCUF
+FCUSDKBCHTG2,Stock (US),Financial Services,KPCUF
+300HK,Stock (HK),Consumer Cyclical,0300
+992HK,Stock (US),Technology,LNVGY
+598HK,Stock (HK),Other,598
+700HK,Stock (HK),Technology,700
+780HK,Stock (HK),,780
+696HK,Stock (HK),Technology,0696
+288HK,Stock (HK),Consumer Defensive,0288
+IWVLLN,Stock (US),Financial Services,BLK
+FCAUDKBCLASSIC,Stock (US),Financial Services,KPCUF
+FCEURKBCLASSIC,Stock (US),Financial Services,KPCUF
+FCSGDKBCLASSIC,Stock (US),Financial Services,KPCUF
+FCUSDKBCLASSIC,Stock (US),Financial Services,KPCUF
+SCBAXJ,Stock (TH),Financial Services,SCB
+SCBCHEQ,Stock (TH),Financial Services,SCB
+SCBFIN,Stock (TH),Financial Services,SCB
+SCBDBOND,Stock (TH),Financial Services,SCB
+SCBGML,Stock (TH),Financial Services,SCB
+FCUSDKBCOMP,Stock (US),Financial Services,KPCUF
+SCBGVALUE,Stock (TH),Financial Services,SCB
+FCUSDKBCTECH,Stock (US),Financial Services,KPCUF
+FCUSDKBCTECH,Stock (US),Financial Services,KPCUF
+FCUSDKBCTECH,Stock (US),Financial Services,KPCUF
+PK-P/U,Stock (TH),Industrials,PK
+PK-P/U,Stock (TH),Industrials,PK
+SAUOBTDA,Stock (US),Financial Services,UOVEF
+SAUOBTDA,Stock (US),Financial Services,UOVEF
+FCUSDKBDIGI,Stock (US),Financial Services,KPCUF
+SAUOBTDBOND,Stock (US),Financial Services,UOVEF
+FCUSDKBDIGI,Stock (US),Financial Services,KPCUF
+FCUSDKBDJI,Stock (US),Financial Services,KPCUF
+FCUSDKBDJI,Stock (US),Financial Services,KPCUF
+FCUSDKBDJI,Stock (US),Financial Services,KPCUF
+SAUOBTDLITE,Stock (US),Financial Services,UOVEF
+FCHKDKBDM,Stock (US),Financial Services,KPCUF
+AGGULN,Stock (US),Financial Services,BLK
+FCJPYKBDM,Stock (US),Financial Services,KPCUF
+FCUSDKBDM,Stock (US),Financial Services,KPCUF
+FCEURKBDM2,Stock (US),Financial Services,KPCUF
+FCUSDKBDM2,Stock (US),Financial Services,KPCUF
+FCHKDKBDM2,Stock (US),Financial Services,KPCUF
+FCJPYKBDM2,Stock (US),Financial Services,KPCUF
+SAUOBTDPLUS,Stock (US),Financial Services,UOVEF
+FCUSDTTBDPLUS,Stock (TH),Financial Services,TTB
+FCUSDKBEMBOND,Stock (US),Financial Services,KPCUF
+FCUSDKBEMEQ,Stock (US),Financial Services,KPCUF
+FCUSDKBEMEQ,Stock (US),Financial Services,KPCUF
+FCUSDKBEMEQ,Stock (US),Financial Services,KPCUF
+AIE,Stock (TH),Consumer Defensive,AIE
+UBE,Stock (TH),Consumer Defensive,UBE
+UBE,Stock (TH),Consumer Defensive,UBE
+AIE,Stock (TH),Consumer Defensive,AIE
+FCEURBAYEUEQ,Stock (TH),Financial Services,BAY
+FCEURBAYEUEQ,Stock (TH),Financial Services,BAY
+FCEURBAYEUEQ,Stock (TH),Financial Services,BAY
+MSTEUCZLX,Stock (US),Financial Services,MS
+MSTEUCZLX,Stock (US),Financial Services,MS
+MSTEUCZLX,Stock (US),Financial Services,MS
+ECARLN,Stock (US),Financial Services,BLK
+FCUSDKBEV,Stock (US),Financial Services,KPCUF
+ECARLN,Stock (US),Financial Services,BLK
+FCUSDKBEV,Stock (US),Financial Services,KPCUF
+FCUSDKBFIN,Stock (US),Financial Services,KPCUF
+FCUSDKBFIN,Stock (US),Financial Services,KPCUF
+FCUSDKBFINTECH,Stock (US),Financial Services,KPCUF
+FCUSDKBFINTECH,Stock (US),Financial Services,KPCUF
+FCUSDKBFINTECH,Stock (US),Financial Services,KPCUF
+SAUOBTFIXED,Stock (US),Financial Services,UOVEF
+FCUSDKBFP,Stock (US),Financial Services,KPCUF
+SAUOBTFP,Stock (US),Financial Services,UOVEF
+FCUSDKBFP,Stock (US),Financial Services,KPCUF
+SAUOBTFP,Stock (US),Financial Services,UOVEF
+FCEURKBFST,Stock (US),Financial Services,KPCUF
+FCUSDKBFST,Stock (US),Financial Services,KPCUF
+FCUSDKBGA,Stock (US),Financial Services,KPCUF
+PIPUSDILX,Stock (US),Financial Services,ASST
+FCUSDKBGEAR,Stock (US),Financial Services,KPCUF
+FCUSDKBGEESG,Stock (US),Financial Services,KPCUF
+FCUSDKBGEESG,Stock (US),Financial Services,KPCUF
+FCUSDKBGENOME,Stock (US),Financial Services,KPCUF
+FCUSDKBGENOME,Stock (US),Financial Services,KPCUF
+FCUSDKBGENOME,Stock (US),Financial Services,KPCUF
+FCUSDKBGEQ,Stock (US),Financial Services,KPCUF
+VERGLAUID,Stock (US),Financial Services,ASST
+FCUSDKBGEQ,Stock (US),Financial Services,KPCUF
+VERGLAUID,Stock (US),Financial Services,ASST
+GSINDAILX,Stock (US),Financial Services,GS
+FCUSDKBGEX,Stock (US),Financial Services,KPCUF
+GSINDAILX,Stock (US),Financial Services,GS
+FCUSDKBGEX,Stock (US),Financial Services,KPCUF
+FCUSDKBGHC,Stock (US),Financial Services,KPCUF
+FCUSDKBGHC,Stock (US),Financial Services,KPCUF
+FCUSDKBGHC,Stock (US),Financial Services,KPCUF
+FCEURKBGIF,Stock (US),Financial Services,KPCUF
+FCEURKBGIF,Stock (US),Financial Services,KPCUF
+FCEURKBGIN,Stock (US),Financial Services,KPCUF
+FCUSDKBGIN,Stock (US),Financial Services,KPCUF
+FCEURKBGIN,Stock (US),Financial Services,KPCUF
+FCUSDKBGLOB,Stock (US),Financial Services,KPCUF
+FCUSDKBGIN,Stock (US),Financial Services,KPCUF
+FCCNHKBGLOWP,Stock (US),Financial Services,KPCUF
+FCUSDKBGLOWP,Stock (US),Financial Services,KPCUF
+FCEURKBGLOWP,Stock (US),Financial Services,KPCUF
+FCCNHKBGLOW,Stock (US),Financial Services,KPCUF
+FCEURKBGLOW,Stock (US),Financial Services,KPCUF
+FCUSDKBGLOW,Stock (US),Financial Services,KPCUF
+BRIUAT0ID,Stock (US),Financial Services,BLK
+BRTOXUAID,Stock (US),Financial Services,BLK
+CCAULN,Stock (US),Financial Services,BLK
+CEUUNA,Stock (US),Financial Services,BLK
+CPXJLN,Stock (US),Financial Services,BLK
+CSPXLN,Stock (US),Financial Services,BLK
+CSUSLN,Stock (US),Financial Services,BLK
+EXCHNA,Stock (US),Financial Services,EXCH
+ICHNNA,Stock (US),Financial Services,BLK
+IDTMLN,Stock (US),Financial Services,BLK
+IEMBLN,Stock (US),Financial Services,BLK
+IEMLLN,Stock (US),Financial Services,BLK
+IGLNLN,Stock (US),Financial Services,BLK
+IHYULN,Stock (US),Financial Services,BLK
+IJPALN,Stock (US),Financial Services,BLK
+IMBSLN,Stock (US),Financial Services,BLK
+ISACLN,Stock (US),Financial Services,BLK
+ISFDLN,Stock (US),Financial Services,BLK
+SASULN,Stock (US),Financial Services,BLK
+TIP5LN,Stock (US),Financial Services,BLK
+ABBVUN,Stock (US),Healthcare,ABBV
+FCEURJPGMCORE,Stock (US),Financial Services,JPM-PL
+FCUSDJPGMCORE,Stock (US),Financial Services,JPM-PL
+AEEUS,Stock (US),Utilities,AEE
+ANETUN,Stock (US),Technology,ANET
+APHUN,Stock (US),Technology,APH
+AZOUN,Stock (US),Consumer Cyclical,AZO
+BKUS,Stock (US),Financial Services,BKU
+BSXUN,Stock (US),Healthcare,BSX
+CBREUN,Stock (US),Real Estate,CBRE
+CTVAUN,Stock (US),Basic Materials,CTVA
+CMEUW,Stock (US),Financial Services,CME
+COSTUW,Stock (US),Consumer Defensive,COST
+DASHUN,Stock (US),Consumer Cyclical,DASH
+ECLUS,Stock (US),Basic Materials,ECL
+FICOUS,Stock (US),Technology,FICO
+ISRGUW,Stock (US),Healthcare,ISRG
+GSUS,Stock (US),Financial Services,GS
+HCAUN,Stock (US),Technology,HCA
+JPMUN,Stock (US),Financial Services,JPM
+FCUSDKBGML,Stock (US),Financial Services,KPCUF
+MNSTUW,Stock (US),Consumer Defensive,MNST
+MAUN,Stock (US),Financial Services,MA
+PLTRUS,Stock (US),Technology,PLTR
+MCKUN,Stock (US),Healthcare,MCK
+ORLYUW,Stock (US),Consumer Cyclical,ORLY
+SCHWUN,Stock (US),Financial Services,SCHW
+RSGUS,Stock (US),Industrials,RSG
+TMUSUW,Stock (US),Communication Services,TMUS
+TSLAUW,Stock (US),Consumer Cyclical,TSLA
+TRGPUN,Stock (US),Energy,TRGP
+TWUW,Stock (US),Financial Services,TW
+VTRUS,Stock (US),Real Estate,VTR
+VRSNUW,Stock (US),Technology,VRSN
+WELLUN,Stock (US),Real Estate,WELL
+WMTUN,Stock (US),Consumer Defensive,WMT
+FCUSDKBGOLD,Stock (US),Financial Services,KPCUF
+WMBUN,Stock (US),Energy,WMB
+FCUSDKBGMT,Stock (US),Financial Services,KPCUF
+FCUSDKBGOLDH,Stock (US),Financial Services,KPCUF
+FCUSDKBGOLDH,Stock (US),Financial Services,KPCUF
+FCUSDKBGOLDH,Stock (US),Financial Services,KPCUF
+FCUSDKBGPA,Stock (US),Financial Services,KPCUF
+HLGPAFILX,Stock (US),Financial Services,HLNE
+SAUOBTGPA,Stock (US),Financial Services,UOVEF
+FCUSDKBGOLDHR,Stock (US),Financial Services,KPCUF
+FCUSDKBGPLUS,Stock (US),Financial Services,KPCUF
+FCUSDKBGPROP,Stock (US),Financial Services,KPCUF
+FCUSDKBGPROP,Stock (US),Financial Services,KPCUF
+FCUSDKBGPROP,Stock (US),Financial Services,KPCUF
+FCUSDKBGSIF,Stock (US),Financial Services,KPCUF
+FCUSDKBGSIF,Stock (US),Financial Services,KPCUF
+FCUSDKBGSIF,Stock (US),Financial Services,KPCUF
+FCUSDKBGTO,Stock (US),Financial Services,KPCUF
+FCUSDKBGTTG2,Stock (US),Financial Services,KPCUF
+FCUSDKBGVALUE,Stock (US),Financial Services,KPCUF
+FCUSDKBGVALUE,Stock (US),Financial Services,KPCUF
+FCUSDKBINDEQ,Stock (US),Financial Services,KPCUF
+FCUSDBAYINDIA,Stock (TH),Financial Services,BAY
+FCUSDKBINDEQ,Stock (US),Financial Services,KPCUF
+FCUSDKBINDO,Stock (US),Financial Services,KPCUF
+FCUSDBAYINDIA,Stock (TH),Financial Services,BAY
+FCUSDKBINNO,Stock (US),Financial Services,KPCUF
+FCUSDKBINNO,Stock (US),Financial Services,KPCUF
+FCUSDKBINNO,Stock (US),Financial Services,KPCUF
+GSJEPIJLX,Stock (US),Financial Services,GS
+GSJEPIJLX,Stock (US),Financial Services,GS
+GSJEPIJLX,Stock (US),Financial Services,GS
+FCJPYKBJPSM,Stock (US),Financial Services,KPCUF
+FCJPYKBJPSM,Stock (US),Financial Services,KPCUF
+FCUSDKBKEQTG,Stock (US),Financial Services,KPCUF
+FCUSDKBKEQTG,Stock (US),Financial Services,KPCUF
+FCUSDKBKEQTG,Stock (US),Financial Services,KPCUF
+SAUOBTLT1,Stock (US),Financial Services,UOVEF
+SAUOBTLT1,Stock (US),Financial Services,UOVEF
+SAUOBTLT1,Stock (US),Financial Services,UOVEF
+ABBVUNA,Stock (US),Healthcare,ABBV
+GOOGLUWA,Stock (US),Communication Services,GOOGL
+AMZNUSA,Stock (US),Consumer Cyclical,AMZN
+AEEUSA,Stock (US),Utilities,AEE
+APHUNA,Stock (US),Technology,APH
+AAPLUWA,Stock (US),Technology,AAPL
+APPUSA,Stock (US),Communication Services,APP
+ANETUNA,Stock (US),Technology,ANET
+AZOUNA,Stock (US),Consumer Cyclical,AZO
+BKUSA,Stock (US),Financial Services,BK
+BKNGUWA,Stock (US),Consumer Cyclical,BKNG
+BSXUNA,Stock (US),Healthcare,BSX
+AVGOUWA,Stock (US),Technology,AVGO
+CBREUNA,Stock (US),Real Estate,CBRE
+CMEUWA,Stock (US),Financial Services,CME
+CTVAUNA,Stock (US),Basic Materials,CTVA
+DASHUNA,Stock (US),Consumer Cyclical,DASH
+COSTUWA,Stock (US),Consumer Defensive,COST
+ECLUSA,Stock (US),Basic Materials,ECL
+FICOUSA,Stock (US),Technology,FICO
+LLYUNA,Stock (US),Healthcare,LLY
+GSUSA,Stock (US),Financial Services,GS
+HCAUNA,Stock (US),Technology,HCA
+ISRGUWA,Stock (US),Healthcare,ISRG
+JPMUNA,Stock (US),Financial Services,JPM
+FCCNHKBLT4,Stock (US),Financial Services,KPCUF
+FCJPYKBLT4,Stock (US),Financial Services,KPCUF
+FCUSDKBLT4,Stock (US),Financial Services,KPCUF
+MCKUNA,Stock (US),Healthcare,MCK
+MAUNA,Stock (US),Financial Services,MA
+METAUWA,Stock (US),Communication Services,META
+MSFTUWA,Stock (US),Technology,MSFT
+MNSTUWA,Stock (US),Consumer Defensive,MNST
+ORLYUWA,Stock (US),Consumer Cyclical,ORLY
+PLTRUSA,Stock (US),Technology,PLTR
+RSGUSA,Stock (US),Industrials,RSG
+SCHWUNA,Stock (US),Financial Services,SCHW
+TMUSUWA,Stock (US),Communication Services,TMUS
+TSLAUWA,Stock (US),Consumer Cyclical,TSLA
+TRGPUNA,Stock (US),Energy,TRGP
+TWUWA,Stock (US),Financial Services,TW
+UBERUNA,Stock (US),Technology,UBER
+SAUOBTLT4,Stock (US),Financial Services,UOVEF
+VTRUSA,Stock (US),Real Estate,VTR
+WMTUNA,Stock (US),Consumer Defensive,WMT
+VRSNUWA,Stock (US),Technology,VRSN
+WELLUNA,Stock (US),Real Estate,WELL
+WMBUNA,Stock (US),Energy,WMB
+WELLUNA,Stock (US),Real Estate,WELL
+KSL,Stock (TH),Consumer Defensive,KSL-R
+WMBUNA,Stock (US),Energy,WMB
+SAUOBTLTS,Stock (US),Financial Services,UOVEF
+XPG,Stock (TH),Financial Services,XPG
+XPG,Stock (TH),Financial Services,XPG
+XPG,Stock (TH),Financial Services,XPG
+FCUSDKBMEGA,Stock (US),Financial Services,KPCUF
+PIPUCAILX,Stock (US),Financial Services,ASST
+FCAUDKBMILD,Stock (US),Financial Services,KPCUF
+FCEURKBMILD,Stock (US),Financial Services,KPCUF
+FCSGDKBMILD,Stock (US),Financial Services,KPCUF
+FCUSDKBMILD,Stock (US),Financial Services,KPCUF
+FCCNHKBMLCA,Stock (US),Financial Services,KPCUF
+FCHKDKBMLCA,Stock (US),Financial Services,KPCUF
+FCUSDKBMLCA,Stock (US),Financial Services,KPCUF
+PDDUW,Stock (US),Consumer Cyclical,PDD
+TALUN,Stock (US),Consumer Defensive,TAL
+TMEUN,Stock (US),Communication Services,TME
+VIPSUN,Stock (US),Consumer Cyclical,VIPS
+TMEUN,Stock (US),Communication Services,TME
+ASP,Stock (TH),Financial Services,ASP
+VIPSUN,Stock (US),Consumer Cyclical,VIPS
+STPI,Stock (TH),Industrials,STPI
+SAUOBTMONEY,Stock (US),Financial Services,UOVEF
+STPI,Stock (TH),Industrials,STPI
+SAUOBTMONEY,Stock (US),Financial Services,UOVEF
+FCUSDTTBMPLUS,Stock (TH),Financial Services,TTB
+SAUOBTMPLUS,Stock (US),Financial Services,UOVEF
+FCUSDKBNDQ,Stock (US),Financial Services,KPCUF
+FCUSDKBNDQ,Stock (US),Financial Services,KPCUF
+FCUSDKBNDQ,Stock (US),Financial Services,KPCUF
+FCUSDKBNEXT,Stock (US),Financial Services,KPCUF
+FCUSDKBNEXT,Stock (US),Financial Services,KPCUF
+FCUSDKBNEXT,Stock (US),Financial Services,KPCUF
+FCUSDKBOPP,Stock (US),Financial Services,KPCUF
+FCAUDKBPIN,Stock (US),Financial Services,KPCUF
+FCUSDKBOPP,Stock (US),Financial Services,KPCUF
+FCSGDKBPIN,Stock (US),Financial Services,KPCUF
+SAUOBTPIN,Stock (US),Financial Services,UOVEF
+FCUSDKBPIN,Stock (US),Financial Services,KPCUF
+FCUSDKBPIN,Stock (US),Financial Services,KPCUF
+FCUSDKBPLUS,Stock (US),Financial Services,KPCUF
+FCSGDKBPLUS,Stock (US),Financial Services,KPCUF
+SAUOBTPLUS,Stock (US),Financial Services,UOVEF
+FCSGDKBPLUS,Stock (US),Financial Services,KPCUF
+SAUOBTPLUS,Stock (US),Financial Services,UOVEF
+INVSKTBRF,Stock (TH),Financial Services,KTB
+SAUOBTRF,Stock (US),Financial Services,UOVEF
+INVSUOBTRM1,Stock (US),Financial Services,UOVEF
+INVSUOBTRM2,Stock (US),Financial Services,UOVEF
+INVSUOBTRM4,Stock (US),Financial Services,UOVEF
+INVSUOBTRM3,Stock (US),Financial Services,UOVEF
+FCCNHKBRMCHA,Stock (US),Financial Services,KPCUF
+FCUSDKBRMCTECH,Stock (US),Financial Services,KPCUF
+FCEURKBRMEU,Stock (US),Financial Services,KPCUF
+FCUSDKBRMGHC,Stock (US),Financial Services,KPCUF
+FCCNHKBRMGW,Stock (US),Financial Services,KPCUF
+FCEURKBRMGW,Stock (US),Financial Services,KPCUF
+FCUSDKBRMGW,Stock (US),Financial Services,KPCUF
+FCCNHKBRMGWP,Stock (US),Financial Services,KPCUF
+FCEURKBRMGIF,Stock (US),Financial Services,KPCUF
+FCEURKBRMGWP,Stock (US),Financial Services,KPCUF
+FCUSDKBRMGWP,Stock (US),Financial Services,KPCUF
+FCJPYKBRMJP,Stock (US),Financial Services,KPCUF
+SCBMLCA,Stock (TH),Financial Services,SCB
+FCUSDKBRMNDQ,Stock (US),Financial Services,KPCUF
+FCAUDKBRMPIN,Stock (US),Financial Services,KPCUF
+FCSGDKBRMPIN,Stock (US),Financial Services,KPCUF
+FCUSDKBRMPIN,Stock (US),Financial Services,KPCUF
+SAUOBTRMPIN,Stock (US),Financial Services,UOVEF
+FCUSDKBRMUSA,Stock (US),Financial Services,KPCUF
+MSUEGZULX,Stock (US),Financial Services,MS
+SCBVIET,Stock (TH),Financial Services,SCB
+PIROIUSLX,Stock (US),Financial Services,ASST
+FCUSDKBROBO,Stock (US),Financial Services,KPCUF
+FCUSDKBRMWORLD,Stock (US),Financial Services,KPCUF
+FCUSDKBROBO,Stock (US),Financial Services,KPCUF
+FCUSDKBROYALTY,Stock (US),Financial Services,KPCUF
+FCUSDKBSEMI,Stock (US),Financial Services,KPCUF
+FCUSDKBSEMI,Stock (US),Financial Services,KPCUF
+FCUSDKBSEMI,Stock (US),Financial Services,KPCUF
+FCCHFBAYSFF,Stock (TH),Financial Services,BAY
+FCEURBAYSFF,Stock (TH),Financial Services,BAY
+INVSKTBSFF,Stock (TH),Financial Services,KTB
+SAUOBTSFF,Stock (US),Financial Services,UOVEF
+FCCHFBAYSFFPLUS,Stock (TH),Financial Services,BAY
+FCEURBAYSFFPLUS,Stock (TH),Financial Services,BAY
+INVSKTBSFFPLUS,Stock (TH),Financial Services,KTB
+SAUOBTSFFPLUS,Stock (US),Financial Services,UOVEF
+INVSKTBSFFPLUS,Stock (TH),Financial Services,KTB
+SAUOBTSFFPLUS,Stock (US),Financial Services,UOVEF
+SAUOBTSMART2,Stock (US),Financial Services,UOVEF
+SAUOBTSMART2,Stock (US),Financial Services,UOVEF
+SAUOBTSMART2,Stock (US),Financial Services,UOVEF
+FCUSDKBSMART4,Stock (US),Financial Services,KPCUF
+FCUSDKBSMART3,Stock (US),Financial Services,KPCUF
+FCUSDKBSPLUS,Stock (US),Financial Services,KPCUF
+SAUOBTSPLUS,Stock (US),Financial Services,UOVEF
+FCAUDKBSPICY,Stock (US),Financial Services,KPCUF
+FCEURKBSPICY,Stock (US),Financial Services,KPCUF
+FCSGDKBSPICY,Stock (US),Financial Services,KPCUF
+FCUSDKBSPICY,Stock (US),Financial Services,KPCUF
+FCUSDKBTAPX,Stock (US),Financial Services,KPCUF
+FCUSDKBTAPX,Stock (US),Financial Services,KPCUF
+FCUSDKBTAPX,Stock (US),Financial Services,KPCUF
+SAUOBTTM,Stock (US),Financial Services,UOVEF
+SAUOBTTM,Stock (US),Financial Services,UOVEF
+SAUOBTTMF,Stock (US),Financial Services,UOVEF
+SAUOBTTMFPLUS,Stock (US),Financial Services,UOVEF
+SAUOBTTMFPLUS,Stock (US),Financial Services,UOVEF
+FCEURKBTRAVEL,Stock (US),Financial Services,KPCUF
+SAUOBTTMFPLUS,Stock (US),Financial Services,UOVEF
+FCUSDKBTRAVEL,Stock (US),Financial Services,KPCUF
+FCUSDKBTRAVEL,Stock (US),Financial Services,KPCUF
+FCUSDKBTRAVEL,Stock (US),Financial Services,KPCUF
+FCUSDKBUSA,Stock (US),Financial Services,KPCUF
+FCUSDKBUSA,Stock (US),Financial Services,KPCUF
+FCUSDKBUSA,Stock (US),Financial Services,KPCUF
+FCUSDKBUSHY,Stock (US),Financial Services,KPCUF
+FCUSDKBUSSM,Stock (US),Financial Services,KPCUF
+BEC,Stock (TH),Communication Services,BEC
+FCUSDKBUSSM,Stock (US),Financial Services,KPCUF
+BEC,Stock (TH),Communication Services,BEC
+FCUSDKBVIET,Stock (US),Financial Services,KPCUF
+FCUSDDBVIET,Stock (US),Financial Services,DB
+FCVNDDBVIET,Stock (US),Financial Services,DB
+MBBVN/ST,Stock (US),Technology,ST
+MBBVN/ST,Stock (US),Technology,ST
+FCVNDDBVIET,Stock (US),Financial Services,DB
+FCUSDTTBWEQ,Stock (TH),Financial Services,TTB
+FCUSDKBWIN,Stock (US),Financial Services,KPCUF
+FCVNDDBVNALPHA,Stock (US),Financial Services,DB
+FCUSDKBWIN,Stock (US),Financial Services,KPCUF
+FCUSDKBWIP,Stock (US),Financial Services,KPCUF
+FCUSDKBWIP,Stock (US),Financial Services,KPCUF
+FCUSDKBWIP,Stock (US),Financial Services,KPCUF
+FCUSDKBWORLD,Stock (US),Financial Services,KPCUF
+FCUSDKBWORLD,Stock (US),Financial Services,KPCUF
+SIGDYIU MK,Stock (TH),Real Estate,MK
+KBANK EUR-KBANK,Stock (TH),Financial Services,KBANK
+FCUSDKBWORLD,Stock (US),Financial Services,KPCUF
+POLBTIU ID,Stock (US),Consumer Cyclical,ID
+SCB USD,Stock (TH),Financial Services,SCB
+SCB HKD-SCB,Stock (TH),Financial Services,SCB
+KBANK HKD-KBANK,Stock (TH),Financial Services,KBANK
+KBANK USD-KBANK,Stock (TH),Financial Services,KBANK
+SCB HKD,Stock (US),Technology,HKD
+ES-MF,Stock (US),Financial Services,ASST
+SCBTMFPLUS,Stock (TH),Financial Services,SCB
+ES-MF,Stock (US),Financial Services,ASST
+BAY USD-BAY,Stock (TH),Financial Services,BAY
+SCBTMFPLUS,Stock (TH),Financial Services,SCB
+BAY HKD-BAY,Stock (TH),Financial Services,BAY
+BAY HKD-BAY,Stock (TH),Financial Services,BAY
+JPMGLAA LX,Stock (US),Financial Services,JPM
+SCB USD-SCB,Stock (TH),Financial Services,SCB
+SCB USD-SCB,Stock (TH),Financial Services,SCB
+SRS,Stock (TH),Technology,SRS
+NOINEIU ID,Stock (TH),Financial Services,MFC
+GSINDAI LX,Stock (US),Financial Services,GS
+SCB SCBXXX-USD,Stock (US),Financial Services,SCBS
+SCB SCB XXX-USD,Stock (US),Financial Services,SCBS
+SCB SCBXXX-USD,Stock (US),Financial Services,SCBS
+TLDIVEQ-D_WH,Stock (US),Financial Services,BKKPF
+TLDIVLTF-D_WH,Stock (US),Financial Services,BKKPF
+TLDIVRMF_BBL,Stock (TH),Financial Services,BBL
+DUSIT,Stock (TH),Consumer Cyclical,DUSIT
+TLLTFEQBBL_WH,Stock (TH),Financial Services,BBL
+TLEQTCGBBL_WH,Stock (TH),Financial Services,BBL
+TLEQRMF_BBL,Stock (TH),Financial Services,BBL
+TLFLEX_BBL_WH,Stock (TH),Financial Services,BBL
+TLFLEXRMF_BBL,Stock (TH),Financial Services,BBL
+TLFVMR-ASIAX_SCB_WH,Stock (TH),Financial Services,SCB-R
+TLMMF_BBL_WH,Stock (TH),Financial Services,BBL
+TLMMF_BBL_WH,Stock (TH),Financial Services,BBL
+TLMMRMF_BBL,Stock (TH),Financial Services,BBL
+SFLEX,Stock (TH),Consumer Cyclical,SFLEX
+TLMSEQ_BBL_WH,Stock (TH),Financial Services,BBL
+TACC,Stock (TH),Consumer Defensive,TACC
+TACC,Stock (TH),Consumer Defensive,TACC
+TLMSEQ_BBL_WH,Stock (TH),Financial Services,BBL
+TLSEMICON-H_KBANK_WH,Stock (TH),Financial Services,KBANK
+TLMSEQRMF,Stock (US),Financial Services,BKKPF
+TLSEMICON-UH_KBANK_WH,Stock (TH),Financial Services,KBANK
+TLSMALLEQ_BBL_WH,Stock (TH),Financial Services,BBL
+TLSMALLEQ_BBL_WH,Stock (TH),Financial Services,BBL
+TLUSNDQ-H_BAY_WH,Stock (TH),Financial Services,BAY
+TLUSNDQ-UH_BAY_WH,Stock (TH),Financial Services,BAY
+TTB USD-TMB,Stock (TH),Financial Services,TTB
+TLUSNDQ-H_BAY_WH,Stock (TH),Financial Services,BAY
+GSGCEIC LX,Stock (US),Financial Services,GS
+TSF,Stock (TH),Financial Services,MFC
+GSGCEIC LX,Stock (US),Financial Services,GS
+JPMECAA,Stock (US),Financial Services,JPM
+SSULUOB,Stock (US),Financial Services,STT
+SPSB.US,Stock (US),Financial Services,STT
+JPMINCC,Stock (US),Financial Services,JPM
+JPMINCC,Stock (US),Financial Services,JPM
+PSECUSI,Stock (US),Financial Services,ASST
+GLD.US,Stock (US),Financial Services,STT
+CSLIFXU,Stock (US),Financial Services,CNS
+HSGIEIU,Stock (HK),Financial Services,0005
+CSLIFXU,Stock (US),Financial Services,CNS
+GLD.SP,Stock (US),Financial Services,STT
+GLD.SP,Stock (US),Financial Services,STT
+SSGSAUS,Stock (US),Financial Services,STT
+JPMUSTI,Stock (US),Financial Services,JPM
+VEF,Stock (US),Consumer Defensive,DRGV
+ES-TM,Stock (US),Financial Services,ASST
+TSP1-PRESERVER,Stock (US),Financial Services,ASST
+TSP2-NURTURER,Stock (US),Financial Services,ASST
+TSP3-BALANCER,Stock (US),Financial Services,ASST
+TSP4-EXPLORER,Stock (US),Financial Services,ASST
+TSP5-GOGETTER,Stock (US),Financial Services,ASST
+KWI CNGLOV_THB,Stock (US),Financial Services,BKAYY
+KBANK SI_1AM-TG,Stock (TH),Financial Services,KBANK
