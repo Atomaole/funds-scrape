@@ -1,157 +1,154 @@
-# 📈 Thai Mutual Fund Data Pipeline
+# 📈 Thai Mutual Fund Data Pipeline & API (V3.1.1)
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square&logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat-square&logo=postgresql)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi)
+![Prefect](https://img.shields.io/badge/Prefect-Workflow-0052CC?style=flat-square)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)
-![Selenium](https://img.shields.io/badge/Selenium-Firefox-43B02A?style=flat-square&logo=selenium)
 
-**A production-ready data aggregation pipeline** designed to construct a comprehensive database of Thai Mutual Funds. This system intelligently scrapes, normalizes, and merges data from multiple sources (**Finnomena**, **WealthMagik**, and **SEC**) into a unified PostgreSQL database.
+**A production-ready data aggregation pipeline and API** designed to construct a comprehensive database of Thai Mutual Funds and Feeder Funds. 
+
+Version 3.1.1 introduces a massive architectural upgrade: migrating away from Selenium to high-speed concurrent requests, implementing **Prefect** for robust workflow orchestration, and introducing a **Two-Tier Database System** powered by MySQL to serve a built-in **FastAPI** backend.
 
 ---
 
 ## 🚀 Key Features
 
-* **🛡️ Resilient Architecture:**
-    * **Smart Resume:** Automatically skips processed funds if interrupted.
-    * **Dual-Round Execution:** Runs a second "Retry Round" 5 hours after the main run to catch any failed requests or network timeouts.
-    * **Auto-Healing:** Automatically updates `geckodriver` to match the installed Firefox version.
-* **🔗 Data Fusion:**
-    * Combines **NAV History** from Finnomena with real-time **Bid/Offer** from WealthMagik.
-    * Merges **Portfolios (Holdings)** from both sources for maximum coverage.
-    * Enriches data with **Risk Metrics** (Sharpe, Alpha, Beta) directly from the SEC.
-* **⚡ High Performance:**
-    * Uses **Multithreading** for heavy scraping tasks (PDF parsing, Bid/Offer fetching).
-    * **Vectorized Processing** (Pandas) for efficient data merging.
-* **📦 Containerized Storage:**
-    * Pre-configured **PostgreSQL** and **PgAdmin4** via Docker Compose.
-    * Idempotent database loader (safe to re-run without duplicating data).
+* **⚡ High-Performance Extraction (No More Selenium):**
+  * Transitioned from Selenium to pure `requests` for significantly faster execution.
+  * Implemented **Multi-threading** (`ThreadPoolExecutor`) and dynamic User-Agent rotation (Windows, macOS, Linux) to bypass basic bot protections and accelerate data fetching.
+* **🧠 Smart PDF Parsing & Fuzzy Matching:**
+  * Uses `pdfplumber` to extract Factsheets and parse **ISIN codes** directly from documents.
+  * Includes a server-friendly logic: PDF extraction runs **only once a month** to prevent IP bans.
+  * Utilizes `thefuzz` for fuzzy string matching, accurately mapping fund names with the Stock Exchange of Thailand (SET) database.
+* **🤖 Advanced Workflow Orchestration:**
+  * Fully managed by **Prefect** (`@flow`, `@task`).
+  * Features automated Cron scheduling (starts at 01:00 AM) and an intelligent Pause/Resume mechanism to handle retry rounds at 07:00 AM for failed tasks.
+* **📊 Integrated FastAPI Backend:**
+  * Includes a fully functional `API.py` using FastAPI to serve aggregated data, structured specifically for comprehensive dashboards (Thai Funds and Feeder Funds).
 
 ---
 
 ## 🏗️ System Architecture
 
-The system operates as a **Single-Entry Orchestrator Model**. You only need to interact with **one** script.
+The system is highly decoupled, operating through four distinct phases: Extraction, Transformation, Storage, and Serving.
 
 ```mermaid
-graph LR
-  A[Master Runner] --> B{Update Driver}
-  A --> C[Scrapers Group]
-  C --> D[WealthMagik List]
-  C --> E[Finnomena API/PDF]
-  C --> F[SEC Risk Info]
-  C --> G[WM Bid/Offer/Port]
-  C --> H[Raw CSVs]
-  H --> I[Merge Process]
-  I --> J[Merged CSVs]
-  J --> K[DB Loader]
-  K --> L[(PostgreSQL)]
+graph TD
+  subgraph "1. Orchestration & Extraction (Prefect)"
+    A[Master Runner: 01:00 AM] --> B{Multi-thread Scrapers}
+    B -->|API/Requests| C(Finnomena)
+    B -->|API/Requests| D(WealthMagik)
+    B -->|API/Requests| E(SEC Risk Info)
+  end
+
+  subgraph "2. Transformation (Pandas)"
+    C & D & E --> F[Raw CSVs]
+    F --> G[merge_funds.py]
+    G --> H[clean_type_holding.py]
+    H --> I[set_isin.py / Fuzzy Match]
+  end
+
+  subgraph "3. Two-Tier MySQL Database"
+    I --> J[db_loader.py]
+    J -->|Upsert| K[(Tier 1: Raw Data DB)]
+    K -.->|Manual ETL Process| L[(Tier 2: Analytical DB)]
+  end
+
+  subgraph "4. Application (FastAPI)"
+    L --> M[API Endpoints]
+    M --> N[Dashboard / Client]
+  end
 
 ```
 
-| Component | Script | Description |
-| --- | --- | --- |
-| **👑 Orchestrator** | `master_runner.py` | **ENTRY POINT.** Manages scheduling, rounds, and process lifecycle. |
-| **🕷️ Scrapers** | `scrape_finnomena.py`<br>
+---
 
-<br>`list_fund_wealthmagik.py`<br>
+## 🗄️ Database Design: Two-Tier System
 
-<br>`scrape_sec_info.py` | Extract data using API reversing, PDF parsing, and Headless Selenium. |
-| **🌪️ Transformer** | `merge_funds.py` | Cleans, normalizes, and joins data from raw CSVs into unified datasets. |
-| **💾 Loader** | `db_loader.py` | Upserts data into SQL tables using `ON CONFLICT DO UPDATE` strategies. |
+To balance high-speed data ingestion with complex dashboard queries, the database is split into two logical tiers using **MySQL 8**:
+
+### 📥 Tier 1: Raw Data / Staging (`thai_funds`)
+
+* **Initialized by:** `init.sql`
+* **Purpose:** Directly stores merged flat data from `db_loader.py`.
+* **Tables:** `funds_master_info`, `funds_daily`, `funds_holding`, `funds_statistics`, etc.
+
+### 📈 Tier 2: Analytical / Relational (`funds_API`)
+
+* **Initialized by:** `funds.sql`
+* **Purpose:** A highly structured, relational database designed specifically for the FastAPI backend and complex joins (Deep Look-through to underlying global stocks).
+* **Tables:** `stocks`, `funds`, `master_funds`, `fund_direct_holdings`, `fund_master_holdings`.
+* **⚠️ Important Note:** Currently, the ETL (Extract, Transform, Load) script to move and transform data from Tier 1 to Tier 2 is **not included**. Users must manually process or write a script to populate Tier 2 before using the API.
 
 ---
 
 ## 🛠️ Installation & Setup
 
-### 1. Prerequisites
+### 1. Infrastructure (Database)
 
-* **Python 3.9+**
-* **Docker & Docker Compose**
-* **Mozilla Firefox** (Latest version installed on host)
-
-### 2. Infrastructure (Database)
-
-Start the PostgreSQL and PgAdmin containers:
+Start the **MySQL 8** and **PhpMyAdmin** containers:
 
 ```bash
 docker-compose up -d
 
 ```
-**Accessing the Database UI (PgAdmin):**
-After starting the containers, access PgAdmin4 at `http://localhost:8080`
 
-* **Email:** `atom@admin.com`
-* **Password:** `admin`
-* **Host Name/Address (for server connection):** `db`
+* **PhpMyAdmin UI:** `http://localhost:8080`
+* **Credentials:** Username: `root` / Password: `1234`
+* *(The Tier 1 schema `thai_funds` will automatically initialize on the first run via `init.sql`).*
 
-**Tip:** You can customize these credentials (Username, Password, DB Name) by editing the environment variables in the `docker-compose.yml` file before starting the containers.
+### 2. Python Dependencies
 
-*Note: The database schema (`funds_db`) will be automatically initialized using `init.sql` on the first run.*
-
-
-### 3. Python Dependencies
+Ensure you are using Python 3.9+.
 
 ```bash
 pip install -r requirements.txt
 
 ```
 
----
+### 3. Start the Pipeline
 
-## ⚡ Usage
-
-⚠️ **IMPORTANT:** Always run the pipeline through the master runner. Do not run individual scraper scripts manually unless debugging.
+Run the Prefect orchestrator to begin the daily scraping cycle:
 
 ```bash
 python master_runner.py
 
 ```
 
-### Configuration (`master_runner.py`)
+### 4. Start the API Server
 
-You can tweak the constants at the top of the file:
+Once your Tier 2 database is populated, launch the FastAPI server:
 
-* `AUTO_MODE`: Set to `True` for continuous daily looping, `False` for a single run.
-* `DAILY_START_TIME`: Time to start the daily scraping cycle (Default: `"01:00"`).
-* `MODE_FOR_WEALTHMAGIK`:
-* `1`: Sequential (Slowest, Most Stable)
-* `2`: Hybrid (Recommended)
-* `3`: Parallel (Fastest, High Resource Usage)
+```bash
+uvicorn API:app --reload
 
+```
 
+* **API Documentation (Swagger UI):** `http://127.0.0.1:8000/docs`
 
 ---
 
-## 🗄️ Database Schema
+## 🇹🇭 สรุปการทำงานภาษาไทย (Thai Summary)
 
-The system populates the following tables in `funds_db`:
+โปรเจกต์เวอร์ชัน 3.1.1 นี้ถูกอัปเกรดโครงสร้างใหม่ทั้งหมดเพื่อให้เทียบเท่าระดับ Production โดยมีจุดเปลี่ยนสำคัญดังนี้:
 
-1. **`funds_master_info`**: Core fund details (AMC, Dividend Policy, Inception Date).
-2. **`funds_daily`**: Time-series data for NAV, AUM, Bid, and Offer prices.
-3. **`funds_statistics`**: Risk metrics (SD, Sharpe, Alpha, Beta, Drawdown) from SEC.
-4. **`funds_fee`**: Front-end, Back-end, Management fees, and TER.
-5. **`funds_holding`**: Top 5 or Full portfolio holdings (Stock/Bond names).
-6. **`funds_allocations`**: Asset allocation (Equity/Fixed Income) and Country allocation.
-7. **`funds_codes`**: Mapping of Fund Codes to ISIN codes parsed from Factsheets.
+1. **ถอด Selenium ออก:** เปลี่ยนมาใช้การยิง Request ตรงๆ ร่วมกับการทำงานแบบขนาน (Multi-threading) ทำให้ดึงข้อมูลได้เร็วขึ้นหลายเท่าตัว และมีการสุ่ม User-Agent เพื่อป้องกันการถูกบล็อก
+2. **ระบบจัดการ Workflow ด้วย Prefect:** สคริปต์หลัก (`master_runner.py`) ควบคุมโดย Prefect มีการตั้งเวลาทำงานอัตโนมัติตอนตี 1 และมีระบบฉลาดๆ ที่สามารถ Pause ตัวเองเพื่อไปเก็บตกข้อมูลที่พลาดในตอน 7 โมงเช้าได้
+3. **การอ่าน PDF และ Fuzzy Match:** ระบบสามารถโหลดไฟล์ Factsheet มาอ่านด้วย `pdfplumber` เพื่อหาโค้ด ISIN ได้เอง (ตั้งค่าให้ทำแค่เดือนละ 1 ครั้งเพื่อถนอมเซิร์ฟเวอร์) และใช้ `thefuzz` จับคู่ชื่อกองทุนกับฐานข้อมูลตลาดหลักทรัพย์ (SET) ได้อย่างแม่นยำ
+4. **ฐานข้อมูลแบบ 2 ชั้น (Two-Tier MySQL):**
+* **Tier 1 (Raw Data):** เก็บข้อมูลดิบที่เพิ่งดูดมา (ใช้ `init.sql`)
+* **Tier 2 (Analytical Data):** โครงสร้างแบบ Relational DB ที่พร้อมใช้ทำ Dashboard (ใช้ `funds.sql`)
+* *(หมายเหตุ: ปัจจุบันยังต้องเขียน Script ย้ายข้อมูลจาก Tier 1 ไป Tier 2 เอง)*
 
----
 
-## 🇹🇭 Thai Summary
+5. **เพิ่ม FastAPI:** มีระบบ Backend เตรียมพร้อมสำหรับส่งข้อมูลไปแสดงผลบน Dashboard เรียบร้อยแล้ว
 
-โปรเจกต์นี้คือ **"ระบบดูดและรวบรวมข้อมูลกองทุนรวมไทยแบบอัตโนมัติ"** ที่ถูกออกแบบมาให้ทำงานได้ด้วยตัวเองทุกวัน โดยมีจุดเด่นคือ:
+**การเริ่มต้นใช้งานเบื้องต้น:**
 
-1. **สั่งงานจุดเดียว:** รันแค่ไฟล์ `master_runner.py` ไฟล์เดียว ระบบจะจัดการทุกอย่างให้ (อัปเดต Driver -> ดูดข้อมูล -> รวมไฟล์ -> ลง Database)
-2. **ระบบกันเหนียว (Dual-Round):** หากเน็ตหลุดหรือเว็บล่มในรอบแรก (01:00) ระบบจะรอ 5 ชั่วโมงแล้วตื่นมา "เก็บตก" เฉพาะกองทุนที่ยังไม่เสร็จให้โดยอัตโนมัติ
-3. **ข้อมูลครบเครื่อง:** รวมข้อมูลจากทั้ง Finnomena (ข้อมูลพื้นฐาน/NAV), WealthMagik (Bid-Offer/พอร์ต) และ ก.ล.ต. (ค่าความเสี่ยง) มาไว้ในที่เดียว
-4. **พร้อมใช้:** มี Docker Compose เตรียม Database (PostgreSQL) ไว้ให้พร้อมใช้งานทันที
-
-**วิธีใช้งาน:**
-
-1. รัน Docker: `docker-compose up -d`
-* *สามารถเข้าดูข้อมูลผ่าน PgAdmin ได้ที่ `localhost:8080` (แก้ไข User/Pass ได้ในไฟล์ docker-compose.yml)*
-
-2. ติดตั้ง Library: `pip install -r requirements.txt`
-3. เริ่มระบบ: `python master_runner.py`
+1. รัน `docker-compose up -d` เพื่อเปิดฐานข้อมูล MySQL
+2. รัน `pip install -r requirements.txt`
+3. รัน `python master_runner.py` เพื่อเริ่มระบบดูดข้อมูลอัตโนมัติ
 
 ---
 
